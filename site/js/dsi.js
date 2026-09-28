@@ -6,8 +6,17 @@ export const LIFTS = [
   { k: 'clean', db: 'clean', n: 'Clean', b: 1.00, c: 'var(--clean)' },
 ];
 export const LIFT_BY_DB = Object.fromEntries(LIFTS.map(l => [l.db, l]));
-export const OTHER_LIFTS = { jerk: 'Jerk', snatch: 'Snatch', front_squat: 'Front squat', overhead_squat: 'Overhead squat' };
-export const liftName = db => (LIFT_BY_DB[db] && LIFT_BY_DB[db].n) || OTHER_LIFTS[db] || db;
+// Every lift in the catalog (mirrors public.lifts). Only the four above feed the DSI score.
+export const ALL_LIFTS = [
+  ['bench', 'Bench press'], ['squat', 'Back squat'], ['deadlift', 'Deadlift'], ['clean', 'Clean'],
+  ['front_squat', 'Front squat'], ['overhead_squat', 'Overhead squat'],
+  ['snatch', 'Snatch'], ['squat_snatch', 'Squat snatch'], ['power_snatch', 'Power snatch'],
+  ['squat_clean', 'Squat clean'], ['power_clean', 'Power clean'], ['clean_and_jerk', 'Clean and jerk'], ['jerk', 'Jerk'],
+  ['strict_press', 'Strict press'], ['push_press', 'Push press'], ['sumo_deadlift', 'Sumo deadlift'],
+];
+const NAMES = Object.fromEntries(ALL_LIFTS);
+export const OTHER_LIFTS = Object.fromEntries(ALL_LIFTS.filter(([id]) => !LIFT_BY_DB[id]));
+export const liftName = db => NAMES[db] || db;
 export const liftColor = db => (LIFT_BY_DB[db] && LIFT_BY_DB[db].c) || 'var(--muted)';
 
 export const CLUBS = [1500, 1250, 1000, 750];

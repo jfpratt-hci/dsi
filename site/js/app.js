@@ -230,6 +230,9 @@ VIEWS.u = async (id, tok) => {
   const r = board.find(x => x.profile_id === id) || { name: p.display_name, bw: num(p.bodyweight), age: p.birth_year ? new Date().getFullYear() - p.birth_year : 0, bench: 0, squat: 0, dead: 0, clean: 0 };
   if (!r.p) { r.score = D.score(r); r.total = D.total(r); r.p = D.pcts(r); }
   const v = D.verdict(r.score), gl = Object.fromEntries(must(goals).map(g => [g.lift, num(g.target_lb)]));
+  const bestOf = {};
+  must(hist).filter(e => e.status !== 'struck').forEach(e => { bestOf[e.lift] = Math.max(bestOf[e.lift] || 0, num(e.weight_lb)); });
+  const otherBests = Object.entries(bestOf).filter(([id]) => !D.LIFT_BY_DB[id]).map(([lift, w]) => ({ lift, weight_lb: w, performed_on: must(hist).find(e => e.lift === lift && num(e.weight_lb) === w).performed_on }));
   const mine = S.me && S.me.id === id, club = D.clubOf(r.total);
   const role = p.role === 'commissioner' ? '<span class="pill acc">Commissioner</span>' : p.role === 'admin' ? '<span class="pill acc">Founder</span>' : '';
   if (!paint(tok, `<article class="card">
@@ -240,7 +243,8 @@ VIEWS.u = async (id, tok) => {
     <div class="bars">${D.LIFTS.map(l => `<div class="brow" style="--c:${l.c}"><span class="ln">${l.n}</span><div class="pb" title="${r.p[l.k]}th percentile"><i style="width:${r.p[l.k]}%"></i><s></s></div><span class="w">${r[l.k] ? fmt(r[l.k]) + ' lb' : 'n/a'}</span><span class="pc">${r.p[l.k] || 0}%</span></div>`).join('')}
       <p class="hint">The line is the median for ${r.age ? 'age ' + r.age : 'your age'} at ${r.bw || 185} lb. Percent is where you rank.</p></div>
   </article>
-  ${Object.keys(gl).length ? `<section class="sec"><h2>Goals</h2><div class="goalRows">${D.LIFTS.filter(l => gl[l.db]).map(l => { const now = r[l.k] || 0, g = gl[l.db], pctg = Math.min(100, Math.round(now / g * 100)); return `<div class="g" style="--c:${l.c}"><h4>${l.n}</h4><div class="big">${fmt(g)} lb</div><div class="pb"><i style="width:${pctg}%"></i></div><div class="now">${now ? fmt(now) + ' now · ' + (g > now ? fmt(g - now) + ' to go' : 'done') : 'no lift yet'}</div></div>`; }).join('')}</div></section>` : ''}
+  ${Object.keys(gl).length ? `<section class="sec"><h2>Goals</h2><div class="goalRows">${Object.keys(gl).map(id => { const now = bestOf[id] || 0, g = gl[id], pctg = Math.min(100, Math.round(now / g * 100)); return `<div class="g" style="--c:${D.liftColor(id)}"><h4>${esc(D.liftName(id))}</h4><div class="big">${fmt(g)} lb</div><div class="pb"><i style="width:${pctg}%"></i></div><div class="now">${now ? fmt(now) + ' now · ' + (g > now ? fmt(g - now) + ' to go' : 'done') : 'no lift yet'}</div></div>`; }).join('')}</div></section>` : ''}
+  ${otherBests.length ? `<section class="sec"><h2>Other <span>lifts</span></h2><div class="goalRows">${otherBests.map(b => `<div class="g" style="--c:var(--muted)"><h4>${esc(D.liftName(b.lift))}</h4><div class="big">${fmt(b.weight_lb)} lb</div><div class="now">${fmtD(b.performed_on)}</div></div>`).join('')}</div></section>` : ''}
   <section class="sec"><h2>Lift <span>history</span></h2><div class="board"><div class="tablewrap"><table><thead><tr><th>Date</th><th>Lift</th><th class="r">Weight</th><th>Status</th><th></th></tr></thead><tbody>
   ${must(hist).map(e => `<tr class="${e.status === 'struck' ? 'struck' : ''}"><td class="n">${fmtD(e.performed_on)}</td><td>${esc(D.liftName(e.lift))}${e.note ? `<div class="sub">${esc(e.note)}</div>` : ''}</td><td class="r n big">${fmt(e.weight_lb)}</td>
     <td>${e.is_pr ? '<span class="pill acc">PR</span>' : ''}${e.status === 'protested' ? '<span class="pill flat">Under protest</span>' : e.status === 'struck' ? '<span class="pill down">Struck</span>' : ''}${e.source === 'workout' ? '<span class="sub"> from workout</span>' : ''}</td>
@@ -260,7 +264,7 @@ VIEWS.log = async (_, tok) => {
   if (!S.me) return needLogin(tok, 'log lifts');
   await loadBoard();
   const r = boardRow(S.me.id) || {};
-  const opts = [...D.LIFTS.map(l => [l.db, l.n + (r[l.k] ? ` (best ${fmt(r[l.k])})` : '')]), ...Object.entries(D.OTHER_LIFTS)];
+  const opts = [...D.LIFTS.map(l => [l.db, D.liftName(l.db) + (r[l.k] ? ` (best ${fmt(r[l.k])})` : '')]), ...Object.entries(D.OTHER_LIFTS)];
   if (!paint(tok, `<section class="sec"><div><div class="eyebrow">New max</div><h2>Log a <span>lift</span></h2></div>
     <p class="lede">Log a heavy single. Beat your old best and it lands on the PR wall with today's date.</p>
     <form class="formCard" id="logF">
@@ -514,9 +518,12 @@ VIEWS.protests = async (_, tok) => {
 /* ---------- me ---------- */
 VIEWS.me = async (_, tok) => {
   if (!S.me) return needLogin(tok, 'see your account');
-  const [board, goals, tiers] = await Promise.all([loadBoard(), sb.from('goals').select('*').eq('profile_id', S.me.id).then(must), sb.from('tiers').select('*').order('sort').then(must)]);
-  const m = S.me, first = !m.display_name, r = boardRow(m.id) || {};
+  const [board, goals, tiers, bests] = await Promise.all([loadBoard(), sb.from('goals').select('*').eq('profile_id', S.me.id).then(must), sb.from('tiers').select('*').order('sort').then(must), sb.from('lift_bests').select('lift,weight_lb').eq('profile_id', S.me.id).then(must)]);
+  const m = S.me, first = !m.display_name;
   const gl = Object.fromEntries(goals.map(g => [g.lift, num(g.target_lb)]));
+  const best = Object.fromEntries(bests.map(b => [b.lift, num(b.weight_lb)]));
+  const goalIds = [...new Set([...D.LIFTS.map(l => l.db), ...goals.map(g => g.lift)])];
+  const goalCard = id => `<div class="g" style="--c:${D.liftColor(id)}"><h4>${esc(D.liftName(id))}</h4><input type="number" min="0" max="1499" step="5" data-g="${id}" value="${gl[id] || ''}" aria-label="${esc(D.liftName(id))} goal"><div class="now">${best[id] ? 'Best ' + fmt(best[id]) + ' lb' : 'No lift yet'}</div></div>`;
   const tier = tiers.find(t => t.id === m.tier) || { name: m.tier };
   const yr = new Date().getFullYear();
   if (!paint(tok, `<section class="sec"><div><div class="eyebrow">${first ? 'Welcome to the index' : 'Your account'}</div><h2>${first ? 'Set up your <span>profile</span>' : esc(m.display_name)}</h2></div>
@@ -532,7 +539,9 @@ VIEWS.me = async (_, tok) => {
       </div>
       <div class="row"><button class="btn" type="submit">${first ? 'Join the board' : 'Save'}</button><span class="hint" id="pf-msg"></span></div>
     </form></section>
-    ${first ? '' : `<section class="sec"><h2>Goals</h2><form class="formCard" id="gf"><div class="goalRows">${D.LIFTS.map(l => `<div class="g" style="--c:${l.c}"><h4>${l.n}</h4><input type="number" min="0" max="1499" step="5" data-g="${l.db}" value="${gl[l.db] || ''}" aria-label="${l.n} goal"><div class="now">${r[l.k] ? 'Best ' + fmt(r[l.k]) + ' lb' : 'No lift yet'}</div></div>`).join('')}</div><div class="row"><button class="btn" type="submit">Save goals</button></div></form></section>
+    ${first ? '' : `<section class="sec"><h2>Goals</h2><form class="formCard" id="gf"><div class="goalRows" id="gRows">${goalIds.map(goalCard).join('')}</div>
+      <div class="row"><label class="vh" for="g-add">Add a goal for another lift</label><select id="g-add" style="max-width:280px"><option value="">Add a goal for another lift…</option>${D.ALL_LIFTS.filter(([id]) => !goalIds.includes(id)).map(([id, n]) => `<option value="${id}">${esc(n)}</option>`).join('')}</select><button class="btn ghost sm" type="button" id="g-addb">Add</button></div>
+      <div class="row"><button class="btn" type="submit">Save goals</button><span class="hint">Clear a box to remove that goal.</span></div></form></section>
     <section class="sec"><h2>Membership</h2><div class="row"><p class="lede">You're on <b>${esc(tier.name)}</b>.</p><a class="btn ghost sm" href="#/join">See levels</a><button class="btn ghost sm" id="so">Sign out</button></div></section>`}`)) return;
   $('#pf').onsubmit = async e => {
     e.preventDefault();
@@ -547,10 +556,22 @@ VIEWS.me = async (_, tok) => {
   const gf = $('#gf');
   if (gf) gf.onsubmit = async e => {
     e.preventDefault();
-    const ups = $$('[data-g]', gf).filter(i => +i.value > 0).map(i => ({ profile_id: m.id, lift: i.dataset.g, target_lb: +i.value, updated_at: new Date().toISOString() }));
-    if (!ups.length) return toast('Enter a goal first');
-    const { error } = await sb.from('goals').upsert(ups, { onConflict: 'profile_id,lift' });
-    toast(error ? error.message : 'Goals saved');
+    const inputs = $$('[data-g]', gf);
+    const ups = inputs.filter(i => +i.value > 0).map(i => ({ profile_id: m.id, lift: i.dataset.g, target_lb: +i.value, updated_at: new Date().toISOString() }));
+    const dels = inputs.filter(i => !(+i.value > 0) && gl[i.dataset.g]).map(i => i.dataset.g);
+    if (!ups.length && !dels.length) return toast('Enter a goal first');
+    const r1 = ups.length ? await sb.from('goals').upsert(ups, { onConflict: 'profile_id,lift' }) : {};
+    const r2 = dels.length ? await sb.from('goals').delete().eq('profile_id', m.id).in('lift', dels) : {};
+    const err = r1.error || r2.error;
+    toast(err ? err.message : 'Goals saved');
+    if (!err) route();
+  };
+  const addb = $('#g-addb');
+  if (addb) addb.onclick = () => {
+    const sel = $('#g-add'), id = sel.value; if (!id) return;
+    $('#gRows').insertAdjacentHTML('beforeend', goalCard(id));
+    sel.querySelector(`option[value="${id}"]`).remove(); sel.value = '';
+    $(`[data-g="${id}"]`).focus();
   };
   const so = $('#so'); if (so) so.onclick = async () => { await sb.auth.signOut(); location.hash = '#/'; };
 };
