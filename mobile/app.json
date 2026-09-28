@@ -2,6 +2,7 @@
   "expo": {
     "name": "DSI",
     "slug": "dsi",
+    "owner": "dandy-strength",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -9,7 +10,8 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.dandystrength.dsi"
+      "bundleIdentifier": "com.dandystrength.dsi",
+      "config": { "usesNonExemptEncryption": false }
     },
     "android": {
       "adaptiveIcon": {
@@ -40,6 +42,9 @@
     "experiments": {
       "typedRoutes": true
     },
-    "backgroundColor": "#0E1420"
+    "backgroundColor": "#0E1420",
+    "extra": {
+      "eas": { "projectId": "3acc4ce1-280f-40f1-963f-b922019f93a3" }
+    }
   }
 }
