@@ -17,10 +17,9 @@ main:focus{outline:none}
 
 /* top bar: brand left, menu centered, account right */
 body{overflow-x:clip}
-.bar{position:sticky;top:0;z-index:20;background:rgba(11,16,25,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin:0 -16px;padding:0 24px;height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px}
+.bar{position:sticky;top:0;z-index:20;background:rgba(11,16,25,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin:0 -16px;padding:0 max(16px,calc((100% + 32px - 1100px)/2));height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;justify-self:start}
-.brand span{font:900 26px/1 var(--disp);letter-spacing:.02em}
-.brand sup{font-size:11px;color:var(--accent)}
+.brand img{display:block;height:44px;width:auto}
 #nav{display:flex;gap:4px;justify-self:center}
 #nav a{position:relative;font:800 18px var(--disp);text-transform:uppercase;letter-spacing:.04em;color:var(--muted);text-decoration:none;padding:20px 12px;white-space:nowrap}
 #nav a:hover{color:var(--ink)}
@@ -36,7 +35,7 @@ body{overflow-x:clip}
 .menuBtn[aria-expanded="true"] span:nth-child(2){opacity:0}
 .menuBtn[aria-expanded="true"] span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
 @media (max-width:860px){
-  .bar{grid-template-columns:1fr auto;padding:0 16px;height:60px}
+  .bar{grid-template-columns:1fr auto;height:60px}
   .menuBtn{display:grid}
   #nav{display:none;position:absolute;top:100%;left:0;right:0;justify-self:stretch;width:100%;flex-direction:column;gap:0;background:#0B1019;border-bottom:1px solid var(--line);padding:8px 16px 20px;box-shadow:0 24px 48px rgba(0,0,0,.5)}
   #nav.open{display:flex}
@@ -45,7 +44,7 @@ body{overflow-x:clip}
   #nav a[aria-current="page"]{color:var(--accent)}
   #nav a[aria-current="page"]::after{display:none}
 }
-@media (max-width:380px){.brand span{display:none}}
+@media (max-width:380px){.brand img{height:36px}}
 
 /* sections: full width bands, content held to the 1100px column */
 main.wrap{max-width:none;margin:0 -16px;display:block;padding:0}
