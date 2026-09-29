@@ -117,11 +117,11 @@ export default function Week() {
                   <Mono style={{ color: C.muted, fontSize: 13 }}>{l.sch}</Mono>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 }}>
-                  <View style={{ width: 80 }}><Eyebrow>Target</Eyebrow><Mono style={{ fontSize: 22, color: C.accent }}>{t || 'n/a'}</Mono></View>
+                  <View style={{ width: 72, flexShrink: 0 }}><Eyebrow>Target</Eyebrow><Mono style={{ fontSize: 22, color: C.accent }}>{t || 'n/a'}</Mono></View>
                   <TextInput value={actual[l.id] ?? ''} onChangeText={v => setActual({ ...actual, [l.id]: v.replace(/[^0-9]/g, '') })}
                     placeholder={t ? String(t) : 'lb'} placeholderTextColor="#5A6478" keyboardType="number-pad" accessibilityLabel={`${l.n} actual weight`}
-                    style={[s.input, { flex: 1, textAlign: 'center' }]} />
-                  <Btn ghost label="Hit" onPress={() => setActual({ ...actual, [l.id]: String(t) })} style={{ height: 52, paddingHorizontal: 12 }} />
+                    style={[s.input, { flex: 1, minWidth: 0, textAlign: 'center' }]} />
+                  <Btn ghost label="Hit" onPress={() => setActual({ ...actual, [l.id]: String(t) })} style={{ height: 52, width: 60, paddingHorizontal: 0, flexShrink: 0 }} />
                 </View>
                 <Muted style={{ marginTop: 6, color: !a ? C.muted : diff >= 0 ? C.up : C.flat }}>
                   {!a ? l.why : diff === 0 ? 'Hit it' : diff > 0 ? `${diff} over target` : `${-diff} under target`}

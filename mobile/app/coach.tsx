@@ -91,7 +91,7 @@ export default function Coach() {
 
       <Card accent={days !== null && days > 45 ? C.down : C.up}>
         <Eyebrow>Momentum</Eyebrow>
-        <Muted style={{ fontSize: 15, marginTop: 4 }}>{days === null ? 'No PRs yet. Your first logged lift sets the baseline.' : days > 45 ? `${days} days since your last PR. Drop the weight 10% for two weeks, then build back with triples.` : `Last PR ${days} day${days === 1 ? '' : 's'} ago. Keep the streak going.`}</Muted>
+        <Muted style={{ fontSize: 15, marginTop: 4 }}>{days === null ? 'No PRs yet. Your first logged lift sets the baseline.' : days > 45 ? `${days} days since your last PR. Drop the weight 10% for two weeks, then build back with triples.` : days === 0 ? 'PR today. Keep the streak going.' : `Last PR ${days} day${days === 1 ? '' : 's'} ago. Keep the streak going.`}</Muted>
       </Card>
       <Muted style={{ textAlign: 'center', fontSize: 12, marginTop: 6 }}>For bragging rights, not medical or training advice.</Muted>
     </Screen>
