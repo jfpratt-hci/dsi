@@ -359,3 +359,20 @@ table.wkT th{padding:8px}
 .impRow{display:grid;grid-template-columns:90px 1fr auto;gap:10px;padding:6px 0;border-top:1px solid var(--line);font-size:14px}
 .impRow .n{font-family:var(--mono)}
 @media (hover:hover){.msg .acts{opacity:0;transition:opacity .15s}.msg:hover .acts,.msg:focus-within .acts{opacity:1}}
+
+/* join */
+.joinGrid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:24px;align-items:start;margin-top:20px}
+.joinGrid #jc{grid-column:1}
+.joinCard{grid-column:2;grid-row:1/span 2;position:sticky;top:84px;padding:22px 24px}
+.joinScore{font:900 88px/1 var(--disp);color:var(--accent);margin:6px 0 8px}
+.formH{font:800 20px var(--disp);letter-spacing:.04em;text-transform:uppercase;margin:4px 0 12px}
+.formH .sub{font:500 13px var(--sans);letter-spacing:0;text-transform:none;margin-left:6px}
+.formH:not(:first-child){margin-top:22px}
+@media (max-width:860px){.joinGrid{grid-template-columns:1fr}.joinCard{grid-column:1;grid-row:auto;position:static}.joinGrid #jc{grid-column:1}}
+@media (max-width:420px){.barR .acct{padding:8px 10px;letter-spacing:.06em}}
+.joinCard .kpi{grid-template-columns:repeat(3,1fr)}.joinCard .kpi div:nth-child(3){border-left:1px solid var(--line)}.joinCard .kpi div{border-top:0!important}.joinCard .kpi b{font-size:22px}
+.joinCard .bars{padding:8px 0}
+.joinCard .brow{grid-template-columns:72px 1fr 44px 40px;gap:8px}
+.joinMini{display:none;margin:12px 0 0;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--panel2)}
+.joinMini b{font:900 30px/1 var(--disp);color:var(--accent);margin-right:10px;vertical-align:middle}
+@media (max-width:860px){.joinMini{display:block}}

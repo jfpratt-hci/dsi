@@ -82,8 +82,9 @@ function updateChrome(r) {
   setMenu(false);
   $$('#nav a').forEach(a => { if (a.dataset.r === r) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   const acct = $('#acct');
-  if (S.me) { acct.textContent = S.me.display_name || 'Set up'; acct.href = '/me'; acct.classList.add('in'); }
+  if (S.me) { acct.textContent = S.me.display_name || 'Finish joining'; acct.href = S.me.display_name ? '/me' : '/join'; acct.classList.add('in'); }
   else { acct.textContent = 'Sign in'; acct.href = '/login'; acct.classList.remove('in'); }
+  $('#joinBtn').hidden = !!S.me || r === 'join';
 }
 
 /* ---------- router ---------- */
@@ -109,7 +110,7 @@ async function route() {
   let r = parts[0] || '';
   for (const ch of S.channels) sb.removeChannel(ch);
   S.channels = [];
-  if (S.me && !S.me.display_name && !['me', 'login'].includes(r)) { go('/me'); return; }
+  if (S.me && !S.me.display_name && !['join', 'login', 'privacy', 'terms', 'support', 'rules'].includes(r)) { go('/join', true); return; }
   if (!VIEWS[r]) r = '';
   updateChrome(r === 'u' ? '' : r);
   const tok = ++S.tok;
@@ -124,7 +125,7 @@ async function route() {
 }
 const paint = (tok, html) => { if (tok !== S.tok) return false; main.innerHTML = html; window.scrollTo(0, 0); return true; };
 function needLogin(tok, what) {
-  return paint(tok, `<section class="prEmpty"><b>Sign in to ${esc(what)}</b><p>Members log lifts, chat and file protests. Boards and PRs stay public.</p><p><a class="btn" href="/login">Sign in</a></p></section>`);
+  return paint(tok, `<section class="prEmpty"><b>Sign in to ${esc(what)}</b><p>Members log lifts, chat and file protests. Boards and PRs stay public.</p><p><a class="btn" href="/login">Sign in</a> <a class="btn ghost" href="/join">Join free</a></p></section>`);
 }
 
 /* ---------- shared actions ---------- */
@@ -171,7 +172,7 @@ VIEWS[''] = async (_, tok) => {
       <img class="logo" src="/assets/logo.svg" alt="Dandy Strength Index" width="760" height="240">
       <h1 class="vh">Dandy Strength Index™</h1>
       <p class="tag">Your bench, squat, deadlift and clean scored against lifters your age and bodyweight. 500 is the median. Every PR moves the board.</p>
-      <div class="cta">${S.me ? '<a class="btn" href="/log">Log a lift</a><a class="btn ghost" href="/week">This week</a>' : '<a class="btn" href="/login">Join the index</a><a class="btn ghost" href="/week">This week</a>'}</div>
+      <div class="cta">${S.me ? '<a class="btn" href="/log">Log a lift</a><a class="btn ghost" href="/week">This week</a>' : '<a class="btn" href="/join">Join the index</a><a class="btn ghost" href="/week">This week</a>'}</div>
     </div>
     <div class="kpi" aria-label="Index stats">
       <div><b>${board.length}</b><span>Lifters</span></div>
@@ -200,7 +201,7 @@ VIEWS[''] = async (_, tok) => {
     <div class="secHead"><div><div class="kicker">The standings</div><h2>Leader<span>board</span></h2><p class="secSub">Filter by division and age, or sort by any lift.</p></div></div>
     <div class="board" id="lb"></div>
   </section>
-  ${S.me ? '' : `<section class="sec band cta2"><div class="secHead"><div><div class="kicker">Free to join</div><h2>Where do <span>you</span> rank?</h2><p class="secSub">Sign in with your email, enter four lifts and see your DSI™ in under a minute.</p></div><a class="btn" href="/login">Join the index</a></div></section>`}`;
+  ${S.me ? '' : `<section class="sec band cta2"><div class="secHead"><div><div class="kicker">Free to join</div><h2>Where do <span>you</span> rank?</h2><p class="secSub">Enter your four lifts, see your DSI™, and save your spot on the board in under a minute.</p></div><a class="btn" href="/join">Join the index</a></div></section>`}`;
   if (!paint(tok, html)) return;
   $$('.king').forEach(b => b.onclick = () => { S.bf.sort = b.dataset.sort; renderBoard(); $('#lb').scrollIntoView({ behavior: 'smooth' }); $$('.king').forEach(k => k.classList.toggle('on', k.dataset.sort === S.bf.sort)); });
   bindActions(main);
@@ -464,7 +465,7 @@ VIEWS.chat = async (roomId, tok) => {
   <div class="chatWrap"><aside class="rooms" aria-label="Rooms">
     <h4>Groups</h4>${groupRooms.map(sideRoom).join('') || '<p class="empty">No groups yet.</p>'}
     ${joinable.map(g => `<div class="room"><b>${esc(g.name)}</b><button class="btn ghost sm" data-join="${g.id}">Join</button></div>`).join('')}
-    ${pro.filter(g => !joinable.includes(g)).map(g => `<a class="room" href="/join"><b>${esc(g.name)}</b><span class="pill acc">Pro</span></a>`).join('')}
+    ${pro.filter(g => !joinable.includes(g)).map(g => `<a class="room" href="/pro"><b>${esc(g.name)}</b><span class="pill acc">Pro</span></a>`).join('')}
     <h4>Threads</h4>${threads.map(sideRoom).join('') || '<p class="empty" style="padding:8px 14px">Hit Talk on any PR, day or protest to start one.</p>'}
     ${S.me.role === 'admin' ? `<h4>New group</h4><form id="ng" class="inlineForm" style="margin:0 10px 10px"><input id="ng-name" maxlength="40" placeholder="Name, like Masters 50+" required><select id="ng-tier"><option value="free">Everyone can join</option><option value="pro">DSI Pro only</option></select><label class="check"><input type="checkbox" id="ng-open" checked><span class="sub">Open to join</span></label><button class="btn sm">Create</button></form>` : ''}
   </aside>
@@ -803,7 +804,6 @@ VIEWS.pro = async (_, tok) => {
 function proGate(tok, what) {
   return paint(tok, `<section class="sec narrow"><div><div class="kicker">DSI Pro</div><h2>${what}</h2><p class="secSub">This is part of DSI Pro.</p></div><div class="row"><a class="btn" href="/pro">See DSI Pro</a></div></section>`);
 }
-VIEWS.join = VIEWS.pro;
 
 // Dependency free SVG line chart
 function lineChart(points, color, goal) {
@@ -978,9 +978,9 @@ VIEWS.support = async (_, tok) => paint(tok, doc('Help', '<span>Support</span>',
 
 /* ---------- login ---------- */
 VIEWS.login = async (_, tok) => {
-  if (S.me) { go(S.me.display_name ? '/' : '/me'); return; }
+  if (S.me) { go(S.me.display_name ? '/' : '/join', true); return; }
   if (!paint(tok, `<section class="sec narrow"><div><div class="kicker">Members</div><h2>Sign <span>in</span></h2></div>
-    <p class="lede">No password. We email you a sign in link and a 6 digit code. Already on the board? Use the same email and your numbers come with you.</p>
+    <p class="lede">No password. We email you a sign in link and a 6 digit code. Already on the board? Use the same email and your numbers come with you. New here? <a href="/join">Join with your four lifts</a>.</p>
     <form class="formCard" id="lg"><div class="field"><label for="lg-e">Email</label><input id="lg-e" type="email" autocomplete="email" required></div>
       <div class="row"><button class="btn" type="submit">Email me a link</button><span class="hint" id="lg-msg"></span></div></form>
     <form class="formCard" id="cd" hidden><div class="field"><label for="cd-c">6 digit code</label><input id="cd-c" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" maxlength="10" required></div>
@@ -1004,6 +1004,111 @@ VIEWS.login = async (_, tok) => {
   };
 };
 
+
+/* ---------- join: four lifts, your DSI, then save it with an email code ---------- */
+const JOIN_KEY = 'dsi.join';
+const readJoin = () => { try { return JSON.parse(localStorage.getItem(JOIN_KEY) || 'null'); } catch { return null; } };
+const saveJoin = v => { try { v ? localStorage.setItem(JOIN_KEY, JSON.stringify(v)) : localStorage.removeItem(JOIN_KEY); } catch {} };
+// Applies a pending signup to a brand new profile. Returning members keep their profile and numbers.
+async function finishJoin() {
+  const j = readJoin();
+  if (!j || !S.me) return null;
+  if (S.me.display_name) { saveJoin(null); return null; }
+  const { data, error } = await sb.from('profiles').update({ display_name: j.name, birth_year: j.by, bodyweight: j.bw, sex: j.sex, division: j.div }).eq('id', S.me.id).select().single();
+  if (error) return { ok: false, error: error.code === '23505' ? 'That board name is taken. Pick another to finish joining.' : error.message };
+  S.me = data;
+  const rows = D.LIFTS.filter(l => +j[l.k] > 0).map(l => ({ profile_id: S.me.id, lift: l.db, weight_lb: +j[l.k], performed_on: today(), source: 'manual', note: 'Signup' }));
+  if (rows.length) { const r = await sb.from('lift_entries').insert(rows); if (r.error) console.error(r.error); }
+  saveJoin(null);
+  return { ok: true };
+}
+VIEWS.join = async (_, tok) => {
+  if (S.me && S.me.display_name) { go('/me', true); return; }
+  const yr = new Date().getFullYear(), j = readJoin() || {}, signedIn = !!S.me;
+  const v = k => esc(j[k] ?? '');
+  const sel = (id, opts, cur) => `<select id="${id}">${opts.map(o => `<option value="${o[0]}"${cur === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>`;
+  if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">Free to join</div><h2>Where do <span>you</span> rank?</h2>
+      <p class="secSub">Your four lifts against lifters your age and size. See your DSI™ now, then save your spot with your email.</p></div></div>
+    <div class="joinGrid">
+    <form class="formCard" id="jf" novalidate>
+      <h3 class="formH">1 · You</h3>
+      <div class="fields">
+        <div class="field w2"><label for="jf-n">Board name</label><input id="jf-n" maxlength="24" autocomplete="nickname" value="${v('name')}" placeholder="Dandy" required></div>
+        <div class="field"><label for="jf-by">Birth year</label><input id="jf-by" type="number" inputmode="numeric" min="${yr - 100}" max="${yr - 13}" value="${v('by')}" placeholder="1985" required></div>
+        <div class="field"><label for="jf-bw">Bodyweight (lb)</label><input id="jf-bw" type="number" inputmode="decimal" min="80" max="450" step="0.1" value="${v('bw')}" placeholder="200" required></div>
+        <div class="field w2"><label for="jf-sex">Sex</label>${sel('jf-sex', [['male', 'Male'], ['female', 'Female'], ['unspecified', 'Prefer not to say']], j.sex || 'male')}</div>
+        <div class="field w2"><label for="jf-div">Division</label>${sel('jf-div', [['men', 'Men'], ['women', 'Women'], ['open', 'Open']], j.div || 'men')}</div>
+      </div>
+      <h3 class="formH">2 · Your four lifts <span class="sub">heaviest single, in pounds</span></h3>
+      <div class="fields">${D.LIFTS.map(l => `<div class="field"><label for="jf-${l.k}" style="color:${l.c}">${l.n}</label><input id="jf-${l.k}" type="number" inputmode="numeric" min="0" max="1499" step="5" value="${v(l.k)}" placeholder="lb"></div>`).join('')}</div>
+      <p class="hint">Leave a lift blank if you don't do it. It scores as zero until you log it.</p>
+      <p class="joinMini" id="jmini" aria-hidden="true"></p>
+      <h3 class="formH">3 · Save your spot</h3>
+      ${signedIn ? `<p class="hint">Signed in as ${esc(S.session.user.email)}.</p>
+      <div class="row"><button class="btn" type="submit">Join the board</button><span class="hint" id="jf-msg"></span></div>`
+      : `<div class="fields"><div class="field w4"><label for="jf-e">Email</label><input id="jf-e" type="email" autocomplete="email" value="${v('email')}" required></div></div>
+      <p class="hint">No password. We email you a 6 digit code. By joining you agree to the <a href="/terms">terms</a> and <a href="/rules">community rules</a>.</p>
+      <div class="row"><button class="btn" type="submit">Email me my code</button><span class="hint" id="jf-msg"></span></div>`}
+    </form>
+    <form class="formCard" id="jc" hidden><h3 class="formH">Enter your code</h3><div class="field"><label for="jc-c">6 digit code</label><input id="jc-c" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" maxlength="10" required></div>
+      <div class="row"><button class="btn" type="submit">Join the board</button><span class="hint" id="jc-msg">Or tap the link in the email.</span></div></form>
+    <aside class="card joinCard" id="jp" aria-live="polite"></aside>
+    </div></section>`)) return;
+  const f = $('#jf');
+  const readForm = () => ({ name: $('#jf-n').value.trim(), by: +$('#jf-by').value || 0, bw: +$('#jf-bw').value || 0, sex: $('#jf-sex').value, div: $('#jf-div').value, email: $('#jf-e') ? $('#jf-e').value.trim().toLowerCase() : '', ...Object.fromEntries(D.LIFTS.map(l => [l.k, +$('#jf-' + l.k).value || 0])) });
+  const preview = () => {
+    const x = readForm(), age = x.by ? yr - x.by : 0, ready = age >= 13 && age <= 100 && x.bw >= 80 && x.bw <= 450, any = D.LIFTS.some(l => x[l.k] > 0);
+    const mini = $('#jmini');
+    if (!ready || !any) { mini.hidden = true; $('#jp').innerHTML = `<div class="eyebrow">Your DSI™</div><div class="joinScore">?</div><p class="sub">${ready ? 'Enter at least one lift.' : 'Enter your birth year and bodyweight, then your lifts.'} Your score updates as you type.</p>`; return; }
+    const r = { bw: x.bw, age, bench: x.bench, squat: x.squat, dead: x.dead, clean: x.clean }, p = D.pcts(r), sc = D.score(r), vd = D.verdict(sc), t = D.total(r);
+    mini.hidden = false; mini.innerHTML = `<b>${sc}</b>Your DSI™ · ${esc(vd[1])}. Full breakdown below.`;
+    $('#jp').innerHTML = `<div class="eyebrow">Your DSI™</div><div class="joinScore">${sc}</div><div class="kpi" style="margin:4px 0 10px"><div><b>${fmt(t)}</b><span>Total lb</span></div><div><b>${age}</b><span>Age</span></div><div><b>${fmt(x.bw)}</b><span>Bodyweight</span></div></div>
+      <p><b style="color:var(--accent)">${esc(vd[1])}.</b> ${esc(vd[3])}</p>
+      <div class="bars">${D.LIFTS.map(l => `<div class="brow" style="--c:${l.c}"><span class="ln">${l.n}</span><div class="pb"><i style="width:${p[l.k]}%"></i><s></s></div><span class="w">${x[l.k] ? fmt(x[l.k]) : 'n/a'}</span><span class="pc">${p[l.k] || 0}%</span></div>`).join('')}</div>
+      <p class="sub">Percentile against lifters your age and bodyweight. Save it to put it on the board.</p>`;
+  };
+  $('#jf-sex').onchange = () => { if ($('#jf-sex').value === 'female' && $('#jf-div').value === 'men') $('#jf-div').value = 'women'; preview(); };
+  f.addEventListener('input', preview); preview();
+  const check = x => {
+    const age = yr - x.by;
+    if (x.name.length < 2) return ['jf-n', 'Pick a board name, at least 2 characters.'];
+    if (!(age >= 13 && age <= 100)) return ['jf-by', 'Enter a real birth year. DSI is for lifters 13 and up.'];
+    if (!(x.bw >= 80 && x.bw <= 450)) return ['jf-bw', 'Bodyweight should be between 80 and 450 lb.'];
+    if (!D.LIFTS.some(l => x[l.k] > 0)) return ['jf-bench', 'Enter at least one of your four lifts.'];
+    if (D.LIFTS.some(l => x[l.k] > 1499)) return ['jf-bench', 'Check your numbers. 1,499 lb is the max.'];
+    if (!signedIn && !/^\S+@\S+\.\S+$/.test(x.email)) return ['jf-e', 'Enter your email so we can send your code.'];
+    return null;
+  };
+  f.onsubmit = async e => {
+    e.preventDefault();
+    const x = readForm(), bad = check(x), msg = $('#jf-msg'), b = f.querySelector('button[type=submit]');
+    if (bad) { msg.textContent = bad[1]; $('#' + bad[0]).focus(); return; }
+    const { data: taken } = await sb.from('profiles').select('id').ilike('display_name', x.name.replace(/[%_\\]/g, '\\$&')).limit(1);
+    if (taken && taken.length) { msg.textContent = 'That board name is taken. Try another.'; $('#jf-n').focus(); return; }
+    saveJoin(x);
+    b.disabled = true;
+    if (signedIn) {
+      msg.textContent = 'Saving…';
+      const r = await finishJoin(); b.disabled = false;
+      if (!r || !r.ok) { msg.textContent = (r && r.error) || 'Could not save. Try again.'; return; }
+      updateChrome(''); toast('You\'re on the board, ' + S.me.display_name); go('/u/' + S.me.id); return;
+    }
+    msg.textContent = 'Sending…';
+    const { error } = await sb.auth.signInWithOtp({ email: x.email, options: { emailRedirectTo: location.origin + '/join', shouldCreateUser: true } });
+    b.disabled = false;
+    if (error) { msg.textContent = error.status === 429 ? 'Too many emails just now. Wait a minute and try again.' : error.message; return; }
+    msg.textContent = 'Code sent to ' + x.email + '.';
+    $('#jc').hidden = false; $('#jc-c').focus();
+  };
+  $('#jc').onsubmit = async e => {
+    e.preventDefault();
+    const x = readJoin() || readForm(), m = $('#jc-msg');
+    m.textContent = 'Checking…';
+    const { error } = await sb.auth.verifyOtp({ email: x.email, token: $('#jc-c').value.trim(), type: 'email' });
+    if (error) m.textContent = 'That code did not work. Check it or send a new one.';
+  };
+};
+
 /* ---------- boot ---------- */
 async function boot() {
   const { data } = await sb.auth.getSession();
@@ -1016,12 +1121,18 @@ async function boot() {
     history.replaceState(null, '', location.hash.slice(1) || '/');
   }
   await loadMe();
+  if (S.me && !S.me.display_name) { const j = await finishJoin(); if (j && j.ok) history.replaceState(null, '', '/u/' + S.me.id); }
   sb.auth.onAuthStateChange((ev, session) => {
     if (ev === 'INITIAL_SESSION' || ev === 'TOKEN_REFRESHED') { S.session = session; return; }
     S.session = session;
     setTimeout(async () => {
       await loadMe();
-      if (ev === 'SIGNED_IN') { if (/^#access_token/.test(location.hash) || ['/', '/login'].includes(location.pathname)) history.replaceState(null, '', S.me && !S.me.display_name ? '/me' : '/'); toast(S.me && S.me.display_name ? 'Welcome back, ' + S.me.display_name : 'Signed in'); }
+      if (ev === 'SIGNED_IN') {
+        const had = S.me && S.me.display_name, j = await finishJoin();
+        if (j && j.ok) { history.replaceState(null, '', '/u/' + S.me.id); toast('You\'re on the board, ' + S.me.display_name); }
+        else if (/^#access_token/.test(location.hash) || ['/', '/login', '/join'].includes(location.pathname)) history.replaceState(null, '', S.me && !S.me.display_name ? '/join' : '/');
+        if (!j || !j.ok) toast(had ? 'Welcome back, ' + S.me.display_name : (j && j.error) || 'Signed in');
+      }
       route();
     }, 0);
   });

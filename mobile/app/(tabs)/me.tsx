@@ -22,8 +22,8 @@ export default function Me() {
   if (!session) return (
     <Screen>
       <Title>Me</Title>
-      <Card><Muted style={{ fontSize: 15 }}>Sign in with the same email you use on dandystrength.com. Your numbers come with you.</Muted></Card>
-      <Btn label="Sign in" onPress={() => router.push('/login')} />
+      <Card><Muted style={{ fontSize: 15 }}>New here? Enter your email, then your four lifts, and you are on the board. Already a member? Use the same email you use on dandystrength.com.</Muted></Card>
+      <Btn label="Join or sign in" onPress={() => router.push('/login')} />
       <View style={{ height: 18 }} />
       <Group title="About">
         <Row first label="Community rules" onPress={() => router.push('/terms')} />
