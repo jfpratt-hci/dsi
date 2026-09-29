@@ -610,6 +610,57 @@ VIEWS.join = async (_, tok) => {
     ${S.me && S.me.tier === t.id ? '<span class="pill up" style="margin:0;justify-self:start">Your level</span>' : t.price_cents ? '<button class="btn" disabled>Coming soon</button>' : S.me ? '' : '<a class="btn" href="#/login">Join free</a>'}</div>`).join('')}</div></section>`);
 };
 
+/* ---------- policies: privacy, terms, support ---------- */
+const CONTACT = 'dandy@dandystrength.com';
+const doc = (kicker, title, updated, body) => `<section class="sec narrow"><div><div class="kicker">${kicker}</div><h2>${title}</h2><p class="secSub">Last updated ${updated}</p></div></section>
+  <section class="sec"><div class="doc">${body}</div></section>`;
+VIEWS.privacy = async (_, tok) => paint(tok, doc('Your data', 'Privacy <span>policy</span>', 'September 29, 2026', `
+  <p>The Dandy Strength Index ("DSI") runs dandystrength.com and the DSI apps for iPhone and Android. This policy explains what we collect and why. Questions: <a href="mailto:${CONTACT}">${CONTACT}</a>.</p>
+  <h3>What we collect</h3>
+  <ul><li><b>Account:</b> your email address, used only to sign you in.</li>
+  <li><b>Profile:</b> board name, birth year, bodyweight, sex and division. These score your lifts fairly against lifters your age and size.</li>
+  <li><b>Training:</b> lifts, goals, workout logs, and any videos you choose to attach.</li>
+  <li><b>Community:</b> chat messages, protests, reports and blocks.</li></ul>
+  <h3>What is public</h3>
+  <p>Your board name, age, bodyweight, division, lifts, PRs, goals and lift videos appear on the public leaderboard and your lifter card. Your email is never shown. Chat is visible only to signed in members of that room.</p>
+  <h3>What we do not do</h3>
+  <p>We do not sell your data, show ads, or use third party tracking or advertising tools.</p>
+  <h3>Who processes it</h3>
+  <p>Supabase stores the database, logins and videos. Resend sends sign in emails. Cloudflare hosts the website. Apple and Google deliver the apps. Each only handles data needed to provide that service.</p>
+  <h3>Your choices</h3>
+  <p>Edit your profile any time. Delete your account in the app under Me, Delete account, or email us. Deleting removes your profile, lifts, goals, logs, messages, videos and login. Removal from backups completes within 30 days.</p>
+  <h3>Age</h3>
+  <p>DSI is for people 13 and older. We do not knowingly collect data from children under 13.</p>
+  <h3>Changes</h3>
+  <p>If this policy changes we will update the date above and post a note in the app.</p>`));
+VIEWS.terms = async (_, tok) => paint(tok, doc('The rules', 'Terms of <span>use</span>', 'September 29, 2026', `
+  <p>By using dandystrength.com or the DSI apps you agree to these terms.</p>
+  <h3>Community rules</h3>
+  <ul><li><b>Log real lifts.</b> Only log weight you actually moved. Fake numbers get struck from the record.</li>
+  <li><b>Talk trash, not hate.</b> Roasts are for people who opt in. No harassment, threats, slurs, or attacks on anyone for who they are.</li>
+  <li><b>Keep it clean.</b> No sexual content, spam, scams, or anything illegal.</li>
+  <li><b>Protest in good faith.</b> The Commissioner rules on every protest.</li>
+  <li><b>Report and block.</b> Report content or block anyone from the app. We review reports within 24 hours and remove content and users who break these rules.</li></ul>
+  <p>There is zero tolerance for objectionable content or abusive users.</p>
+  <h3>Your content</h3>
+  <p>You own what you post. You give DSI permission to display it on the boards, your lifter card and in chat so the service works. You can delete it at any time.</p>
+  <h3>Not training or medical advice</h3>
+  <p>Scores, targets, plans and coach notes are for fun and motivation. They are not medical, health or training advice. Lift safely and within your limits.</p>
+  <h3>Accounts</h3>
+  <p>We may suspend or remove accounts that break these terms. You can delete your account at any time.</p>
+  <h3>DSI Pro</h3>
+  <p>Paid features, when offered, are billed through the App Store or Google Play and renew until cancelled in your store account settings.</p>
+  <h3>Contact</h3>
+  <p><a href="mailto:${CONTACT}">${CONTACT}</a></p>`));
+VIEWS.support = async (_, tok) => paint(tok, doc('Help', '<span>Support</span>', 'September 29, 2026', `
+  <p>Email <a href="mailto:${CONTACT}">${CONTACT}</a> and we will answer within two business days.</p>
+  <h3>Common questions</h3>
+  <p><b>How do I sign in?</b> Enter your email and we send a 6 digit code. Use the same email on the website and the apps and your numbers follow you.</p>
+  <p><b>My code never arrived.</b> Check spam, wait a minute, then tap Send a new code.</p>
+  <p><b>How is my DSI score figured?</b> Each of your bench, squat, deadlift and clean is compared to the median lifter of your age and bodyweight. 500 is the median.</p>
+  <p><b>Someone is harassing me.</b> Long press their message to report or block them. Reports are reviewed within 24 hours.</p>
+  <p><b>How do I delete my account?</b> In the app go to Me, then Delete account. On the web, email us and we will do it for you.</p>`));
+
 /* ---------- login ---------- */
 VIEWS.login = async (_, tok) => {
   if (S.me) { location.hash = S.me.display_name ? '#/' : '#/me'; return; }

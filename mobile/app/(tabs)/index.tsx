@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -35,14 +35,19 @@ export default function Board() {
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
       <ScrollView contentContainerStyle={s.pad}
         refreshControl={<RefreshControl tintColor={C.accent} refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}>
-        <Title eyebrow="Dandy Strength Index™" accent="">Board</Title>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Title eyebrow="Dandy Strength Index™" accent="">Board</Title>
+          <Pressable onPress={() => router.push('/prs')} style={{ borderWidth: 1, borderColor: C.line, borderRadius: 18, paddingHorizontal: 14, height: 36, justifyContent: 'center', marginTop: 18 }} accessibilityRole="button">
+            <Text style={{ color: C.ink, fontWeight: '700', fontSize: 13 }}>PR wall</Text>
+          </Pressable>
+        </View>
 
         {newPRs.slice(0, 3).map(({ r, l }) => (
-          <Card key={r.profile_id + l.k} style={{ backgroundColor: '#221F14', borderColor: C.accent, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Pressable key={r.profile_id + l.k} onPress={() => router.push('/prs')}><Card style={{ backgroundColor: '#221F14', borderColor: C.accent, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Text style={{ backgroundColor: C.accent, color: '#141414', fontWeight: '800', fontSize: 10, letterSpacing: 1.4, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 3 }}>NEW PR</Text>
             <Text style={{ color: C.ink, flex: 1, fontSize: 14 }}><Text style={{ fontWeight: '700' }}>{r.name}</Text> {l.n.toLowerCase()} <Mono>{(r as any)[l.k]}</Mono></Text>
             <Muted>{fmtD((r as any)[l.k + '_date'])}</Muted>
-          </Card>
+          </Card></Pressable>
         ))}
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }}>
@@ -60,7 +65,7 @@ export default function Board() {
           const sub = sort === 'score' ? `${r.total.toLocaleString()} lb total` : sort === 'total' ? `DSI ${r.score}` : isNew((r as any)[sort + '_date']) ? `PR ${fmtD((r as any)[sort + '_date'])}` : `${r.p[sort]}th percentile`;
           const mine = me?.id === r.profile_id;
           return (
-            <Pressable key={r.profile_id} accessibilityRole="button"
+            <Pressable key={r.profile_id} accessibilityRole="button" onPress={() => router.push({ pathname: '/lifter/[id]', params: { id: r.profile_id } })}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderTopWidth: 1, borderTopColor: C.line, backgroundColor: mine ? 'rgba(242,201,76,0.08)' : 'transparent' }}>
               <Text style={{ width: 28, fontSize: 24, fontWeight: '900', color: i === 0 ? C.accent : C.muted }}>{i + 1}</Text>
               <View style={{ flex: 1 }}>

@@ -63,6 +63,13 @@ export default function Week() {
     setMsg('Logged. It shows on the day board.');
   }
 
+  async function talk() {
+    if (!me || !w) { router.push('/login'); return; }
+    const t = `${fmtD(w.day)} · ${w.title}`;
+    const { data, error } = await sb.rpc('room_for', { p_kind: 'workout', p_ref: w.id, p_title: t });
+    if (!error) router.push({ pathname: '/room/[id]', params: { id: data, title: t } });
+  }
+
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
   return (
     <Screen>
@@ -94,6 +101,7 @@ export default function Week() {
               <Text style={{ color: C.ink, fontSize: 24, fontWeight: '900', textTransform: 'uppercase' }}>{w.title}</Text>
             </View>
             <Chip label={showProg ? 'Hide workout' : 'Full workout'} on={false} onPress={() => setShowProg(!showProg)} />
+            <Chip label="Talk" on={false} onPress={talk} />
           </View>
           {w.rest_note ? <Card accent={C.up}><Text style={{ color: C.ink }}>{w.rest_note}</Text></Card> : null}
           {showProg ? <Card>{w.sections.map(x => <View key={x.name} style={{ marginBottom: 8 }}><Text style={{ color: C.ink, fontWeight: '700' }}>{x.name}</Text><Muted>{x.text}</Muted></View>)}</Card> : null}

@@ -9,9 +9,12 @@
     "scheme": "dsi",
     "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.dandystrength.dsi",
-      "config": { "usesNonExemptEncryption": false }
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {}
     },
     "android": {
       "adaptiveIcon": {
@@ -34,17 +37,29 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#0E1420"
         }
-      ]
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "DSI uses your photo library so you can attach a video of your lift.",
+          "cameraPermission": "DSI uses the camera so you can record your lift.",
+          "microphonePermission": "DSI records sound with your lift video."
+        }
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true
     },
     "backgroundColor": "#0E1420",
     "extra": {
-      "eas": { "projectId": "3acc4ce1-280f-40f1-963f-b922019f93a3" }
+      "eas": {
+        "projectId": "3acc4ce1-280f-40f1-963f-b922019f93a3"
+      }
     }
   }
 }

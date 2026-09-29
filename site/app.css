@@ -79,7 +79,7 @@ h1 span,h2 span,h3 span{color:var(--accent)}
 .empty{padding:18px 12px;color:var(--muted)}
 .err{color:var(--down)}
 .foot{position:relative;margin:0 -16px -40px;padding:48px 16px 32px;background:#0A0F18;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
-.footIn{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr;gap:32px}
+.footIn{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:32px}
 @media (max-width:700px){.footIn{grid-template-columns:1fr 1fr}.footBrand{grid-column:1/-1}}
 .footBrand{display:flex;gap:14px;align-items:flex-start}
 .footBrand b{font:900 26px/1 var(--disp);text-transform:uppercase;color:var(--ink)}
@@ -292,3 +292,10 @@ table.wkT th{padding:8px}
 
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:6px;font-weight:600;pointer-events:none;transition:all .2s;max-width:calc(100% - 32px);z-index:10}
 #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* policy pages */
+.doc{max-width:720px;display:grid;gap:12px;font-size:16px;line-height:1.65}
+.doc h3{margin:18px 0 0;font:900 24px/1.1 var(--disp);text-transform:uppercase}
+.doc p,.doc ul{margin:0;color:var(--ink)}
+.doc ul{padding-left:20px;display:grid;gap:6px}
+.doc a{color:var(--accent)}
