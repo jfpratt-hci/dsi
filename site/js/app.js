@@ -58,7 +58,21 @@ async function loadPeople() {
 const nameOf = id => (S.people.get(id) || {}).display_name || 'Someone';
 const boardRow = id => S.board.find(r => r.profile_id === id);
 
+/* mobile menu */
+const nav = $('#nav'), menuBtn = $('#menuBtn');
+function setMenu(open) {
+  nav.classList.toggle('open', open);
+  menuBtn.setAttribute('aria-expanded', String(open));
+  menuBtn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+}
+menuBtn.onclick = () => { const open = !nav.classList.contains('open'); setMenu(open); if (open) nav.querySelector('a').focus(); };
+nav.addEventListener('click', e => { if (e.target.closest('a')) setMenu(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && nav.classList.contains('open')) { setMenu(false); menuBtn.focus(); } });
+document.addEventListener('click', e => { if (nav.classList.contains('open') && !e.target.closest('.bar')) setMenu(false); });
+matchMedia('(min-width:861px)').addEventListener('change', e => { if (e.matches) setMenu(false); });
+
 function updateChrome(r) {
+  setMenu(false);
   $$('#nav a').forEach(a => { if (a.dataset.r === r) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   const acct = $('#acct');
   if (S.me) { acct.textContent = S.me.display_name || 'Set up'; acct.href = '#/me'; acct.classList.add('in'); }
@@ -145,15 +159,27 @@ VIEWS[''] = async (_, tok) => {
       <div><b>${heavy ? fmt(heavy.total) : 0}</b><span>Top total</span></div>
     </div>
   </section>
+  ${S.me ? '' : `<section class="sec band" aria-labelledby="how">
+    <div class="secHead"><div><div class="kicker">How it works</div><h2 id="how">Three steps to the <span>board</span></h2></div></div>
+    <div class="steps">
+      <div class="step"><b>Log your lifts</b><p>Bench, squat, deadlift and clean. One heavy single each, with the date you hit it.</p></div>
+      <div class="step"><b>Get your DSI™</b><p>Each lift is scored against lifters your age and bodyweight. 500 is the median.</p></div>
+      <div class="step"><b>Climb the board</b><p>Every PR moves you up. Follow the daily workout, chase goals, protest the fishy ones.</p></div>
+    </div>
+  </section>`}
   <section class="sec" aria-labelledby="wkprs">
-    <div class="secHead"><h2 id="wkprs">PRs this <span>week</span></h2><a class="chip" href="#/prs">Full PR wall</a></div>
+    <div class="secHead"><div><div class="kicker">This week</div><h2 id="wkprs">Fresh <span>PRs</span></h2><p class="secSub">Every new personal record since Monday.</p></div><a class="btn ghost sm" href="#/prs">Full PR wall</a></div>
     ${weekPRs.length ? `<div class="prGrid">${weekPRs.slice(0, 8).map(prCard).join('')}</div>` : `<div class="prEmpty"><b>No PRs yet this week</b><p>Somebody has to go first. <a href="#/log">Log a lift</a>.</p></div>`}
   </section>
-  <section class="sec" aria-labelledby="kings">
-    <div class="secHead"><h2 id="kings">Lift <span>kings</span></h2></div>
+  <section class="sec band" aria-labelledby="kings">
+    <div class="secHead"><div><div class="kicker">Heaviest on the board</div><h2 id="kings">Lift <span>kings</span></h2><p class="secSub">Tap a lift to sort the leaderboard by it.</p></div></div>
     <div class="kings">${D.LIFTS.map(l => { const k = [...board].sort((a, b) => b[l.k] - a[l.k])[0]; return k && k[l.k] ? `<button class="king${S.bf.sort === l.k ? ' on' : ''}" style="--c:${l.c}" data-sort="${l.k}"><span class="eyebrow">${l.n}</span><b>${esc(k.name)}</b><span class="kv">${fmt(k[l.k])} lb</span>${isNew(k[l.k + '_date']) ? `<span class="prDateNew">PR ${fmtD(k[l.k + '_date'])}</span>` : ''}</button>` : ''; }).join('')}</div>
   </section>
-  <section class="sec" aria-labelledby="lbh"><div class="board" id="lb"></div></section>`;
+  <section class="sec" aria-labelledby="lbh">
+    <div class="secHead"><div><div class="kicker">The standings</div><h2>Leader<span>board</span></h2><p class="secSub">Filter by division and age, or sort by any lift.</p></div></div>
+    <div class="board" id="lb"></div>
+  </section>
+  ${S.me ? '' : `<section class="sec band cta2"><div class="secHead"><div><div class="kicker">Free to join</div><h2>Where do <span>you</span> rank?</h2><p class="secSub">Sign in with your email, enter four lifts and see your DSI™ in under a minute.</p></div><a class="btn" href="#/login">Join the index</a></div></section>`}`;
   if (!paint(tok, html)) return;
   $$('.king').forEach(b => b.onclick = () => { S.bf.sort = b.dataset.sort; renderBoard(); $('#lb').scrollIntoView({ behavior: 'smooth' }); $$('.king').forEach(k => k.classList.toggle('on', k.dataset.sort === S.bf.sort)); });
   bindActions(main);
@@ -210,7 +236,7 @@ VIEWS.prs = async (_, tok) => {
   const feed = must(await sb.from('pr_feed').select('*').limit(200));
   const wk = monday(today());
   const thisWeek = feed.filter(p => p.performed_on >= wk), earlier = feed.filter(p => p.performed_on < wk);
-  if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="eyebrow">Every PR, dated</div><h2>PR <span>wall</span></h2></div>${S.me ? '<a class="btn" href="#/log">Log a lift</a>' : ''}</div>
+  if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">Every PR, dated</div><h2>PR <span>wall</span></h2></div>${S.me ? '<a class="btn" href="#/log">Log a lift</a>' : ''}</div>
     <p class="lede">A PR counts when it beats your old best. Think one is fishy? Protest it and the Commissioner rules.</p></section>
     <section class="sec"><h2>This <span>week</span></h2>${thisWeek.length ? `<div class="prGrid">${thisWeek.map(prCard).join('')}</div>` : '<div class="prEmpty"><b>Quiet week so far</b><p>First PR of the week gets the spotlight.</p></div>'}</section>
     <section class="sec"><h2>Earlier</h2>${earlier.length ? `<div class="prGrid">${earlier.map(prCard).join('')}</div>` : '<p class="empty">Nothing older yet.</p>'}</section>`)) return;
@@ -265,7 +291,7 @@ VIEWS.log = async (_, tok) => {
   await loadBoard();
   const r = boardRow(S.me.id) || {};
   const opts = [...D.LIFTS.map(l => [l.db, D.liftName(l.db) + (r[l.k] ? ` (best ${fmt(r[l.k])})` : '')]), ...Object.entries(D.OTHER_LIFTS)];
-  if (!paint(tok, `<section class="sec"><div><div class="eyebrow">New max</div><h2>Log a <span>lift</span></h2></div>
+  if (!paint(tok, `<section class="sec"><div><div class="kicker">New max</div><h2>Log a <span>lift</span></h2></div>
     <p class="lede">Log a heavy single. Beat your old best and it lands on the PR wall with today's date.</p>
     <form class="formCard" id="logF">
       <div class="fields">
@@ -331,7 +357,7 @@ VIEWS.week = async (day, tok) => {
     }
     body = `<div class="wkBody">${prog}${mine}</div>${dayBoard(w, logs.filter(l => l.workout_id === w.id))}`;
   }
-  if (!paint(tok, `<section class="sec"><div class="wkNav"><div><div class="eyebrow">Week of ${esc(fmtD(start))}</div><h2>The <span>week</span></h2></div>
+  if (!paint(tok, `<section class="sec"><div class="wkNav"><div><div class="kicker">Week of ${esc(fmtD(start))}</div><h2>The <span>week</span></h2></div>
     <div class="row"><a class="btn ghost sm" href="#/week/${addDays(start, -7)}">← Last week</a>${start !== monday(tdy) ? `<a class="btn ghost sm" href="#/week/${tdy}">Today</a>` : ''}<a class="btn ghost sm" href="#/week/${addDays(start, 7)}">Next week →</a></div></div>
     <nav class="wkDays" aria-label="Days">${dayBtns}</nav></section>
     <section class="sec">${body}</section>`)) return;
@@ -398,7 +424,7 @@ VIEWS.chat = async (roomId, tok) => {
   const pro = locked.filter(g => g.min_tier !== 'free');
   const back = room && { pr: ['#/prs', 'PR wall'], workout: ['#/week', 'The week'], protest: ['#/protests', 'Protests'] }[room.kind];
   const sideRoom = r => `<a class="room" href="#/chat/${r.id}" ${room && r.id === room.id ? 'aria-current="page"' : ''}><b>${esc(r.title)}</b><span class="sub">${r.kind === 'group' ? esc((gById.get(r.group_id) || {}).kind || '') : esc(r.kind)}</span></a>`;
-  if (!paint(tok, `<section class="sec"><div><div class="eyebrow">Talk it out</div><h2>The <span>chat</span></h2></div>
+  if (!paint(tok, `<section class="sec"><div><div class="kicker">Talk it out</div><h2>The <span>chat</span></h2></div>
   <div class="chatWrap"><aside class="rooms" aria-label="Rooms">
     <h4>Groups</h4>${groupRooms.map(sideRoom).join('') || '<p class="empty">No groups yet.</p>'}
     ${joinable.map(g => `<div class="room"><b>${esc(g.name)}</b><button class="btn ghost sm" data-join="${g.id}">Join</button></div>`).join('')}
@@ -501,7 +527,7 @@ VIEWS.protests = async (_, tok) => {
     </article>`;
   };
   const open = list.filter(p => p.status === 'open'), done = list.filter(p => p.status !== 'open');
-  if (!paint(tok, `<section class="sec"><div><div class="eyebrow">Commissioner's court</div><h2><span>Protests</span></h2></div>
+  if (!paint(tok, `<section class="sec"><div><div class="kicker">Commissioner's court</div><h2><span>Protests</span></h2></div>
     <p class="lede">See a suspicious PR or a questionable log? Hit Protest on the PR wall, a lifter page or a day board. The lift is flagged until JB31 rules. Struck lifts come off the boards.</p></section>
     <section class="sec"><h2>Open <span>cases</span></h2>${open.length ? `<div class="plist">${open.map(card).join('')}</div>` : '<div class="prEmpty"><b>No open protests</b><p>Peace in the gym. For now.</p></div>'}</section>
     ${done.length ? `<section class="sec"><h2>Ruled</h2><div class="plist">${done.map(card).join('')}</div></section>` : ''}`)) return;
@@ -526,7 +552,7 @@ VIEWS.me = async (_, tok) => {
   const goalCard = id => `<div class="g" style="--c:${D.liftColor(id)}"><h4>${esc(D.liftName(id))}</h4><input type="number" min="0" max="1499" step="5" data-g="${id}" value="${gl[id] || ''}" aria-label="${esc(D.liftName(id))} goal"><div class="now">${best[id] ? 'Best ' + fmt(best[id]) + ' lb' : 'No lift yet'}</div></div>`;
   const tier = tiers.find(t => t.id === m.tier) || { name: m.tier };
   const yr = new Date().getFullYear();
-  if (!paint(tok, `<section class="sec"><div><div class="eyebrow">${first ? 'Welcome to the index' : 'Your account'}</div><h2>${first ? 'Set up your <span>profile</span>' : esc(m.display_name)}</h2></div>
+  if (!paint(tok, `<section class="sec"><div><div class="kicker">${first ? 'Welcome to the index' : 'Your account'}</div><h2>${first ? 'Set up your <span>profile</span>' : esc(m.display_name)}</h2></div>
     ${first ? '<p class="lede">Pick the name that shows on the boards. Age and bodyweight make the score fair.</p>' : `<div class="row"><span class="pill acc" style="margin:0">${esc(tier.name)}</span>${m.role !== 'member' ? `<span class="pill up">${m.role === 'commissioner' ? 'Commissioner' : 'Founder'}</span>` : ''}<span class="sub">${esc(S.session.user.email)}</span><a class="chip" href="#/u/${m.id}">View my card</a></div>`}
     <form class="formCard" id="pf">
       <div class="fields">
@@ -579,7 +605,7 @@ VIEWS.me = async (_, tok) => {
 /* ---------- membership ---------- */
 VIEWS.join = async (_, tok) => {
   const tiers = must(await sb.from('tiers').select('*').order('sort'));
-  paint(tok, `<section class="sec"><div><div class="eyebrow">Membership</div><h2>Pick your <span>level</span></h2></div><p class="lede">The boards, PR wall, daily workouts and chat are free. DSI Pro adds coaching and deeper tools.</p>
+  paint(tok, `<section class="sec"><div><div class="kicker">Membership</div><h2>Pick your <span>level</span></h2></div><p class="lede">The boards, PR wall, daily workouts and chat are free. DSI Pro adds coaching and deeper tools.</p>
   <div class="tiers">${tiers.map((t, i) => `<div class="tier" style="--c:${i ? 'var(--accent)' : 'var(--line)'}"><h3>${esc(t.name)}</h3><div class="price">${t.price_cents ? '$' + (t.price_cents / 100).toFixed(0) + '<span class="sub">/mo</span>' : 'Free'}</div><ul>${(t.perks || []).map(p => `<li>${esc(p)}</li>`).join('')}</ul>
     ${S.me && S.me.tier === t.id ? '<span class="pill up" style="margin:0;justify-self:start">Your level</span>' : t.price_cents ? '<button class="btn" disabled>Coming soon</button>' : S.me ? '' : '<a class="btn" href="#/login">Join free</a>'}</div>`).join('')}</div></section>`);
 };
@@ -587,7 +613,7 @@ VIEWS.join = async (_, tok) => {
 /* ---------- login ---------- */
 VIEWS.login = async (_, tok) => {
   if (S.me) { location.hash = S.me.display_name ? '#/' : '#/me'; return; }
-  if (!paint(tok, `<section class="sec" style="max-width:520px"><div><div class="eyebrow">Members</div><h2>Sign <span>in</span></h2></div>
+  if (!paint(tok, `<section class="sec narrow"><div><div class="kicker">Members</div><h2>Sign <span>in</span></h2></div>
     <p class="lede">No password. We email you a sign in link and a 6 digit code. Already on the board? Use the same email and your numbers come with you.</p>
     <form class="formCard" id="lg"><div class="field"><label for="lg-e">Email</label><input id="lg-e" type="email" autocomplete="email" required></div>
       <div class="row"><button class="btn" type="submit">Email me a link</button><span class="hint" id="lg-msg"></span></div></form>

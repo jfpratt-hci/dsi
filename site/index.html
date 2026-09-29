@@ -41,10 +41,20 @@
     <a href="#/chat" data-r="chat">Chat</a>
     <a href="#/protests" data-r="protests">Protests</a>
   </nav>
-  <a id="acct" class="acct" href="#/login">Sign in</a>
+  <div class="barR">
+    <a id="acct" class="acct" href="#/login">Sign in</a>
+    <button id="menuBtn" class="menuBtn" type="button" aria-controls="nav" aria-expanded="false" aria-label="Open menu"><span></span><span></span><span></span></button>
+  </div>
 </header>
 <main id="main" class="wrap" tabindex="-1"><p class="empty">Loading…</p></main>
-<footer class="wrap foot">Dandy Strength Index™ and DSI™ are trademarks of the Dandy Strength Index. All rights reserved. · Founded by JB31 · <a href="#/join">Membership</a> · For bragging rights, not medical or training advice.</footer>
+<footer class="foot">
+  <div class="footIn">
+    <div class="footBrand"><img src="/assets/icon.svg" alt="" width="40" height="40"><div><b>Dandy Strength <span>Index</span>™</b><p>How strong are you, really? Scored against lifters your age and size.</p></div></div>
+    <nav class="footCol" aria-label="Explore"><h4>Explore</h4><a href="#/">Boards</a><a href="#/prs">PR wall</a><a href="#/week">The week</a><a href="#/protests">Protests</a></nav>
+    <nav class="footCol" aria-label="Members"><h4>Members</h4><a href="#/log">Log a lift</a><a href="#/chat">Chat</a><a href="#/join">Membership</a><a href="#/me">My account</a></nav>
+  </div>
+  <p class="legal">Dandy Strength Index™ and DSI™ are trademarks of the Dandy Strength Index. All rights reserved. Founded by JB31. For bragging rights, not medical or training advice.</p>
+</footer>
 <div id="toast" role="status" aria-live="polite"></div>
 </body>
 </html>
