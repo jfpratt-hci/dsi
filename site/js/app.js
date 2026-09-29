@@ -395,7 +395,7 @@ VIEWS.week = async (day, tok) => {
     body = `<div class="wkBody">${prog}${mine}</div>${dayBoard(w, logs.filter(l => l.workout_id === w.id))}`;
   }
   if (!paint(tok, `<section class="sec"><div class="wkNav"><div><div class="kicker">Week of ${esc(fmtD(start))}</div><h2>The <span>week</span></h2></div>
-    <div class="row"><a class="btn ghost sm" href="/week/${addDays(start, -7)}">← Last week</a>${start !== monday(tdy) ? `<a class="btn ghost sm" href="/week/${tdy}">Today</a>` : ''}<a class="btn ghost sm" href="/week/${addDays(start, 7)}">Next week →</a></div></div>
+    <div class="row"><a class="btn ghost sm" href="/week/${addDays(start, -7)}">← Last week</a>${start !== monday(tdy) ? `<a class="btn ghost sm" href="/week/${tdy}">Today</a>` : ''}<a class="btn ghost sm" href="/week/${addDays(start, 7)}">Next week →</a>${isStaff() ? '<a class="btn sm" href="/program">Import workouts</a>' : ''}</div></div>
     <nav class="wkDays" aria-label="Days">${dayBtns}</nav></section>
     <section class="sec">${body}</section>`)) return;
   bindActions(main, () => route());
@@ -628,7 +628,7 @@ VIEWS.me = async (_, tok) => {
       <div class="row"><label class="vh" for="g-add">Add a goal for another lift</label><select id="g-add" style="max-width:280px"><option value="">Add a goal for another lift…</option>${D.ALL_LIFTS.filter(([id]) => !goalIds.includes(id)).map(([id, n]) => `<option value="${id}">${esc(n)}</option>`).join('')}</select><button class="btn ghost sm" type="button" id="g-addb">Add</button></div>
       <div class="row"><button class="btn" type="submit">Save goals</button><span class="hint">Clear a box to remove that goal.</span></div></form></section>
     <section class="sec"><div><div class="kicker">Community</div><h2>Rules and <span>safety</span></h2></div>
-      <div class="tools">${tile('/rules', 'Community rules', m.terms_accepted_at ? 'You agreed on ' + fmtD(m.terms_accepted_at) + '.' : 'Agree before posting in chat.')}${tile('/blocked', 'Blocked lifters', S.blocked.size ? S.blocked.size + ' blocked' : 'Nobody blocked.')}${isStaff() ? tile('/reports', 'Reports', 'Review reports within 24 hours.') : ''}${tile('/protests', 'Protests', 'The Commissioner\'s court.')}</div></section>
+      <div class="tools">${tile('/rules', 'Community rules', m.terms_accepted_at ? 'You agreed on ' + fmtD(m.terms_accepted_at) + '.' : 'Agree before posting in chat.')}${tile('/blocked', 'Blocked lifters', S.blocked.size ? S.blocked.size + ' blocked' : 'Nobody blocked.')}${isStaff() ? tile('/reports', 'Reports', 'Review reports within 24 hours.') + tile('/program', 'Import workouts', 'Post the week from a gym link or screenshots.') : ''}${tile('/protests', 'Protests', 'The Commissioner\'s court.')}</div></section>
     <section class="sec"><div><div class="kicker">Account</div><h2>Your <span>account</span></h2></div>
       <div class="row"><span class="pill acc" style="margin:0">${pro ? 'DSI Pro' : 'Member'}</span><a class="btn ghost sm" href="/pro">Membership</a><button class="btn ghost sm" id="so">Sign out</button><button class="btn ghost sm dangerText" id="delAcct">Delete account</button></div>
       <p class="hint">Deleting removes your profile, every lift, goal, log, message and video, and your login. It cannot be undone.</p></section>`}`)) return;
@@ -1004,6 +1004,97 @@ VIEWS.login = async (_, tok) => {
   };
 };
 
+
+
+/* ---------- import workouts (staff): gym link, screenshots or text into the week ---------- */
+const BASES = [['squat', 'Squat'], ['dead', 'Deadlift'], ['clean', 'Clean'], ['bench', 'Bench']];
+const shrink = file => new Promise((res, rej) => {
+  const img = new Image(), u = URL.createObjectURL(file);
+  img.onload = () => { const k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u); res(c.toDataURL('image/jpeg', 0.85)); };
+  img.onerror = () => { URL.revokeObjectURL(u); rej(new Error('Could not read ' + file.name)); };
+  img.src = u;
+});
+const liftRule = l => l.rx && l.rx.length ? `${l.rx[0]}${l.rx[1] && l.rx[1] !== l.rx[0] ? ' / ' + l.rx[1] : ''} lb Rx` : l.f ? `${Math.round(l.f * 100)}% of ${(BASES.find(b => b[0] === l.b) || [, l.b])[1].toLowerCase()}` : 'n/a';
+VIEWS.program = async (_, tok) => {
+  if (!S.me) return needLogin(tok, 'import workouts');
+  if (!isStaff()) return paint(tok, '<section class="prEmpty"><b>Staff only</b><p>The Founder and Commissioners post the week.</p><p><a class="btn ghost sm" href="/week">Back to the week</a></p></section>');
+  let mode = 'url', shots = [], draft = null;
+  await loadBoard();
+  if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">Commissioner tools</div><h2>Import <span>workouts</span></h2>
+      <p class="secSub">Point it at your gym's programming page, drop in screenshots of the whiteboard or app, or paste the text. You check the draft, then post it to the week.</p></div><a class="btn ghost sm" href="/week">The week</a></div></section>
+    <section class="sec"><div class="tabs" role="tablist">${[['url', 'Link'], ['shots', 'Screenshots'], ['text', 'Paste text']].map(([k, n], i) => `<button class="tab" role="tab" data-mode="${k}" aria-selected="${!i}">${n}</button>`).join('')}</div>
+    <form class="formCard" id="pg" style="margin-top:16px">
+      <div class="fields">
+        <div class="field w4" data-pane="url"><label for="pg-url">Programming page</label><input id="pg-url" type="url" placeholder="https://yourgym.com/wod" inputmode="url"></div>
+        <div class="field w4" data-pane="shots" hidden><label for="pg-img">Screenshots or photos (up to 10)</label><input id="pg-img" type="file" accept="image/*" multiple><div class="shotRow" id="pg-prev"></div></div>
+        <div class="field w4" data-pane="text" hidden><label for="pg-txt">Workout text</label><textarea id="pg-txt" rows="8" maxlength="30000" placeholder="Monday&#10;A) Back squat 5x5&#10;B) 3 RFT: 10 cleans 135/95, 15 burpees"></textarea></div>
+        <div class="field"><label for="pg-start">First day, if no dates</label><input id="pg-start" type="date" value="${today()}"></div>
+      </div>
+      <div class="row"><button class="btn" type="submit">Read workouts</button><span class="hint" id="pg-msg">Takes about 20 seconds.</span></div>
+    </form></section>
+    <section class="sec" id="pg-draft" hidden></section>`)) return;
+  const setMode = m => { mode = m; $$('[data-mode]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mode === m))); $$('[data-pane]').forEach(p => p.hidden = p.dataset.pane !== m); };
+  $$('[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+  $('#pg-img').onchange = async e => {
+    const files = [...e.target.files].slice(0, 10), msg = $('#pg-msg');
+    msg.textContent = 'Preparing images…';
+    try { shots = await Promise.all(files.map(shrink)); msg.textContent = `${shots.length} image${shots.length === 1 ? '' : 's'} ready.`; }
+    catch (err) { shots = []; msg.textContent = err.message; }
+    $('#pg-prev').innerHTML = shots.map(d => `<img src="${d}" alt="">`).join('');
+  };
+  $('#pg').onsubmit = async e => {
+    e.preventDefault();
+    const msg = $('#pg-msg'), b = e.target.querySelector('button[type=submit]'), body = { start: $('#pg-start').value || null };
+    if (mode === 'url') { body.url = $('#pg-url').value.trim(); if (!body.url) return (msg.textContent = 'Paste the link first.'); }
+    if (mode === 'shots') { body.images = shots; if (!shots.length) return (msg.textContent = 'Add at least one screenshot.'); }
+    if (mode === 'text') { body.text = $('#pg-txt').value.trim(); if (!body.text) return (msg.textContent = 'Paste the workout text first.'); }
+    b.disabled = true; msg.textContent = 'Reading the workouts…';
+    const { data, error } = await sb.functions.invoke('import-workout', { body });
+    b.disabled = false;
+    let errMsg = error && error.message;
+    if (error && error.context && error.context.json) { try { errMsg = (await error.context.json()).error || errMsg; } catch {} }
+    if (errMsg || !data || !(data.days || []).length) { msg.textContent = errMsg || 'No workouts found in that.'; return; }
+    msg.textContent = `Found ${data.days.length} day${data.days.length === 1 ? '' : 's'}. Check them below.`;
+    draft = data; renderDraft();
+  };
+  async function renderDraft() {
+    const days = draft.days.map(d => ({ ...d, lifts: (d.lifts || []).map(l => { const x = { ...l }; if (x.rx && x.rx.length) { if (x.rx.length === 1) x.rx = [x.rx[0], x.rx[0]]; delete x.f; } else delete x.rx; return x; }) }));
+    draft.days = days;
+    const dates = days.map(d => d.day).filter(Boolean);
+    const existing = dates.length ? must(await sb.from('workouts').select('day,title').in('day', dates)) : [];
+    const had = Object.fromEntries(existing.map(x => [x.day, x.title]));
+    const host = $('#pg-draft'); host.hidden = false;
+    host.innerHTML = `<div class="secHead"><div><div class="kicker">Draft${draft.source ? ' · ' + esc(draft.source) : ''}</div><h2>Check and <span>post</span></h2>${draft.notes ? `<p class="secSub">${esc(draft.notes)}</p>` : ''}</div></div>
+      <div class="plist">${days.map((d, i) => `<article class="pcase impDay" style="--c:var(--accent)" data-i="${i}">
+        <div class="impHead"><label class="check"><input type="checkbox" data-inc checked><span class="sub">Post</span></label>
+          <input type="date" data-day value="${esc(d.day || '')}" aria-label="Date"><input data-title maxlength="80" value="${esc(d.title || '')}" aria-label="Title"></div>
+        ${had[d.day] ? `<p class="hint" style="color:var(--flat)">Replaces "${esc(had[d.day])}" on ${esc(fmtD(d.day))}.</p>` : ''}
+        ${d.rest_note ? `<p class="rest">${esc(d.rest_note)}</p>` : ''}
+        ${(d.sections || []).map((s, k) => `<div class="field"><label>${esc(s.name)}</label><textarea rows="${Math.min(6, Math.max(2, Math.ceil(s.text.length / 90)))}" data-sec="${k}">${esc(s.text)}</textarea></div>`).join('')}
+        ${d.lifts.length ? `<div class="tablewrap"><table class="wkT"><thead><tr><th>Lift</th><th>Scheme</th><th>Target rule</th><th class="r">Dandy</th></tr></thead><tbody>${d.lifts.map(l => { const t = D.target(l, boardRow(S.me.id) || {}); return `<tr><td><b>${esc(l.n)}</b>${l.max ? ' <span class="pill acc">Max</span>' : ''}<div class="sub">${esc(l.why || '')}</div></td><td class="n">${esc(l.sch)}</td><td class="n">${esc(liftRule(l))}</td><td class="r tgt">${t ? t + ' lb' : 'n/a'}</td></tr>`; }).join('')}</tbody></table></div>` : ''}
+        ${d.score_label ? `<p class="sub">Scored by ${esc(d.score_label)}${d.pr_lift ? ' · counts as a ' + esc(D.liftName(d.pr_lift)) + ' PR' : ''}</p>` : ''}
+      </article>`).join('')}</div>
+      <div class="row" style="margin-top:16px"><button class="btn" id="pg-post">Post to the week</button><span class="hint" id="pg-pmsg">Targets use each lifter's own PRs. The last column shows yours.</span></div>`;
+    $('#pg-post').onclick = async () => {
+      const rows = $$('.impDay', host).filter(a => $('[data-inc]', a).checked).map(a => {
+        const d = days[+a.dataset.i];
+        return { day: $('[data-day]', a).value, title: $('[data-title]', a).value.trim() || d.title, source: draft.source || null,
+          sections: (d.sections || []).map((s, k) => ({ name: s.name, text: $(`[data-sec="${k}"]`, a).value.trim() })).filter(s => s.text),
+          lifts: d.lifts, score_label: d.score_label || null, score_type: ['time', 'text'].includes(d.score_type) ? d.score_type : (d.score_label ? 'text' : null),
+          rest_note: d.rest_note || null, pr_lift: ['bench', 'squat', 'deadlift', 'clean'].includes(d.pr_lift) ? d.pr_lift : null };
+      });
+      const pm = $('#pg-pmsg');
+      if (!rows.length) return (pm.textContent = 'Tick at least one day.');
+      if (rows.some(r => !/^\d{4}-\d{2}-\d{2}$/.test(r.day))) return (pm.textContent = 'Every day needs a date.');
+      if (new Set(rows.map(r => r.day)).size !== rows.length) return (pm.textContent = 'Two days share a date. Fix one.');
+      pm.textContent = 'Posting…';
+      const { error } = await sb.from('workouts').upsert(rows, { onConflict: 'day' });
+      if (error) { pm.textContent = error.message; return; }
+      toast(`Posted ${rows.length} day${rows.length === 1 ? '' : 's'}`);
+      go('/week/' + rows.map(r => r.day).sort()[0]);
+    };
+  }
+};
 
 /* ---------- join: four lifts, your DSI, then save it with an email code ---------- */
 const JOIN_KEY = 'dsi.join';

@@ -375,3 +375,10 @@ table.wkT th{padding:8px}
 .joinMini{display:none;margin:12px 0 0;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--panel2)}
 .joinMini b{font:900 30px/1 var(--disp);color:var(--accent);margin-right:10px;vertical-align:middle}
 @media (max-width:860px){.joinMini{display:block}}
+/* import workouts */
+.shotRow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.shotRow img{width:88px;height:88px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+.impHead{display:grid;grid-template-columns:auto 170px 1fr;gap:10px;align-items:center;margin-bottom:10px}
+.impDay textarea{width:100%}
+.impDay .field{margin-bottom:10px}
+@media (max-width:600px){.impHead{grid-template-columns:auto 1fr}.impHead [data-title]{grid-column:1/-1}}
