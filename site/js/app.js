@@ -387,7 +387,7 @@ VIEWS.week = async (day, tok) => {
       const ent = (myLog && myLog.entries) || {};
       mine = `<form class="wkMine" id="wkF"><h3>${esc(S.me.display_name)}'s <span>numbers</span></h3>
         <div class="tablewrap"><table class="wkT"><thead><tr><th>Lift</th><th>Scheme</th><th class="r">Target</th><th class="r">Actual</th></tr></thead><tbody>
-        ${(w.lifts || []).map(l => { const t = D.target(l, meRow); return `<tr><td><b>${esc(l.n)}</b><div class="sub">${esc(l.why)}</div></td><td class="n">${esc(l.sch)}</td><td class="r tgt">${t ? t + ' lb' : 'n/a'}</td><td class="r"><input class="wkIn" type="number" inputmode="numeric" step="5" min="0" max="1499" data-id="${esc(l.id)}" value="${esc(ent[l.id] ?? '')}" placeholder="${t || 'lb'}" aria-label="${esc(l.n)} actual weight"></td></tr>`; }).join('')}
+        ${(w.lifts || []).map(l => { const t = D.target(l, meRow); return `<tr><td><b>${esc(l.n)}</b><div class="sub">${esc(l.why)}</div></td><td class="n">${esc(l.sch)}</td><td class="r tgt">${t ? t + ' lb' : 'n/a'}</td><td class="r"><input class="wkIn" type="number" inputmode="numeric" step="any" min="0" max="1499" data-id="${esc(l.id)}" value="${esc(ent[l.id] ?? '')}" placeholder="${t || 'lb'}" aria-label="${esc(l.n)} actual weight"></td></tr>`; }).join('')}
         ${w.score_label ? `<tr><td><b>${esc(w.score_label)}</b><div class="sub">${w.score_type === 'time' ? 'mm:ss' : 'Your score'}</div></td><td></td><td></td><td class="r"><input class="wkIn wkScore" type="text" maxlength="40" id="wkScore" value="${esc(myLog?.score || '')}" placeholder="${w.score_type === 'time' ? '12:34' : 'score'}" aria-label="${esc(w.score_label)}"></td></tr>` : ''}
         </tbody></table></div>
         <div class="row"><button class="btn" type="submit">${myLog ? 'Update log' : 'Log it'}</button><span class="hint" id="wkMsg">${myLog ? 'Logged. Update any time.' : 'Hit the targets, then log what you actually did.'}</span></div></form>`;
@@ -403,7 +403,7 @@ VIEWS.week = async (day, tok) => {
   if (f) f.onsubmit = async e => {
     e.preventDefault();
     const entries = {};
-    $$('.wkIn[data-id]', f).forEach(i => { const v = i.value.trim(); if (v) entries[i.dataset.id] = Math.max(0, Math.min(1499, Math.round(+v) || 0)); });
+    $$('.wkIn[data-id]', f).forEach(i => { const v = i.value.trim(); if (v) entries[i.dataset.id] = Math.max(0, Math.min(1499, Math.round(+v * 2) / 2 || 0)); });
     const score = $('#wkScore') ? $('#wkScore').value.trim().slice(0, 40) : '';
     const msg = $('#wkMsg'), b = f.querySelector('button');
     if (!Object.keys(entries).length && !score) { msg.textContent = 'Enter at least one number.'; return; }
@@ -600,7 +600,7 @@ VIEWS.me = async (_, tok) => {
   const best = Object.fromEntries(bests.map(b => [b.lift, num(b.weight_lb)]));
   const goalIds = [...new Set([...D.LIFTS.map(l => l.db), ...goals.map(g => g.lift)])];
   const WEEKS = [8, 12, 16, 24];
-  const goalCard = id => { const g = gl[id] || {}; return `<div class="g" style="--c:${D.liftColor(id)}"><h4>${esc(D.liftName(id))}</h4><input type="number" min="0" max="1499" step="5" data-g="${id}" value="${g.target_lb ? num(g.target_lb) : ''}" aria-label="${esc(D.liftName(id))} goal"><div class="now">${best[id] ? 'Best ' + fmt(best[id]) + ' lb' : 'No lift yet'}</div>
+  const goalCard = id => { const g = gl[id] || {}; return `<div class="g" style="--c:${D.liftColor(id)}"><h4>${esc(D.liftName(id))}</h4><input type="number" min="0" max="1499" step="any" data-g="${id}" value="${g.target_lb ? num(g.target_lb) : ''}" aria-label="${esc(D.liftName(id))} goal"><div class="now">${best[id] ? 'Best ' + fmt(best[id]) + ' lb' : 'No lift yet'}</div>
     ${pro ? `<select data-gd="${id}" aria-label="${esc(D.liftName(id))} goal date"><option value="">No date</option>${WEEKS.map(w => { const d = addDays(today(), w * 7); return `<option value="${d}">${w} weeks · ${fmtD(d)}</option>`; }).join('')}${g.target_date ? `<option value="${g.target_date}" selected>By ${fmtD(g.target_date)}</option>` : ''}</select>` : ''}</div>`; };
   const row = boardRow(m.id), v = row ? D.verdict(row.score) : null;
   const yr = new Date().getFullYear();
@@ -1131,7 +1131,7 @@ VIEWS.join = async (_, tok) => {
         <div class="field w2"><label for="jf-div">Division</label>${sel('jf-div', [['men', 'Men'], ['women', 'Women'], ['open', 'Open']], j.div || 'men')}</div>
       </div>
       <h3 class="formH">2 · Your four lifts <span class="sub">heaviest single, in pounds</span></h3>
-      <div class="fields">${D.LIFTS.map(l => `<div class="field"><label for="jf-${l.k}" style="color:${l.c}">${l.n}</label><input id="jf-${l.k}" type="number" inputmode="numeric" min="0" max="1499" step="5" value="${v(l.k)}" placeholder="lb"></div>`).join('')}</div>
+      <div class="fields">${D.LIFTS.map(l => `<div class="field"><label for="jf-${l.k}" style="color:${l.c}">${l.n}</label><input id="jf-${l.k}" type="number" inputmode="numeric" min="0" max="1499" step="any" value="${v(l.k)}" placeholder="lb"></div>`).join('')}</div>
       <p class="hint">Leave a lift blank if you don't do it. It scores as zero until you log it.</p>
       <p class="joinMini" id="jmini" aria-hidden="true"></p>
       <h3 class="formH">3 · Save your spot</h3>

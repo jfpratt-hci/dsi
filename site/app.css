@@ -227,9 +227,9 @@ tr.struck td{opacity:.45;text-decoration:line-through}
 .wd i{position:absolute;top:3px;right:5px;font-style:normal;font-size:11px;color:var(--up)}
 .wd.on i{color:var(--bg)}
 .wkNav{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.wkBody{display:grid;grid-template-columns:1fr 1.15fr;gap:16px;align-items:start}
+.wkBody{display:grid;grid-template-columns:1fr 1.15fr;gap:16px;align-items:stretch}
 @media (max-width:860px){.wkBody{grid-template-columns:1fr}}
-.wkProg,.wkMine{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px 20px;display:grid;gap:12px}
+.wkProg,.wkMine{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px 20px;display:grid;gap:12px;align-content:start}
 .wkProg h3,.wkMine h3{margin:0;font:900 30px/1 var(--disp);text-transform:uppercase}
 .wkSec{border-left:3px solid var(--line);padding-left:12px;display:grid;gap:2px}
 .wkSec b{font:800 17px var(--disp);text-transform:uppercase;letter-spacing:.02em}
