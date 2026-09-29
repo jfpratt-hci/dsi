@@ -35,8 +35,8 @@ export default function Terms() {
         </Card>
       ))}
       <View style={{ flexDirection: 'row', gap: 16, marginVertical: 10 }}>
-        <Text style={{ color: C.accent }} onPress={() => Linking.openURL('https://dandystrength.com/#/terms')}>Terms of use</Text>
-        <Text style={{ color: C.accent }} onPress={() => Linking.openURL('https://dandystrength.com/#/privacy')}>Privacy policy</Text>
+        <Text style={{ color: C.accent }} onPress={() => Linking.openURL('https://dandystrength.com/terms')}>Terms of use</Text>
+        <Text style={{ color: C.accent }} onPress={() => Linking.openURL('https://dandystrength.com/privacy')}>Privacy policy</Text>
       </View>
       {accepted ? <Muted style={{ textAlign: 'center' }}>You accepted these rules.</Muted>
         : <Btn label="I agree" onPress={accept} disabled={busy} />}

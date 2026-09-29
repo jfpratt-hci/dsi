@@ -1,4 +1,4 @@
-// Community rules shown before a member can post. Same text as dandystrength.com/#/terms.
+// Community rules shown before a member can post. Same text as dandystrength.com/terms.
 export const RULES: [string, string][] = [
   ['Log real lifts', 'Only log weight you actually moved. Fake numbers get struck from the record.'],
   ['Talk trash, not hate', 'Roasts are for people who opt in. No harassment, threats, slurs, or attacks on anyone for who they are.'],

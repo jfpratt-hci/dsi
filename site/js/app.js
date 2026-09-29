@@ -75,20 +75,34 @@ function updateChrome(r) {
   setMenu(false);
   $$('#nav a').forEach(a => { if (a.dataset.r === r) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   const acct = $('#acct');
-  if (S.me) { acct.textContent = S.me.display_name || 'Set up'; acct.href = '#/me'; acct.classList.add('in'); }
-  else { acct.textContent = 'Sign in'; acct.href = '#/login'; acct.classList.remove('in'); }
+  if (S.me) { acct.textContent = S.me.display_name || 'Set up'; acct.href = '/me'; acct.classList.add('in'); }
+  else { acct.textContent = 'Sign in'; acct.href = '/login'; acct.classList.remove('in'); }
 }
 
 /* ---------- router ---------- */
 const VIEWS = {};
+// Clean URLs: dandystrength.com/prs, /u/<id>, /week/2026-10-02. Same origin links are handled here without a reload.
+function go(path, replace) {
+  if (path === location.pathname + location.search) { route(); return; }
+  history[replace ? 'replaceState' : 'pushState'](null, '', path);
+  route();
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest && e.target.closest('a[href]');
+  if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target || a.hasAttribute('download')) return;
+  const href = a.getAttribute('href');
+  if (!href.startsWith('/') || href.startsWith('//')) return;
+  if (/^\/(assets|js)\//.test(href) || /\.[a-z0-9]+$/i.test(href)) return;
+  e.preventDefault();
+  go(href);
+});
 async function route() {
-  const h = location.hash;
-  if (/^#(access_token|error)/.test(h)) return;
-  const parts = h.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
+  if (/^#(access_token|error)/.test(location.hash)) return;
+  const parts = location.pathname.replace(/^\/+|\/+$/g, '').split('/').map(decodeURIComponent);
   let r = parts[0] || '';
   for (const ch of S.channels) sb.removeChannel(ch);
   S.channels = [];
-  if (S.me && !S.me.display_name && !['me', 'login'].includes(r)) { location.hash = '#/me'; return; }
+  if (S.me && !S.me.display_name && !['me', 'login'].includes(r)) { go('/me'); return; }
   if (!VIEWS[r]) r = '';
   updateChrome(r === 'u' ? '' : r);
   const tok = ++S.tok;
@@ -97,24 +111,24 @@ async function route() {
     await VIEWS[r](parts[1], tok);
   } catch (e) {
     console.error(e);
-    if (tok === S.tok) main.innerHTML = `<div class="prEmpty"><b>That didn't load</b><p class="err">${esc(e.message || e)}</p><p><a class="btn ghost sm" href="#/">Back to the boards</a></p></div>`;
+    if (tok === S.tok) main.innerHTML = `<div class="prEmpty"><b>That didn't load</b><p class="err">${esc(e.message || e)}</p><p><a class="btn ghost sm" href="/">Back to the boards</a></p></div>`;
   }
   if (tok === S.tok && document.activeElement === document.body) main.focus({ preventScroll: true });
 }
 const paint = (tok, html) => { if (tok !== S.tok) return false; main.innerHTML = html; window.scrollTo(0, 0); return true; };
 function needLogin(tok, what) {
-  return paint(tok, `<section class="prEmpty"><b>Sign in to ${esc(what)}</b><p>Members log lifts, chat and file protests. Boards and PRs stay public.</p><p><a class="btn" href="#/login">Sign in</a></p></section>`);
+  return paint(tok, `<section class="prEmpty"><b>Sign in to ${esc(what)}</b><p>Members log lifts, chat and file protests. Boards and PRs stay public.</p><p><a class="btn" href="/login">Sign in</a></p></section>`);
 }
 
 /* ---------- shared actions ---------- */
 async function openThread(kind, ref, title) {
-  if (!S.me) { location.hash = '#/login'; return; }
+  if (!S.me) { go('/login'); return; }
   const { data, error } = await sb.rpc('room_for', { p_kind: kind, p_ref: ref, p_title: title });
   if (error) { toast(error.message); return; }
-  location.hash = '#/chat/' + data;
+  go('/chat/' + data);
 }
 function protestForm(host, type, id, label, done) {
-  if (!S.me) { location.hash = '#/login'; return; }
+  if (!S.me) { go('/login'); return; }
   if (host.querySelector('.inlineForm')) { host.querySelector('.inlineForm').remove(); return; }
   const f = document.createElement('form');
   f.className = 'inlineForm';
@@ -150,7 +164,7 @@ VIEWS[''] = async (_, tok) => {
       <img class="logo" src="/assets/logo.svg" alt="Dandy Strength Index" width="760" height="240">
       <h1 class="vh">Dandy Strength Index™</h1>
       <p class="tag">Your bench, squat, deadlift and clean scored against lifters your age and bodyweight. 500 is the median. Every PR moves the board.</p>
-      <div class="cta">${S.me ? '<a class="btn" href="#/log">Log a lift</a><a class="btn ghost" href="#/week">This week</a>' : '<a class="btn" href="#/login">Join the index</a><a class="btn ghost" href="#/week">This week</a>'}</div>
+      <div class="cta">${S.me ? '<a class="btn" href="/log">Log a lift</a><a class="btn ghost" href="/week">This week</a>' : '<a class="btn" href="/login">Join the index</a><a class="btn ghost" href="/week">This week</a>'}</div>
     </div>
     <div class="kpi" aria-label="Index stats">
       <div><b>${board.length}</b><span>Lifters</span></div>
@@ -168,8 +182,8 @@ VIEWS[''] = async (_, tok) => {
     </div>
   </section>`}
   <section class="sec" aria-labelledby="wkprs">
-    <div class="secHead"><div><div class="kicker">This week</div><h2 id="wkprs">Fresh <span>PRs</span></h2><p class="secSub">Every new personal record since Monday.</p></div><a class="btn ghost sm" href="#/prs">Full PR wall</a></div>
-    ${weekPRs.length ? `<div class="prGrid">${weekPRs.slice(0, 8).map(prCard).join('')}</div>` : `<div class="prEmpty"><b>No PRs yet this week</b><p>Somebody has to go first. <a href="#/log">Log a lift</a>.</p></div>`}
+    <div class="secHead"><div><div class="kicker">This week</div><h2 id="wkprs">Fresh <span>PRs</span></h2><p class="secSub">Every new personal record since Monday.</p></div><a class="btn ghost sm" href="/prs">Full PR wall</a></div>
+    ${weekPRs.length ? `<div class="prGrid">${weekPRs.slice(0, 8).map(prCard).join('')}</div>` : `<div class="prEmpty"><b>No PRs yet this week</b><p>Somebody has to go first. <a href="/log">Log a lift</a>.</p></div>`}
   </section>
   <section class="sec band" aria-labelledby="kings">
     <div class="secHead"><div><div class="kicker">Heaviest on the board</div><h2 id="kings">Lift <span>kings</span></h2><p class="secSub">Tap a lift to sort the leaderboard by it.</p></div></div>
@@ -179,7 +193,7 @@ VIEWS[''] = async (_, tok) => {
     <div class="secHead"><div><div class="kicker">The standings</div><h2>Leader<span>board</span></h2><p class="secSub">Filter by division and age, or sort by any lift.</p></div></div>
     <div class="board" id="lb"></div>
   </section>
-  ${S.me ? '' : `<section class="sec band cta2"><div class="secHead"><div><div class="kicker">Free to join</div><h2>Where do <span>you</span> rank?</h2><p class="secSub">Sign in with your email, enter four lifts and see your DSI™ in under a minute.</p></div><a class="btn" href="#/login">Join the index</a></div></section>`}`;
+  ${S.me ? '' : `<section class="sec band cta2"><div class="secHead"><div><div class="kicker">Free to join</div><h2>Where do <span>you</span> rank?</h2><p class="secSub">Sign in with your email, enter four lifts and see your DSI™ in under a minute.</p></div><a class="btn" href="/login">Join the index</a></div></section>`}`;
   if (!paint(tok, html)) return;
   $$('.king').forEach(b => b.onclick = () => { S.bf.sort = b.dataset.sort; renderBoard(); $('#lb').scrollIntoView({ behavior: 'smooth' }); $$('.king').forEach(k => k.classList.toggle('on', k.dataset.sort === S.bf.sort)); });
   bindActions(main);
@@ -192,7 +206,7 @@ function prCard(p) {
   const mine = S.me && S.me.id === p.profile_id;
   return `<article class="prCard${hot ? ' hot' : ''}${p.status === 'protested' ? ' protested' : ''}" style="--c:${l.c}" data-host>
     <div class="prTop"><span class="prTag">${hot ? 'New PR' : 'PR'}</span><span class="prDate">${fmtD(p.performed_on)}</span></div>
-    <a class="prName" href="#/u/${p.profile_id}">${esc(p.name)}</a>
+    <a class="prName" href="/u/${p.profile_id}">${esc(p.name)}</a>
     <div class="prLift">${esc(l.n)} <b>${fmt(p.weight_lb)} lb</b>${p.status === 'protested' ? '<span class="pill flat">Under protest</span>' : ''}</div>
     ${gain ? `<div class="prGain">+${fmt(gain)} lb</div><div class="sub">was ${fmt(p.prev_best)}</div>` : ''}
     <div class="prAct"><button class="btn ghost sm" data-thread="pr" data-ref="${p.id}" data-title="${esc(p.name + ' ' + l.n + ' ' + num(p.weight_lb))}">Talk</button>${!mine && p.status === 'ok' ? `<button class="btn ghost sm" data-protest="lift_entry" data-ref="${p.id}" data-title="${esc(p.name + ' ' + l.n + ' ' + num(p.weight_lb) + ' lb')}">Protest</button>` : ''}</div>
@@ -220,7 +234,7 @@ function renderBoard() {
     ${rows.map((r, i) => {
       const club = D.clubOf(r.total);
       return `<tr class="${S.me && S.me.id === r.profile_id ? 'me' : ''}"><td class="pos">${i + 1}</td>
-      <td><div class="who"><a href="#/u/${r.profile_id}">${esc(r.name)}</a>${r.roast_opt_in ? '<i class="fire" title="Opted in to roasts">🔥</i>' : ''}${r.has_protest ? '<span class="pill flat">Protest</span>' : ''}</div><div class="sub">${r.age ? 'Age ' + r.age + ' · ' : ''}${r.bw ? r.bw + ' lb · ' : ''}${esc(r.division)}</div></td>
+      <td><div class="who"><a href="/u/${r.profile_id}">${esc(r.name)}</a>${r.roast_opt_in ? '<i class="fire" title="Opted in to roasts">🔥</i>' : ''}${r.has_protest ? '<span class="pill flat">Protest</span>' : ''}</div><div class="sub">${r.age ? 'Age ' + r.age + ' · ' : ''}${r.bw ? r.bw + ' lb · ' : ''}${esc(r.division)}</div></td>
       <td class="r n big">${r.score}</td><td class="r n">${fmt(r.total)}${club ? `<span class="club">${fmt(club)}</span>` : ''}</td>
       ${D.LIFTS.map(l => r[l.k] ? `<td class="r n">${fmt(r[l.k])}<div class="sub">${isNew(r[l.k + '_date']) ? `<span class="prDateNew">PR ${fmtD(r[l.k + '_date'])}</span>` : r.p[l.k] + 'th pct'}</div></td>` : '<td class="r sub">n/a</td>').join('')}
       </tr>`;
@@ -236,7 +250,7 @@ VIEWS.prs = async (_, tok) => {
   const feed = must(await sb.from('pr_feed').select('*').limit(200));
   const wk = monday(today());
   const thisWeek = feed.filter(p => p.performed_on >= wk), earlier = feed.filter(p => p.performed_on < wk);
-  if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">Every PR, dated</div><h2>PR <span>wall</span></h2></div>${S.me ? '<a class="btn" href="#/log">Log a lift</a>' : ''}</div>
+  if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">Every PR, dated</div><h2>PR <span>wall</span></h2></div>${S.me ? '<a class="btn" href="/log">Log a lift</a>' : ''}</div>
     <p class="lede">A PR counts when it beats your old best. Think one is fishy? Protest it and the Commissioner rules.</p></section>
     <section class="sec"><h2>This <span>week</span></h2>${thisWeek.length ? `<div class="prGrid">${thisWeek.map(prCard).join('')}</div>` : '<div class="prEmpty"><b>Quiet week so far</b><p>First PR of the week gets the spotlight.</p></div>'}</section>
     <section class="sec"><h2>Earlier</h2>${earlier.length ? `<div class="prGrid">${earlier.map(prCard).join('')}</div>` : '<p class="empty">Nothing older yet.</p>'}</section>`)) return;
@@ -245,7 +259,7 @@ VIEWS.prs = async (_, tok) => {
 
 /* ---------- lifter page ---------- */
 VIEWS.u = async (id, tok) => {
-  if (!id) { location.hash = '#/'; return; }
+  if (!id) { go('/'); return; }
   const [board, prof, hist, goals] = await Promise.all([
     loadBoard(),
     sb.from('profiles').select('id,display_name,division,sex,birth_year,bodyweight,roast_opt_in,role,tier').eq('id', id).maybeSingle(),
@@ -311,7 +325,7 @@ VIEWS.log = async (_, tok) => {
     if (error) { msg.textContent = error.message; return; }
     const name = D.liftName(data.lift);
     if (data.is_pr) {
-      msg.innerHTML = `<b style="color:var(--accent)">New ${esc(name)} PR: ${data.prev_best ? fmt(data.prev_best) + ' → ' : ''}${fmt(data.weight_lb)} lb.</b> It's on the <a href="#/prs">PR wall</a>.`;
+      msg.innerHTML = `<b style="color:var(--accent)">New ${esc(name)} PR: ${data.prev_best ? fmt(data.prev_best) + ' → ' : ''}${fmt(data.weight_lb)} lb.</b> It's on the <a href="/prs">PR wall</a>.`;
       toast(`New ${name} PR!`);
     } else msg.textContent = `Logged ${fmt(data.weight_lb)} lb. Your best is still ${fmt(data.prev_best)}.`;
     $('#lf-w').value = ''; $('#lf-n').value = '';
@@ -334,7 +348,7 @@ VIEWS.week = async (day, tok) => {
   const days = [...Array(7)].map((_, i) => addDays(start, i));
   const dayBtns = days.map(d => {
     const has = wks.find(x => x.day === d), logged = S.me && has && logs.some(l => l.workout_id === has.id && l.profile_id === S.me.id);
-    return `<a class="wd${d === sel ? ' on' : ''}${d === tdy ? ' today' : ''}" href="#/week/${d}" ${d === sel ? 'aria-current="date"' : ''}><span>${pd(d).toLocaleDateString('en-US', { weekday: 'short' })}</span><b>${pd(d).getDate()}</b>${logged ? '<i title="Logged">✓</i>' : ''}</a>`;
+    return `<a class="wd${d === sel ? ' on' : ''}${d === tdy ? ' today' : ''}" href="/week/${d}" ${d === sel ? 'aria-current="date"' : ''}><span>${pd(d).toLocaleDateString('en-US', { weekday: 'short' })}</span><b>${pd(d).getDate()}</b>${logged ? '<i title="Logged">✓</i>' : ''}</a>`;
   }).join('');
   let body = '';
   if (!w) body = `<div class="prEmpty"><b>No programming for ${esc(fmtDW(sel))}</b><p>${wks.length ? 'Pick another day above.' : 'This week has not been posted yet.'}</p></div>`;
@@ -345,7 +359,7 @@ VIEWS.week = async (day, tok) => {
       <div class="row"><button class="btn ghost sm" data-thread="workout" data-ref="${w.id}" data-title="${esc(fmtD(w.day) + ' · ' + w.title)}">Day thread</button></div></div>`;
     let mine = '';
     if (!(w.lifts || []).length && !w.score_label) mine = `<div class="wkMine"><h3>Rest <span>day</span></h3><p class="hint">Nothing to log. Recover like it's your job.</p></div>`;
-    else if (!S.me) mine = `<div class="wkMine"><h3>Your <span>numbers</span></h3><p class="hint">Sign in and every weight here is built from your own PRs. Then log what you actually did.</p><a class="btn" href="#/login">Sign in</a></div>`;
+    else if (!S.me) mine = `<div class="wkMine"><h3>Your <span>numbers</span></h3><p class="hint">Sign in and every weight here is built from your own PRs. Then log what you actually did.</p><a class="btn" href="/login">Sign in</a></div>`;
     else {
       const ent = (myLog && myLog.entries) || {};
       mine = `<form class="wkMine" id="wkF"><h3>${esc(S.me.display_name)}'s <span>numbers</span></h3>
@@ -358,7 +372,7 @@ VIEWS.week = async (day, tok) => {
     body = `<div class="wkBody">${prog}${mine}</div>${dayBoard(w, logs.filter(l => l.workout_id === w.id))}`;
   }
   if (!paint(tok, `<section class="sec"><div class="wkNav"><div><div class="kicker">Week of ${esc(fmtD(start))}</div><h2>The <span>week</span></h2></div>
-    <div class="row"><a class="btn ghost sm" href="#/week/${addDays(start, -7)}">← Last week</a>${start !== monday(tdy) ? `<a class="btn ghost sm" href="#/week/${tdy}">Today</a>` : ''}<a class="btn ghost sm" href="#/week/${addDays(start, 7)}">Next week →</a></div></div>
+    <div class="row"><a class="btn ghost sm" href="/week/${addDays(start, -7)}">← Last week</a>${start !== monday(tdy) ? `<a class="btn ghost sm" href="/week/${tdy}">Today</a>` : ''}<a class="btn ghost sm" href="/week/${addDays(start, 7)}">Next week →</a></div></div>
     <nav class="wkDays" aria-label="Days">${dayBtns}</nav></section>
     <section class="sec">${body}</section>`)) return;
   bindActions(main, () => route());
@@ -398,7 +412,7 @@ function dayBoard(w, logs) {
   ${rows.length ? `<div class="tablewrap"><table class="lb"><thead><tr><th>#</th><th>Lifter</th>${lifts.map(l => `<th class="r">${esc(l.n)}</th>`).join('')}${w.score_label ? `<th class="r">${esc(w.score_label)}</th>` : ''}<th></th></tr></thead><tbody>
   ${rows.map((x, i) => {
     const br = boardRow(x.profile_id) || {}, nm = nameOf(x.profile_id), mine = S.me && S.me.id === x.profile_id;
-    return `<tr class="${mine ? 'me' : ''}${x.status === 'struck' ? ' struck' : ''}"><td class="pos">${i + 1}</td><td class="who"><a href="#/u/${x.profile_id}">${esc(nm)}</a>${x.status === 'protested' ? '<span class="pill flat">Protest</span>' : ''}</td>
+    return `<tr class="${mine ? 'me' : ''}${x.status === 'struck' ? ' struck' : ''}"><td class="pos">${i + 1}</td><td class="who"><a href="/u/${x.profile_id}">${esc(nm)}</a>${x.status === 'protested' ? '<span class="pill flat">Protest</span>' : ''}</td>
     ${lifts.map(l => { const v = num(x.entries[l.id]), t = D.target(l, br); return `<td class="r n">${v ? `<span class="${t && v >= t ? 'hit' : ''}">${v}</span>${t ? `<div class="sub">${Math.round(v / t * 100)}% of target</div>` : ''}` : '<span class="sub">n/a</span>'}</td>`; }).join('')}
     ${w.score_label ? `<td class="r n big">${esc(x.score || '')}</td>` : ''}
     <td class="r" data-host>${S.me && !mine && x.status === 'ok' ? `<button class="btn ghost sm" data-protest="workout_log" data-ref="${x.id}" data-title="${esc(nm + ' · ' + fmtD(w.day) + ' log')}">Protest</button>` : ''}</td></tr>`;
@@ -422,13 +436,13 @@ VIEWS.chat = async (roomId, tok) => {
   const locked = groups.filter(g => !groupRooms.some(r => r.group_id === g.id));
   const joinable = locked.filter(g => g.is_open && !myGroups.has(g.id) && g.kind === 'custom');
   const pro = locked.filter(g => g.min_tier !== 'free');
-  const back = room && { pr: ['#/prs', 'PR wall'], workout: ['#/week', 'The week'], protest: ['#/protests', 'Protests'] }[room.kind];
-  const sideRoom = r => `<a class="room" href="#/chat/${r.id}" ${room && r.id === room.id ? 'aria-current="page"' : ''}><b>${esc(r.title)}</b><span class="sub">${r.kind === 'group' ? esc((gById.get(r.group_id) || {}).kind || '') : esc(r.kind)}</span></a>`;
+  const back = room && { pr: ['/prs', 'PR wall'], workout: ['/week', 'The week'], protest: ['/protests', 'Protests'] }[room.kind];
+  const sideRoom = r => `<a class="room" href="/chat/${r.id}" ${room && r.id === room.id ? 'aria-current="page"' : ''}><b>${esc(r.title)}</b><span class="sub">${r.kind === 'group' ? esc((gById.get(r.group_id) || {}).kind || '') : esc(r.kind)}</span></a>`;
   if (!paint(tok, `<section class="sec"><div><div class="kicker">Talk it out</div><h2>The <span>chat</span></h2></div>
   <div class="chatWrap"><aside class="rooms" aria-label="Rooms">
     <h4>Groups</h4>${groupRooms.map(sideRoom).join('') || '<p class="empty">No groups yet.</p>'}
     ${joinable.map(g => `<div class="room"><b>${esc(g.name)}</b><button class="btn ghost sm" data-join="${g.id}">Join</button></div>`).join('')}
-    ${pro.filter(g => !joinable.includes(g)).map(g => `<a class="room" href="#/join"><b>${esc(g.name)}</b><span class="pill acc">Pro</span></a>`).join('')}
+    ${pro.filter(g => !joinable.includes(g)).map(g => `<a class="room" href="/join"><b>${esc(g.name)}</b><span class="pill acc">Pro</span></a>`).join('')}
     <h4>Threads</h4>${threads.map(sideRoom).join('') || '<p class="empty" style="padding:8px 14px">Hit Talk on any PR, day or protest to start one.</p>'}
     ${S.me.role === 'admin' ? `<h4>New group</h4><form id="ng" class="inlineForm" style="margin:0 10px 10px"><input id="ng-name" maxlength="40" placeholder="Name, like Masters 50+" required><select id="ng-tier"><option value="free">Everyone can join</option><option value="pro">DSI Pro only</option></select><label class="check"><input type="checkbox" id="ng-open" checked><span class="sub">Open to join</span></label><button class="btn sm">Create</button></form>` : ''}
   </aside>
@@ -518,7 +532,7 @@ VIEWS.protests = async (_, tok) => {
     const st = LBL[p.status];
     return `<article class="pcase" style="--c:${p.status === 'open' ? 'var(--flat)' : p.status === 'struck' ? 'var(--down)' : 'var(--up)'}" data-host>
       <div class="row"><span class="pill ${st[1]}" style="margin:0">${st[0]}</span><span class="sub">Filed ${timeAgo(p.created_at)} by ${esc(nameOf(p.filed_by))}</span></div>
-      <h3>${who ? `<a href="#/u/${who}" style="text-decoration:none">${esc(what)}</a>` : esc(what)}</h3>
+      <h3>${who ? `<a href="/u/${who}" style="text-decoration:none">${esc(what)}</a>` : esc(what)}</h3>
       <p>“${esc(p.reason)}”</p>
       ${p.status !== 'open' ? `<p class="ruling"><b>Ruling by ${esc(nameOf(p.ruled_by))}:</b> ${esc(p.ruling_note || (p.status === 'struck' ? 'Struck from the record.' : 'The lift stands.'))}</p>` : ''}
       <div class="row"><button class="btn ghost sm" data-thread="protest" data-ref="${p.id}" data-title="${esc('Protest: ' + what)}">Discuss</button></div>
@@ -553,7 +567,7 @@ VIEWS.me = async (_, tok) => {
   const tier = tiers.find(t => t.id === m.tier) || { name: m.tier };
   const yr = new Date().getFullYear();
   if (!paint(tok, `<section class="sec"><div><div class="kicker">${first ? 'Welcome to the index' : 'Your account'}</div><h2>${first ? 'Set up your <span>profile</span>' : esc(m.display_name)}</h2></div>
-    ${first ? '<p class="lede">Pick the name that shows on the boards. Age and bodyweight make the score fair.</p>' : `<div class="row"><span class="pill acc" style="margin:0">${esc(tier.name)}</span>${m.role !== 'member' ? `<span class="pill up">${m.role === 'commissioner' ? 'Commissioner' : 'Founder'}</span>` : ''}<span class="sub">${esc(S.session.user.email)}</span><a class="chip" href="#/u/${m.id}">View my card</a></div>`}
+    ${first ? '<p class="lede">Pick the name that shows on the boards. Age and bodyweight make the score fair.</p>' : `<div class="row"><span class="pill acc" style="margin:0">${esc(tier.name)}</span>${m.role !== 'member' ? `<span class="pill up">${m.role === 'commissioner' ? 'Commissioner' : 'Founder'}</span>` : ''}<span class="sub">${esc(S.session.user.email)}</span><a class="chip" href="/u/${m.id}">View my card</a></div>`}
     <form class="formCard" id="pf">
       <div class="fields">
         <div class="field w2"><label for="pf-n">Board name</label><input id="pf-n" maxlength="24" required value="${esc(m.display_name || '')}" autocomplete="nickname"></div>
@@ -568,7 +582,7 @@ VIEWS.me = async (_, tok) => {
     ${first ? '' : `<section class="sec"><h2>Goals</h2><form class="formCard" id="gf"><div class="goalRows" id="gRows">${goalIds.map(goalCard).join('')}</div>
       <div class="row"><label class="vh" for="g-add">Add a goal for another lift</label><select id="g-add" style="max-width:280px"><option value="">Add a goal for another lift…</option>${D.ALL_LIFTS.filter(([id]) => !goalIds.includes(id)).map(([id, n]) => `<option value="${id}">${esc(n)}</option>`).join('')}</select><button class="btn ghost sm" type="button" id="g-addb">Add</button></div>
       <div class="row"><button class="btn" type="submit">Save goals</button><span class="hint">Clear a box to remove that goal.</span></div></form></section>
-    <section class="sec"><h2>Membership</h2><div class="row"><p class="lede">You're on <b>${esc(tier.name)}</b>.</p><a class="btn ghost sm" href="#/join">See levels</a><button class="btn ghost sm" id="so">Sign out</button></div></section>`}`)) return;
+    <section class="sec"><h2>Membership</h2><div class="row"><p class="lede">You're on <b>${esc(tier.name)}</b>.</p><a class="btn ghost sm" href="/join">See levels</a><button class="btn ghost sm" id="so">Sign out</button></div></section>`}`)) return;
   $('#pf').onsubmit = async e => {
     e.preventDefault();
     const msg = $('#pf-msg'), b = e.target.querySelector('button'); b.disabled = true; msg.textContent = 'Saving…';
@@ -577,7 +591,7 @@ VIEWS.me = async (_, tok) => {
     b.disabled = false;
     if (error) { msg.textContent = error.code === '23505' ? 'That name is taken. Try another.' : error.message; return; }
     S.me = data; updateChrome('me'); toast('Saved');
-    if (first) location.hash = '#/'; else msg.textContent = 'Saved.';
+    if (first) go('/'); else msg.textContent = 'Saved.';
   };
   const gf = $('#gf');
   if (gf) gf.onsubmit = async e => {
@@ -599,7 +613,7 @@ VIEWS.me = async (_, tok) => {
     sel.querySelector(`option[value="${id}"]`).remove(); sel.value = '';
     $(`[data-g="${id}"]`).focus();
   };
-  const so = $('#so'); if (so) so.onclick = async () => { await sb.auth.signOut(); location.hash = '#/'; };
+  const so = $('#so'); if (so) so.onclick = async () => { await sb.auth.signOut(); go('/'); };
 };
 
 /* ---------- membership ---------- */
@@ -607,7 +621,7 @@ VIEWS.join = async (_, tok) => {
   const tiers = must(await sb.from('tiers').select('*').order('sort'));
   paint(tok, `<section class="sec"><div><div class="kicker">Membership</div><h2>Pick your <span>level</span></h2></div><p class="lede">The boards, PR wall, daily workouts and chat are free. DSI Pro adds coaching and deeper tools.</p>
   <div class="tiers">${tiers.map((t, i) => `<div class="tier" style="--c:${i ? 'var(--accent)' : 'var(--line)'}"><h3>${esc(t.name)}</h3><div class="price">${t.price_cents ? '$' + (t.price_cents / 100).toFixed(0) + '<span class="sub">/mo</span>' : 'Free'}</div><ul>${(t.perks || []).map(p => `<li>${esc(p)}</li>`).join('')}</ul>
-    ${S.me && S.me.tier === t.id ? '<span class="pill up" style="margin:0;justify-self:start">Your level</span>' : t.price_cents ? '<button class="btn" disabled>Coming soon</button>' : S.me ? '' : '<a class="btn" href="#/login">Join free</a>'}</div>`).join('')}</div></section>`);
+    ${S.me && S.me.tier === t.id ? '<span class="pill up" style="margin:0;justify-self:start">Your level</span>' : t.price_cents ? '<button class="btn" disabled>Coming soon</button>' : S.me ? '' : '<a class="btn" href="/login">Join free</a>'}</div>`).join('')}</div></section>`);
 };
 
 /* ---------- policies: privacy, terms, support ---------- */
@@ -663,7 +677,7 @@ VIEWS.support = async (_, tok) => paint(tok, doc('Help', '<span>Support</span>',
 
 /* ---------- login ---------- */
 VIEWS.login = async (_, tok) => {
-  if (S.me) { location.hash = S.me.display_name ? '#/' : '#/me'; return; }
+  if (S.me) { go(S.me.display_name ? '/' : '/me'); return; }
   if (!paint(tok, `<section class="sec narrow"><div><div class="kicker">Members</div><h2>Sign <span>in</span></h2></div>
     <p class="lede">No password. We email you a sign in link and a 6 digit code. Already on the board? Use the same email and your numbers come with you.</p>
     <form class="formCard" id="lg"><div class="field"><label for="lg-e">Email</label><input id="lg-e" type="email" autocomplete="email" required></div>
@@ -695,7 +709,10 @@ async function boot() {
   S.session = data.session;
   if (/^#(access_token|error)/.test(location.hash)) {
     if (/error_description=/.test(location.hash)) toast(decodeURIComponent(location.hash.match(/error_description=([^&]*)/)[1]).replace(/\+/g, ' '));
-    history.replaceState(null, '', location.pathname + '#/');
+    history.replaceState(null, '', '/');
+  } else if (location.hash.startsWith('#/')) {
+    // Old #/ links keep working: dandystrength.com/#/prs becomes dandystrength.com/prs
+    history.replaceState(null, '', location.hash.slice(1) || '/');
   }
   await loadMe();
   sb.auth.onAuthStateChange((ev, session) => {
@@ -703,11 +720,11 @@ async function boot() {
     S.session = session;
     setTimeout(async () => {
       await loadMe();
-      if (ev === 'SIGNED_IN') { if (/^#(access_token|\/login)/.test(location.hash) || !location.hash) history.replaceState(null, '', location.pathname + (S.me && !S.me.display_name ? '#/me' : '#/')); toast(S.me && S.me.display_name ? 'Welcome back, ' + S.me.display_name : 'Signed in'); }
+      if (ev === 'SIGNED_IN') { if (/^#access_token/.test(location.hash) || ['/', '/login'].includes(location.pathname)) history.replaceState(null, '', S.me && !S.me.display_name ? '/me' : '/'); toast(S.me && S.me.display_name ? 'Welcome back, ' + S.me.display_name : 'Signed in'); }
       route();
     }, 0);
   });
-  window.addEventListener('hashchange', route);
+  window.addEventListener('popstate', route);
   route();
 }
 boot();

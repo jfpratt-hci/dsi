@@ -1,0 +1,10 @@
+// Cloudflare Worker for dandystrength.com: static site with clean URLs.
+// Any path that is not a real file (like /prs or /u/<id>) serves index.html and the app routes it.
+{
+  "name": "dsi",
+  "compatibility_date": "2026-09-26",
+  "assets": {
+    "directory": "./site",
+    "not_found_handling": "single-page-application"
+  }
+}

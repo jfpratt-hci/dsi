@@ -27,8 +27,8 @@ export default function Me() {
       <View style={{ height: 18 }} />
       <Group title="About">
         <Row first label="Community rules" onPress={() => router.push('/terms')} />
-        <Row label="Privacy policy" onPress={() => Linking.openURL('https://dandystrength.com/#/privacy')} />
-        <Row label="Support" onPress={() => Linking.openURL('https://dandystrength.com/#/support')} />
+        <Row label="Privacy policy" onPress={() => Linking.openURL('https://dandystrength.com/privacy')} />
+        <Row label="Support" onPress={() => Linking.openURL('https://dandystrength.com/support')} />
       </Group>
     </Screen>
   );
@@ -101,8 +101,8 @@ export default function Me() {
 
       <Group title="Account">
         <Row first label="Email" detail={session.user.email ?? ''} onPress={() => {}} />
-        <Row label="Privacy policy" onPress={() => Linking.openURL('https://dandystrength.com/#/privacy')} />
-        <Row label="Support" onPress={() => Linking.openURL('https://dandystrength.com/#/support')} />
+        <Row label="Privacy policy" onPress={() => Linking.openURL('https://dandystrength.com/privacy')} />
+        <Row label="Support" onPress={() => Linking.openURL('https://dandystrength.com/support')} />
         <Row label="Sign out" onPress={signOut} />
         <Row label="Delete account" danger onPress={deleteAccount} />
       </Group>
