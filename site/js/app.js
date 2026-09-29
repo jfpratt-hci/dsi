@@ -1214,7 +1214,9 @@ async function boot() {
   await loadMe();
   if (S.me && !S.me.display_name) { const j = await finishJoin(); if (j && j.ok) history.replaceState(null, '', '/u/' + S.me.id); }
   sb.auth.onAuthStateChange((ev, session) => {
-    if (ev === 'INITIAL_SESSION' || ev === 'TOKEN_REFRESHED') { S.session = session; return; }
+    const same = (S.session && S.session.user && S.session.user.id) === (session && session.user && session.user.id);
+    // Supabase repeats SIGNED_IN when the tab regains focus. Same user means nothing changed, so keep the page (and any draft) as is.
+    if (ev === 'INITIAL_SESSION' || ev === 'TOKEN_REFRESHED' || (same && ev !== 'SIGNED_OUT' && ev !== 'USER_UPDATED')) { S.session = session; return; }
     S.session = session;
     setTimeout(async () => {
       await loadMe();
