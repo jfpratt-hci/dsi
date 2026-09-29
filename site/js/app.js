@@ -33,14 +33,21 @@ function toast(msg) {
 function must(res) { if (res.error) throw res.error; return res.data; }
 
 /* ---------- state ---------- */
-const S = { session: null, me: null, board: [], people: new Map(), channels: [], bf: { sort: 'dsi', div: 'all', age: 'all' }, tok: 0 };
+const S = { session: null, me: null, blocked: new Set(), board: [], people: new Map(), channels: [], bf: { sort: 'dsi', div: 'all', age: 'all' }, tok: 0 };
 const isStaff = () => S.me && ['admin', 'commissioner'].includes(S.me.role);
+const isPro = () => !!S.me && (S.me.tier === 'pro' || isStaff());
+const PRO = '<span class="pill acc">Pro</span>';
 
 async function loadMe() {
   S.me = null;
   if (!S.session) return;
   const { data } = await sb.from('profiles').select('*').eq('user_id', S.session.user.id).maybeSingle();
   S.me = data || null;
+  S.blocked = new Set();
+  if (S.me) {
+    const { data: b } = await sb.from('blocks').select('blocked').eq('blocker', S.me.id);
+    S.blocked = new Set((b || []).map(x => x.blocked));
+  }
 }
 async function loadBoard() {
   const rows = must(await sb.from('board').select('*'));
@@ -278,7 +285,8 @@ VIEWS.u = async (id, tok) => {
   if (!paint(tok, `<article class="card">
     <div class="cardHead"><div><div class="eyebrow">${esc(p.division)} division</div><div class="nm">${esc(p.display_name)}${p.roast_opt_in ? ' <span title="Opted in to roasts">🔥</span>' : ''}</div>
       <div class="meta">${r.age ? 'Age ' + r.age + ' · ' : ''}${r.bw ? r.bw + ' lb · ' : ''}${fmt(r.total)} lb total${club ? ' · ' + fmt(club) + ' club' : ''} ${role}</div></div>
-      <div class="dsi"><div class="eyebrow">DSI™</div><b>${r.score}</b></div></div>
+      <div class="dsi"><div class="eyebrow">DSI™</div><b>${r.score}</b>${S.me && !mine ? `<div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn ghost sm" id="rpU">Report</button><button class="btn ghost sm" id="blU">${S.blocked.has(id) ? 'Unblock' : 'Block'}</button></div>` : ''}</div></div>
+    ${S.blocked.has(id) ? '<div class="verdict"><p class="sub">You blocked this lifter. Their messages are hidden from you.</p></div>' : ''}
     <div class="verdict"><b>${esc(v[1])}</b><p>${esc(p.roast_opt_in ? v[2] : v[3])}</p></div>
     <div class="bars">${D.LIFTS.map(l => `<div class="brow" style="--c:${l.c}"><span class="ln">${l.n}</span><div class="pb" title="${r.p[l.k]}th percentile"><i style="width:${r.p[l.k]}%"></i><s></s></div><span class="w">${r[l.k] ? fmt(r[l.k]) + ' lb' : 'n/a'}</span><span class="pc">${r.p[l.k] || 0}%</span></div>`).join('')}
       <p class="hint">The line is the median for ${r.age ? 'age ' + r.age : 'your age'} at ${r.bw || 185} lb. Percent is where you rank.</p></div>
@@ -286,11 +294,19 @@ VIEWS.u = async (id, tok) => {
   ${Object.keys(gl).length ? `<section class="sec"><h2>Goals</h2><div class="goalRows">${Object.keys(gl).map(id => { const now = bestOf[id] || 0, g = gl[id], pctg = Math.min(100, Math.round(now / g * 100)); return `<div class="g" style="--c:${D.liftColor(id)}"><h4>${esc(D.liftName(id))}</h4><div class="big">${fmt(g)} lb</div><div class="pb"><i style="width:${pctg}%"></i></div><div class="now">${now ? fmt(now) + ' now · ' + (g > now ? fmt(g - now) + ' to go' : 'done') : 'no lift yet'}</div></div>`; }).join('')}</div></section>` : ''}
   ${otherBests.length ? `<section class="sec"><h2>Other <span>lifts</span></h2><div class="goalRows">${otherBests.map(b => `<div class="g" style="--c:var(--muted)"><h4>${esc(D.liftName(b.lift))}</h4><div class="big">${fmt(b.weight_lb)} lb</div><div class="now">${fmtD(b.performed_on)}</div></div>`).join('')}</div></section>` : ''}
   <section class="sec"><h2>Lift <span>history</span></h2><div class="board"><div class="tablewrap"><table><thead><tr><th>Date</th><th>Lift</th><th class="r">Weight</th><th>Status</th><th></th></tr></thead><tbody>
-  ${must(hist).map(e => `<tr class="${e.status === 'struck' ? 'struck' : ''}"><td class="n">${fmtD(e.performed_on)}</td><td>${esc(D.liftName(e.lift))}${e.note ? `<div class="sub">${esc(e.note)}</div>` : ''}</td><td class="r n big">${fmt(e.weight_lb)}</td>
+  ${must(hist).map(e => `<tr class="${e.status === 'struck' ? 'struck' : ''}"><td class="n">${fmtD(e.performed_on)}</td><td>${esc(D.liftName(e.lift))}${e.note ? `<div class="sub">${esc(e.note)}</div>` : ''}</td><td class="r n big">${fmt(e.weight_lb)}${e.video_path ? ` <button class="vidBtn" data-vid="${esc(e.video_path)}" aria-label="Play video">▶</button>` : ''}</td>
     <td>${e.is_pr ? '<span class="pill acc">PR</span>' : ''}${e.status === 'protested' ? '<span class="pill flat">Under protest</span>' : e.status === 'struck' ? '<span class="pill down">Struck</span>' : ''}${e.source === 'workout' ? '<span class="sub"> from workout</span>' : ''}</td>
-    <td class="r" data-host>${!mine && e.status === 'ok' && S.me ? `<button class="btn ghost sm" data-protest="lift_entry" data-ref="${e.id}" data-title="${esc(p.display_name + ' ' + D.liftName(e.lift) + ' ' + num(e.weight_lb) + ' lb')}">Protest</button>` : ''}${mine && e.status === 'ok' ? `<button class="btn ghost sm" data-del="${e.id}">Delete</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">No lifts yet.</td></tr>'}
+    <td class="r" data-host>${!mine && e.status === 'ok' && S.me ? `<button class="btn ghost sm" data-protest="lift_entry" data-ref="${e.id}" data-title="${esc(p.display_name + ' ' + D.liftName(e.lift) + ' ' + num(e.weight_lb) + ' lb')}">Protest</button>` : ''}${mine && e.status === 'ok' && !e.video_path && (e.is_pr || isPro()) ? `<button class="btn ghost sm" data-addvid="${e.id}">Add video</button> ` : ''}${mine && e.status === 'ok' ? `<button class="btn ghost sm" data-del="${e.id}">Delete</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">No lifts yet.</td></tr>'}
   </tbody></table></div></div></section>`)) return;
   bindActions(main, () => route());
+  bindVideo(main, () => route());
+  if ($('#rpU')) $('#rpU').onclick = () => reportDialog({ type: 'profile', id, name: p.display_name, uid: id });
+  if ($('#blU')) $('#blU').onclick = async () => {
+    const was = S.blocked.has(id);
+    const { error } = was ? await sb.from('blocks').delete().eq('blocker', S.me.id).eq('blocked', id) : await sb.from('blocks').insert({ blocker: S.me.id, blocked: id });
+    if (error) return toast(error.message);
+    await loadMe(); toast(was ? 'Unblocked' : `Blocked. You will not see messages from ${p.display_name}.`); route();
+  };
   $$('[data-del]').forEach(b => b.onclick = async () => {
     b.disabled = true;
     const { error } = await sb.from('lift_entries').delete().eq('id', b.dataset.del);
@@ -315,6 +331,7 @@ VIEWS.log = async (_, tok) => {
         <div class="field w4"><label for="lf-n">Note (optional)</label><input id="lf-n" type="text" maxlength="280" placeholder="Belt, no belt, witnesses, video link…"></div>
       </div>
       <div class="row"><button class="btn" type="submit">Log it</button><span class="hint" id="lf-msg"></span></div>
+      <div class="row" id="lf-vid" hidden></div>
     </form></section>`)) return;
   const f = $('#logF');
   f.onsubmit = async e => {
@@ -329,6 +346,11 @@ VIEWS.log = async (_, tok) => {
       toast(`New ${name} PR!`);
     } else msg.textContent = `Logged ${fmt(data.weight_lb)} lb. Your best is still ${fmt(data.prev_best)}.`;
     $('#lf-w').value = ''; $('#lf-n').value = '';
+    const vb = $('#lf-vid'); vb.hidden = false;
+    vb.innerHTML = data.is_pr || isPro()
+      ? `<button class="btn ghost sm" type="button" data-addvid="${data.id}">Add a video of this lift</button><span class="hint">${data.is_pr ? 'Proof for your PR. Free on every PR.' : 'Video on any set is a Pro feature.'}</span>`
+      : `<a class="chip" href="/pro">Add video to any set ${PRO}</a>`;
+    bindVideo(vb, () => { vb.innerHTML = '<span class="hint">Video attached. It plays from your lifter card.</span>'; });
   };
 };
 
@@ -448,7 +470,8 @@ VIEWS.chat = async (roomId, tok) => {
   </aside>
   ${room ? `<div class="thread"><div class="thHead"><h3>${esc(room.title)}</h3>${back ? `<a class="chip" href="${back[0]}">${back[1]}</a>` : ''}</div>
     <div class="msgs" id="msgs" aria-live="polite"><p class="empty">Loading…</p></div>
-    <form class="compose" id="cmp"><label class="vh" for="cmp-t">Message</label><textarea id="cmp-t" maxlength="1000" placeholder="${S.me.roast_opt_in ? 'Say something. Roasts welcome.' : 'Say something'}" required></textarea><button class="btn">Send</button></form></div>`
+    ${S.me.terms_accepted_at ? '' : `<div class="rulesGate"><span>Agree to the <a href="/rules">community rules</a> to post.</span><button class="btn sm" type="button" id="agreeRules">I agree</button></div>`}
+    <form class="compose" id="cmp"${S.me.terms_accepted_at ? '' : ' hidden'}><label class="vh" for="cmp-t">Message</label><textarea id="cmp-t" maxlength="1000" placeholder="${S.me.roast_opt_in ? 'Say something. Roasts welcome.' : 'Say something'}" required></textarea><button class="btn">Send</button></form></div>`
       : '<div class="prEmpty"><b>No rooms yet</b></div>'}
   </div></section>`)) return;
 
@@ -468,7 +491,9 @@ VIEWS.chat = async (roomId, tok) => {
   const box = $('#msgs'), seen = new Set();
   const line = m => {
     const mine = m.profile_id === S.me.id, canDel = !m.deleted && (mine || isStaff());
-    return `<div class="msg${mine ? ' mine' : ''}${m.deleted ? ' del' : ''}" data-mid="${m.id}"><div class="by"><b>${esc(nameOf(m.profile_id))}</b> · ${timeAgo(m.created_at)}</div><div class="tx">${m.deleted ? 'Message removed' : esc(m.body)}</div>${canDel ? `<button class="x" data-rm="${m.id}">Remove</button>` : ''}</div>`;
+    if (S.blocked.has(m.profile_id)) return `<div class="msg del" data-mid="${m.id}"><div class="tx">Message from a blocked lifter</div></div>`;
+    const acts = [canDel ? `<button class="x" data-rm="${m.id}">Remove</button>` : '', !mine && !m.deleted ? `<button class="x" data-rp="${m.id}" data-uid="${m.profile_id}">Report</button><button class="x" data-bl="${m.profile_id}">Block</button>` : ''].join('');
+    return `<div class="msg${mine ? ' mine' : ''}${m.deleted ? ' del' : ''}" data-mid="${m.id}"><div class="by"><a href="/u/${m.profile_id}"><b>${esc(nameOf(m.profile_id))}</b></a> · ${timeAgo(m.created_at)}</div><div class="tx">${m.deleted ? 'Message removed' : esc(m.body)}</div>${acts ? `<div class="acts">${acts}</div>` : ''}</div>`;
   };
   const add = m => {
     if (seen.has(m.id)) return; seen.add(m.id);
@@ -482,7 +507,14 @@ VIEWS.chat = async (roomId, tok) => {
   msgs.forEach(add);
   box.scrollTop = box.scrollHeight;
   box.onclick = async e => {
-    const id = e.target.dataset && e.target.dataset.rm; if (!id) return;
+    const d = e.target.dataset || {};
+    if (d.rp) { reportDialog({ type: 'message', id: d.rp, name: 'Message from ' + nameOf(d.uid), uid: d.uid }); return; }
+    if (d.bl) {
+      const { error } = await sb.from('blocks').insert({ blocker: S.me.id, blocked: d.bl });
+      if (error) return toast(error.message);
+      await loadMe(); toast(`Blocked ${nameOf(d.bl)}`); box.innerHTML = ''; seen.clear(); msgs.forEach(add); return;
+    }
+    const id = d.rm; if (!id) return;
     const { error } = await sb.from('messages').update({ deleted: true }).eq('id', id);
     if (error) toast(error.message);
     else { const el = box.querySelector(`[data-mid="${id}"]`); if (el) el.outerHTML = line({ id, profile_id: S.me.id, deleted: true, created_at: new Date().toISOString(), ...(msgs.find(m => m.id === id) || {}), deleted: true }); }
@@ -498,6 +530,8 @@ VIEWS.chat = async (roomId, tok) => {
     })
     .subscribe();
   S.channels.push(ch);
+  const ag = $('#agreeRules');
+  if (ag) ag.onclick = async () => { const ok = await acceptRules(); if (ok) route(); };
   const cmp = $('#cmp'), ta = $('#cmp-t');
   ta.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); cmp.requestSubmit(); } };
   cmp.onsubmit = async e => {
@@ -555,34 +589,48 @@ VIEWS.protests = async (_, tok) => {
   }));
 };
 
-/* ---------- me ---------- */
+/* ---------- me: the hub ---------- */
+const LIFT_IDS = D.ALL_LIFTS.map(x => x[0]);
 VIEWS.me = async (_, tok) => {
   if (!S.me) return needLogin(tok, 'see your account');
-  const [board, goals, tiers, bests] = await Promise.all([loadBoard(), sb.from('goals').select('*').eq('profile_id', S.me.id).then(must), sb.from('tiers').select('*').order('sort').then(must), sb.from('lift_bests').select('lift,weight_lb').eq('profile_id', S.me.id).then(must)]);
-  const m = S.me, first = !m.display_name;
-  const gl = Object.fromEntries(goals.map(g => [g.lift, num(g.target_lb)]));
+  const [board, goals, bests] = await Promise.all([loadBoard(), sb.from('goals').select('*').eq('profile_id', S.me.id).then(must), sb.from('lift_bests').select('lift,weight_lb').eq('profile_id', S.me.id).then(must)]);
+  const m = S.me, first = !m.display_name, pro = isPro();
+  const gl = Object.fromEntries(goals.map(g => [g.lift, g]));
   const best = Object.fromEntries(bests.map(b => [b.lift, num(b.weight_lb)]));
   const goalIds = [...new Set([...D.LIFTS.map(l => l.db), ...goals.map(g => g.lift)])];
-  const goalCard = id => `<div class="g" style="--c:${D.liftColor(id)}"><h4>${esc(D.liftName(id))}</h4><input type="number" min="0" max="1499" step="5" data-g="${id}" value="${gl[id] || ''}" aria-label="${esc(D.liftName(id))} goal"><div class="now">${best[id] ? 'Best ' + fmt(best[id]) + ' lb' : 'No lift yet'}</div></div>`;
-  const tier = tiers.find(t => t.id === m.tier) || { name: m.tier };
+  const WEEKS = [8, 12, 16, 24];
+  const goalCard = id => { const g = gl[id] || {}; return `<div class="g" style="--c:${D.liftColor(id)}"><h4>${esc(D.liftName(id))}</h4><input type="number" min="0" max="1499" step="5" data-g="${id}" value="${g.target_lb ? num(g.target_lb) : ''}" aria-label="${esc(D.liftName(id))} goal"><div class="now">${best[id] ? 'Best ' + fmt(best[id]) + ' lb' : 'No lift yet'}</div>
+    ${pro ? `<select data-gd="${id}" aria-label="${esc(D.liftName(id))} goal date"><option value="">No date</option>${WEEKS.map(w => { const d = addDays(today(), w * 7); return `<option value="${d}">${w} weeks · ${fmtD(d)}</option>`; }).join('')}${g.target_date ? `<option value="${g.target_date}" selected>By ${fmtD(g.target_date)}</option>` : ''}</select>` : ''}</div>`; };
+  const row = boardRow(m.id), v = row ? D.verdict(row.score) : null;
   const yr = new Date().getFullYear();
-  if (!paint(tok, `<section class="sec"><div><div class="kicker">${first ? 'Welcome to the index' : 'Your account'}</div><h2>${first ? 'Set up your <span>profile</span>' : esc(m.display_name)}</h2></div>
-    ${first ? '<p class="lede">Pick the name that shows on the boards. Age and bodyweight make the score fair.</p>' : `<div class="row"><span class="pill acc" style="margin:0">${esc(tier.name)}</span>${m.role !== 'member' ? `<span class="pill up">${m.role === 'commissioner' ? 'Commissioner' : 'Founder'}</span>` : ''}<span class="sub">${esc(S.session.user.email)}</span><a class="chip" href="/u/${m.id}">View my card</a></div>`}
+  const tile = (href, t, d, isProTool) => `<a class="tool" href="${pro || !isProTool ? href : '/pro'}"><b>${t}${isProTool ? ' ' + PRO : ''}</b><span>${d}</span></a>`;
+  if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${first ? 'Welcome to the index' : (m.role === 'admin' ? 'Founder' : m.role === 'commissioner' ? 'Commissioner' : pro ? 'DSI Pro' : 'Member')}</div><h2>${first ? 'Set up your <span>profile</span>' : esc(m.display_name)}</h2>
+      <p class="secSub">${esc(S.session.user.email)}${first ? '' : ` · <a href="/u/${m.id}">View my card</a>`}</p></div>
+      ${row ? `<div class="kpi"><div><b>${row.score}</b><span>DSI™</span></div><div><b>${fmt(row.total)}</b><span>Total</span></div></div>` : ''}</div>
+      ${v ? `<p class="lede"><b style="color:var(--accent)">${esc(v[1])}.</b> ${esc(m.roast_opt_in ? v[2] : v[3])}</p>` : ''}</section>
+    ${first ? '' : `<section class="sec band"><div class="secHead"><div><div class="kicker">DSI Pro</div><h2>Train with a <span>plan</span></h2></div>${pro ? '<span class="pill up" style="margin:0">Pro active</span>' : '<a class="btn sm" href="/pro">See Pro</a>'}</div>
+      <div class="tools">${tile('/progress', 'Progress charts', 'Every lift over time with your goal line.', 1)}${tile('/plans', 'Goal plans', 'A week by week path to your number.', 1)}${tile('/coach', 'Coach', 'Your weak link and what to train next.', 1)}${tile('/import', 'Import history', 'Paste years of lifts from a spreadsheet.', 1)}</div></section>`}
+    <section class="sec"><div><div class="kicker">Profile</div><h2>${first ? 'The <span>basics</span>' : 'Edit <span>profile</span>'}</h2></div>
     <form class="formCard" id="pf">
       <div class="fields">
         <div class="field w2"><label for="pf-n">Board name</label><input id="pf-n" maxlength="24" required value="${esc(m.display_name || '')}" autocomplete="nickname"></div>
-        <div class="field"><label for="pf-by">Birth year</label><input id="pf-by" type="number" min="${yr - 100}" max="${yr - 12}" value="${esc(m.birth_year || '')}" required></div>
+        <div class="field"><label for="pf-by">Birth year</label><input id="pf-by" type="number" min="${yr - 100}" max="${yr - 13}" value="${esc(m.birth_year || '')}" required></div>
         <div class="field"><label for="pf-bw">Bodyweight (lb)</label><input id="pf-bw" type="number" min="80" max="450" step="0.1" value="${esc(m.bodyweight || '')}" required></div>
         <div class="field"><label for="pf-sex">Sex</label><select id="pf-sex">${[['male', 'Male'], ['female', 'Female'], ['unspecified', 'Prefer not to say']].map(o => `<option value="${o[0]}"${m.sex === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select></div>
         <div class="field"><label for="pf-div">Division</label><select id="pf-div">${[['men', 'Men'], ['women', 'Women'], ['open', 'Open']].map(o => `<option value="${o[0]}"${m.division === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select></div>
-        <div class="field w2"><span class="lbl">Roasts</span><label class="check" style="text-transform:none;letter-spacing:0;font:500 15px var(--sans);color:var(--ink)"><input type="checkbox" id="pf-roast"${m.roast_opt_in ? ' checked' : ''}><span>Roast me. Show the savage verdict on my card and put a 🔥 by my name so people know I can take it.</span></label></div>
+        <div class="field w2"><span class="lbl">Roasts</span><label class="check" style="text-transform:none;letter-spacing:0;font:500 15px var(--sans);color:var(--ink)"><input type="checkbox" id="pf-roast"${m.roast_opt_in ? ' checked' : ''}><span>Roast me. Show the savage verdict on my card and put a 🔥 by my name.</span></label></div>
       </div>
       <div class="row"><button class="btn" type="submit">${first ? 'Join the board' : 'Save'}</button><span class="hint" id="pf-msg"></span></div>
     </form></section>
-    ${first ? '' : `<section class="sec"><h2>Goals</h2><form class="formCard" id="gf"><div class="goalRows" id="gRows">${goalIds.map(goalCard).join('')}</div>
+    ${first ? '' : `<section class="sec band"><div class="secHead"><div><div class="kicker">What you're chasing</div><h2>Goals</h2>${pro ? '<p class="secSub">Pick a date and your goal plan updates.</p>' : `<p class="secSub">Add a date and get a weekly plan with <a href="/pro">DSI Pro</a>.</p>`}</div></div>
+      <form class="formCard" id="gf"><div class="goalRows" id="gRows">${goalIds.map(goalCard).join('')}</div>
       <div class="row"><label class="vh" for="g-add">Add a goal for another lift</label><select id="g-add" style="max-width:280px"><option value="">Add a goal for another lift…</option>${D.ALL_LIFTS.filter(([id]) => !goalIds.includes(id)).map(([id, n]) => `<option value="${id}">${esc(n)}</option>`).join('')}</select><button class="btn ghost sm" type="button" id="g-addb">Add</button></div>
       <div class="row"><button class="btn" type="submit">Save goals</button><span class="hint">Clear a box to remove that goal.</span></div></form></section>
-    <section class="sec"><h2>Membership</h2><div class="row"><p class="lede">You're on <b>${esc(tier.name)}</b>.</p><a class="btn ghost sm" href="/join">See levels</a><button class="btn ghost sm" id="so">Sign out</button></div></section>`}`)) return;
+    <section class="sec"><div><div class="kicker">Community</div><h2>Rules and <span>safety</span></h2></div>
+      <div class="tools">${tile('/rules', 'Community rules', m.terms_accepted_at ? 'You agreed on ' + fmtD(m.terms_accepted_at) + '.' : 'Agree before posting in chat.')}${tile('/blocked', 'Blocked lifters', S.blocked.size ? S.blocked.size + ' blocked' : 'Nobody blocked.')}${isStaff() ? tile('/reports', 'Reports', 'Review reports within 24 hours.') : ''}${tile('/protests', 'Protests', 'The Commissioner\'s court.')}</div></section>
+    <section class="sec"><div><div class="kicker">Account</div><h2>Your <span>account</span></h2></div>
+      <div class="row"><span class="pill acc" style="margin:0">${pro ? 'DSI Pro' : 'Member'}</span><a class="btn ghost sm" href="/pro">Membership</a><button class="btn ghost sm" id="so">Sign out</button><button class="btn ghost sm dangerText" id="delAcct">Delete account</button></div>
+      <p class="hint">Deleting removes your profile, every lift, goal, log, message and video, and your login. It cannot be undone.</p></section>`}`)) return;
   $('#pf').onsubmit = async e => {
     e.preventDefault();
     const msg = $('#pf-msg'), b = e.target.querySelector('button'); b.disabled = true; msg.textContent = 'Saving…';
@@ -591,13 +639,14 @@ VIEWS.me = async (_, tok) => {
     b.disabled = false;
     if (error) { msg.textContent = error.code === '23505' ? 'That name is taken. Try another.' : error.message; return; }
     S.me = data; updateChrome('me'); toast('Saved');
-    if (first) go('/'); else msg.textContent = 'Saved.';
+    if (first) go(data.terms_accepted_at ? '/' : '/rules'); else msg.textContent = 'Saved.';
   };
   const gf = $('#gf');
   if (gf) gf.onsubmit = async e => {
     e.preventDefault();
     const inputs = $$('[data-g]', gf);
-    const ups = inputs.filter(i => +i.value > 0).map(i => ({ profile_id: m.id, lift: i.dataset.g, target_lb: +i.value, updated_at: new Date().toISOString() }));
+    const dateOf = id => { const sel = $(`[data-gd="${id}"]`, gf); return sel ? sel.value || null : (gl[id] ? gl[id].target_date : null); };
+    const ups = inputs.filter(i => +i.value > 0).map(i => ({ profile_id: m.id, lift: i.dataset.g, target_lb: +i.value, target_date: dateOf(i.dataset.g), updated_at: new Date().toISOString() }));
     const dels = inputs.filter(i => !(+i.value > 0) && gl[i.dataset.g]).map(i => i.dataset.g);
     if (!ups.length && !dels.length) return toast('Enter a goal first');
     const r1 = ups.length ? await sb.from('goals').upsert(ups, { onConflict: 'profile_id,lift' }) : {};
@@ -614,14 +663,266 @@ VIEWS.me = async (_, tok) => {
     $(`[data-g="${id}"]`).focus();
   };
   const so = $('#so'); if (so) so.onclick = async () => { await sb.auth.signOut(); go('/'); };
+  const del = $('#delAcct'); if (del) del.onclick = () => confirmDialog({
+    title: 'Delete your account?', body: 'This permanently deletes your profile, every lift, goal, log, message and video, and your login. Type DELETE to confirm.',
+    typed: 'DELETE', okLabel: 'Delete forever', danger: true,
+    onOk: async () => {
+      const { error } = await sb.rpc('delete_my_account');
+      if (error) { toast(error.message); return false; }
+      await sb.auth.signOut(); toast('Your account has been deleted.'); go('/'); return true;
+    },
+  });
 };
 
-/* ---------- membership ---------- */
-VIEWS.join = async (_, tok) => {
-  const tiers = must(await sb.from('tiers').select('*').order('sort'));
-  paint(tok, `<section class="sec"><div><div class="kicker">Membership</div><h2>Pick your <span>level</span></h2></div><p class="lede">The boards, PR wall, daily workouts and chat are free. DSI Pro adds coaching and deeper tools.</p>
-  <div class="tiers">${tiers.map((t, i) => `<div class="tier" style="--c:${i ? 'var(--accent)' : 'var(--line)'}"><h3>${esc(t.name)}</h3><div class="price">${t.price_cents ? '$' + (t.price_cents / 100).toFixed(0) + '<span class="sub">/mo</span>' : 'Free'}</div><ul>${(t.perks || []).map(p => `<li>${esc(p)}</li>`).join('')}</ul>
-    ${S.me && S.me.tier === t.id ? '<span class="pill up" style="margin:0;justify-self:start">Your level</span>' : t.price_cents ? '<button class="btn" disabled>Coming soon</button>' : S.me ? '' : '<a class="btn" href="/login">Join free</a>'}</div>`).join('')}</div></section>`);
+/* ---------- dialogs: report, confirm, video ---------- */
+function dialog(html) {
+  const d = document.createElement('dialog');
+  d.className = 'dlg'; d.innerHTML = html;
+  document.body.appendChild(d);
+  d.addEventListener('close', () => d.remove());
+  d.addEventListener('click', e => { if (e.target === d) d.close(); });
+  d.showModal();
+  return d;
+}
+function reportDialog({ type, id, name, uid }) {
+  if (!S.me) { go('/login'); return; }
+  const REASONS = ['Harassment or hate', 'Sexual or violent content', 'Spam or scam', 'Fake lifts', 'Something else'];
+  const canBlock = uid && uid !== S.me.id && !S.blocked.has(uid);
+  const d = dialog(`<form method="dialog" class="dlgIn"><div class="kicker">Report</div><h3>${esc(name || 'Report')}</h3>
+    <div class="chips" role="radiogroup" aria-label="Reason">${REASONS.map((r, i) => `<label class="chip"><input type="radio" name="rr" value="${esc(r)}"${i ? '' : ' required'}> ${esc(r)}</label>`).join('')}</div>
+    <textarea name="detail" maxlength="400" placeholder="Add detail (optional)"></textarea>
+    ${canBlock ? '<label class="check"><input type="checkbox" name="blk" checked><span>Also block this person</span></label>' : ''}
+    <div class="row"><button class="btn" value="ok">Send report</button><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
+    <p class="hint">Reports are private and reviewed within 24 hours.</p></form>`);
+  d.querySelector('form').onsubmit = async e => {
+    if (e.submitter && e.submitter.value === 'cancel') return;
+    e.preventDefault();
+    const f = e.target, reason = (f.rr.value || '') + (f.detail.value.trim() ? ': ' + f.detail.value.trim() : '');
+    const { error } = await sb.from('reports').insert({ reporter: S.me.id, target_type: type, target_id: id, reason: reason.slice(0, 500) });
+    if (error) { toast(error.message); return; }
+    if (canBlock && f.blk && f.blk.checked) { await sb.from('blocks').insert({ blocker: S.me.id, blocked: uid }); await loadMe(); }
+    d.close(); toast('Thanks. The DSI team reviews every report within 24 hours.');
+    if (canBlock && f.blk && f.blk.checked) route();
+  };
+}
+function confirmDialog({ title, body, typed, okLabel, danger, onOk }) {
+  const d = dialog(`<form method="dialog" class="dlgIn"><h3>${esc(title)}</h3><p>${esc(body)}</p>
+    ${typed ? `<input name="t" autocomplete="off" placeholder="${esc(typed)}" aria-label="Type ${esc(typed)} to confirm">` : ''}
+    <div class="row"><button class="btn${danger ? ' danger' : ''}" value="ok">${esc(okLabel)}</button><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div></form>`);
+  d.querySelector('form').onsubmit = async e => {
+    if (e.submitter && e.submitter.value === 'cancel') return;
+    e.preventDefault();
+    if (typed && e.target.t.value.trim().toUpperCase() !== typed) { e.target.t.focus(); return; }
+    if (await onOk()) d.close();
+  };
+}
+const videoUrl = path => sb.storage.from('lift-videos').getPublicUrl(path).data.publicUrl;
+function bindVideo(root, done) {
+  $$('[data-vid]', root).forEach(b => b.onclick = () => { dialog(`<div class="dlgIn vid"><video src="${esc(videoUrl(b.dataset.vid))}" controls autoplay playsinline></video><form method="dialog"><button class="btn ghost sm">Close</button></form></div>`); });
+  $$('[data-addvid]', root).forEach(b => b.onclick = () => {
+    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'video/mp4,video/quicktime,video/*';
+    inp.onchange = async () => {
+      const f = inp.files[0]; if (!f) return;
+      if (f.size > 100 * 1024 * 1024) { toast('Keep videos under 100 MB, about a minute.'); return; }
+      b.disabled = true; b.textContent = 'Uploading…';
+      const ext = (f.name.split('.').pop() || 'mp4').toLowerCase(), path = `${S.me.id}/${b.dataset.addvid}.${ext}`;
+      const up = await sb.storage.from('lift-videos').upload(path, f, { contentType: f.type || 'video/mp4', upsert: true });
+      if (up.error) { toast(up.error.message); b.disabled = false; b.textContent = 'Add video'; return; }
+      const { error } = await sb.from('lift_entries').update({ video_path: path }).eq('id', b.dataset.addvid);
+      if (error) { toast(error.message); return; }
+      toast('Video attached'); done && done();
+    };
+    inp.click();
+  });
+}
+async function acceptRules() {
+  if (!S.me) { go('/login'); return false; }
+  const { data, error } = await sb.from('profiles').update({ terms_accepted_at: new Date().toISOString() }).eq('id', S.me.id).select().single();
+  if (error) { toast(error.message); return false; }
+  S.me = data; toast('Thanks. Welcome to the crew.'); return true;
+}
+
+/* ---------- community rules ---------- */
+const RULES = [
+  ['Log real lifts', 'Only log weight you actually moved. Fake numbers get struck from the record.'],
+  ['Talk trash, not hate', 'Roasts are for people who opt in. No harassment, threats, slurs, or attacks on anyone for who they are.'],
+  ['Keep it clean', 'No sexual content, spam, scams, or anything illegal.'],
+  ['Protest in good faith', 'Protest lifts you honestly doubt. The Commissioner rules on every one.'],
+  ['Report and block', 'Use Report and Block on any message or lifter. Reports are reviewed within 24 hours and offenders are removed.'],
+];
+VIEWS.rules = async (_, tok) => {
+  if (!paint(tok, `<section class="sec narrow"><div><div class="kicker">Before you post</div><h2>Community <span>rules</span></h2><p class="secSub">DSI has zero tolerance for abusive content or abusive users.</p></div></section>
+    <section class="sec"><div class="rules">${RULES.map(([h, t], i) => `<div class="rule"><span>0${i + 1}</span><b>${h}</b><p>${t}</p></div>`).join('')}</div>
+    <div class="row" style="margin-top:12px">${S.me ? (S.me.terms_accepted_at ? `<span class="pill up" style="margin:0">You agreed on ${fmtD(S.me.terms_accepted_at)}</span>` : '<button class="btn" id="agree">I agree</button>') : '<a class="btn" href="/login">Sign in to join</a>'}<a class="chip" href="/terms">Terms of use</a><a class="chip" href="/privacy">Privacy</a></div></section>`)) return;
+  const a = $('#agree'); if (a) a.onclick = async () => { if (await acceptRules()) go('/chat'); };
+};
+
+/* ---------- blocked and reports ---------- */
+VIEWS.blocked = async (_, tok) => {
+  if (!S.me) return needLogin(tok, 'manage blocks');
+  const ids = [...S.blocked];
+  const people = ids.length ? must(await sb.from('profiles').select('id,display_name').in('id', ids)) : [];
+  if (!paint(tok, `<section class="sec narrow"><div><div class="kicker">Safety</div><h2>Blocked <span>lifters</span></h2><p class="secSub">You do not see messages from people you block.</p></div></section>
+    <section class="sec">${people.length ? `<div class="board">${people.map(p => `<div class="room"><b>${esc(p.display_name || 'Someone')}</b><button class="btn ghost sm" data-ub="${p.id}">Unblock</button></div>`).join('')}</div>` : '<div class="prEmpty"><b>Nobody blocked</b><p>Use Block on any chat message or lifter card.</p></div>'}</section>`)) return;
+  $$('[data-ub]').forEach(b => b.onclick = async () => { await sb.from('blocks').delete().eq('blocker', S.me.id).eq('blocked', b.dataset.ub); await loadMe(); toast('Unblocked'); route(); });
+};
+VIEWS.reports = async (_, tok) => {
+  if (!isStaff()) return paint(tok, '<section class="sec"><div class="prEmpty"><b>Staff only</b></div></section>');
+  const [list] = await Promise.all([sb.from('reports').select('*').order('created_at', { ascending: false }).limit(100).then(must), loadPeople()]);
+  const msgIds = list.filter(r => r.target_type === 'message').map(r => r.target_id);
+  const ctx = new Map(msgIds.length ? must(await sb.from('messages').select('id,body,deleted').in('id', msgIds)).map(m => [m.id, (m.deleted ? '[removed] ' : '') + '“' + m.body + '”']) : []);
+  const open = list.filter(r => r.status === 'open'), done = list.filter(r => r.status !== 'open').slice(0, 30);
+  const card = r => `<article class="pcase" style="--c:${r.status === 'open' ? 'var(--down)' : 'var(--line)'}">
+    <div class="row"><span class="pill ${r.status === 'open' ? 'down' : 'flat'}" style="margin:0">${esc(r.status)}</span><span class="sub">${esc(r.target_type)} · ${timeAgo(r.created_at)} · by ${esc(nameOf(r.reporter))}</span></div>
+    <h3>${esc(r.reason)}</h3>${ctx.get(r.target_id) ? `<p>${esc(ctx.get(r.target_id))}</p>` : ''}${r.target_type === 'profile' ? `<p><a href="/u/${r.target_id}">Open ${esc(nameOf(r.target_id))}</a></p>` : ''}
+    ${r.status === 'open' ? `<div class="row"><button class="btn danger sm" data-act="${r.id}">${r.target_type === 'message' ? 'Remove it' : r.target_type === 'lift_entry' ? 'Strike it' : 'Actioned'}</button><button class="btn ghost sm" data-dis="${r.id}">Dismiss</button></div>` : ''}</article>`;
+  if (!paint(tok, `<section class="sec"><div><div class="kicker">Staff</div><h2><span>Reports</span></h2><p class="secSub">Apple requires a response within 24 hours.</p></div></section>
+    <section class="sec"><h2>Open</h2>${open.length ? `<div class="plist">${open.map(card).join('')}</div>` : '<div class="prEmpty"><b>No open reports</b></div>'}</section>
+    ${done.length ? `<section class="sec"><h2>Handled</h2><div class="plist">${done.map(card).join('')}</div></section>` : ''}`)) return;
+  const handle = async (id, status) => {
+    const r = list.find(x => x.id === id);
+    if (status === 'actioned' && r.target_type === 'message') await sb.from('messages').update({ deleted: true }).eq('id', r.target_id);
+    if (status === 'actioned' && r.target_type === 'lift_entry') await sb.from('lift_entries').update({ status: 'struck' }).eq('id', r.target_id);
+    const { error } = await sb.from('reports').update({ status, handled_by: S.me.id, handled_at: new Date().toISOString() }).eq('id', id);
+    if (error) toast(error.message); else route();
+  };
+  $$('[data-act]').forEach(b => b.onclick = () => handle(b.dataset.act, 'actioned'));
+  $$('[data-dis]').forEach(b => b.onclick = () => handle(b.dataset.dis, 'dismissed'));
+};
+
+/* ---------- Pro ---------- */
+const PERKS = [['Progress charts', 'Every lift over time, with your goal line and PR markers.', '/progress'], ['Goal plans', 'Set a date and get a week by week path to your number.', '/plans'], ['Coach', 'Your weak link, your ratios, and what to train next.', '/coach'], ['Video on any set', 'Attach video to any lift, not just PRs.', '/log'], ['Pro groups', 'Private rooms for Pro lifters.', '/chat'], ['History import', 'Bring years of lifts in from a spreadsheet.', '/import']];
+VIEWS.pro = async (_, tok) => {
+  const pro = isPro();
+  paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">DSI Pro</div><h2>Train with a <span>plan</span></h2><p class="secSub">Everything in Member, plus the tools that turn numbers into progress.</p></div>
+    ${pro ? '<span class="pill up" style="margin:0">Pro is active on your account</span>' : '<div class="kpi"><div><b>$9.99</b><span>a month</span></div><div><b>$59.99</b><span>a year</span></div></div>'}</div></section>
+    <section class="sec band"><div class="tools">${PERKS.map(([t, d, h]) => `<a class="tool" href="${pro ? h : '/pro'}"><b>${t}</b><span>${d}</span></a>`).join('')}</div>
+    ${pro ? '' : '<div class="row" style="margin-top:14px"><button class="btn" disabled>Coming soon</button><span class="hint">Pro memberships open soon on the website and in the apps.</span></div>'}</section>
+    <section class="sec"><div><div class="kicker">Always free</div><h2>Member</h2></div><p class="lede">Leaderboards, the PR wall, daily workouts with your numbers, lift logging, goals, video on PRs, chat and protests.</p></section>`);
+};
+function proGate(tok, what) {
+  return paint(tok, `<section class="sec narrow"><div><div class="kicker">DSI Pro</div><h2>${what}</h2><p class="secSub">This is part of DSI Pro.</p></div><div class="row"><a class="btn" href="/pro">See DSI Pro</a></div></section>`);
+}
+VIEWS.join = VIEWS.pro;
+
+// Dependency free SVG line chart
+function lineChart(points, color, goal) {
+  const W = 680, H = 260, L = 48, R = 14, T = 14, B = 28;
+  if (!points.length) return '';
+  const xs = points.map(p => p.x), ys = points.map(p => p.y).concat(goal ? [goal] : []);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  let y0 = Math.min(...ys), y1 = Math.max(...ys); const padY = Math.max(10, (y1 - y0) * 0.15);
+  y0 = Math.max(0, Math.floor((y0 - padY) / 5) * 5); y1 = Math.ceil((y1 + padY) / 5) * 5;
+  const sx = x => L + (x1 === x0 ? (W - L - R) / 2 : (x - x0) / (x1 - x0) * (W - L - R));
+  const sy = y => T + (1 - (y - y0) / ((y1 - y0) || 1)) * (H - T - B);
+  const raw = (y1 - y0) / 4, mag = Math.pow(10, Math.floor(Math.log10(Math.max(raw, 1)))), n = raw / mag, step = (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * mag;
+  const ticks = []; for (let v = Math.ceil(y0 / step) * step; v <= y1; v += step) ticks.push(v);
+  const d = points.map((p, i) => `${i ? 'L' : 'M'}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(' ');
+  const f = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Progress chart">
+    ${ticks.map(v => `<line x1="${L}" x2="${W - R}" y1="${sy(v)}" y2="${sy(v)}" class="gl"/><text x="${L - 8}" y="${sy(v) + 4}" text-anchor="end">${v}</text>`).join('')}
+    ${goal ? `<line x1="${L}" x2="${W - R}" y1="${sy(goal)}" y2="${sy(goal)}" class="goal"/><text x="${W - R}" y="${sy(goal) - 6}" text-anchor="end" class="goalT">Goal ${fmt(goal)}</text>` : ''}
+    <path d="${d}" style="fill:none;stroke:${color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+    ${points.map((p, i) => `<circle cx="${sx(p.x)}" cy="${sy(p.y)}" r="${i === points.length - 1 ? 5.5 : 4}" style="fill:${color};stroke:var(--bg)" stroke-width="2"><title>${fmtD(p.d)}: ${fmt(p.y)} lb</title></circle>`).join('')}
+    <text x="${L}" y="${H - 8}">${f(x0)}</text><text x="${W - R}" y="${H - 8}" text-anchor="end">${f(x1)}</text></svg>`;
+}
+
+VIEWS.progress = async (lift, tok) => {
+  if (!S.me) return needLogin(tok, 'see your progress');
+  if (!isPro()) return proGate(tok, 'Progress <span>charts</span>');
+  const [hist, goals] = await Promise.all([sb.from('lift_entries').select('*').eq('profile_id', S.me.id).neq('status', 'struck').order('performed_on').then(must), sb.from('goals').select('lift,target_lb').eq('profile_id', S.me.id).then(must)]);
+  const lifts = [...new Set(hist.map(e => e.lift))];
+  const cur = lift && lifts.includes(lift) ? lift : lifts[0] || 'bench';
+  const rows = hist.filter(e => e.lift === cur), goal = num((goals.find(g => g.lift === cur) || {}).target_lb);
+  const byDay = new Map(); rows.forEach(e => byDay.set(e.performed_on, Math.max(byDay.get(e.performed_on) || 0, num(e.weight_lb))));
+  let run = 0; const pts = [...byDay.entries()].sort().map(([d, w]) => { run = Math.max(run, w); return { x: pd(d).getTime(), y: run, d }; });
+  const first = pts[0] ? pts[0].y : 0, prs = rows.filter(e => e.is_pr);
+  paint(tok, `<section class="sec"><div><div class="kicker">DSI Pro</div><h2>Progress <span>charts</span></h2></div>
+    <div class="chips">${(lifts.length ? lifts : ['bench']).map(l => `<a class="chip" href="/progress/${l}" aria-pressed="${l === cur}">${esc(D.liftName(l))}</a>`).join('')}</div></section>
+    <section class="sec"><div class="chartCard"><div class="eyebrow">${esc(D.liftName(cur))} · best over time</div>${pts.length ? lineChart(pts, D.LIFT_BY_DB[cur] ? D.LIFT_BY_DB[cur].c : 'var(--accent)', goal) : `<p class="empty">Log a ${esc(D.liftName(cur).toLowerCase())} to start the chart.</p>`}</div>
+    <div class="kpi" style="grid-template-columns:repeat(3,1fr)"><div><b>${run ? fmt(run) : '·'}</b><span>Best</span></div><div><b style="color:var(--up)">${run ? '+' + fmt(run - first) : '·'}</b><span>Gained</span></div><div><b>${prs.length}</b><span>PRs</span></div></div></section>
+    <section class="sec"><h2>Every <span>${esc(D.liftName(cur).toLowerCase())}</span></h2><div class="board"><div class="tablewrap"><table><thead><tr><th>Date</th><th class="r">Weight</th><th></th></tr></thead><tbody>${[...rows].reverse().map(e => `<tr><td class="n">${fmtD(e.performed_on)}</td><td class="r n big">${fmt(e.weight_lb)}</td><td>${e.is_pr ? '<span class="pill acc">PR</span>' : ''}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">Nothing yet.</td></tr>'}</tbody></table></div></div></section>`);
+};
+
+const r5 = x => Math.round(x / 5) * 5;
+VIEWS.plans = async (_, tok) => {
+  if (!S.me) return needLogin(tok, 'see your plans');
+  if (!isPro()) return proGate(tok, 'Goal <span>plans</span>');
+  const [goals, bests] = await Promise.all([sb.from('goals').select('*').eq('profile_id', S.me.id).then(must), sb.from('lift_bests').select('lift,weight_lb').eq('profile_id', S.me.id).then(must)]);
+  const best = Object.fromEntries(bests.map(b => [b.lift, num(b.weight_lb)])), bw = num(S.me.bodyweight) || 200;
+  const dated = goals.filter(g => g.target_date && num(g.target_lb) > (best[g.lift] || 0));
+  const start = monday(today());
+  const plan = g => {
+    const b = best[g.lift] || r5(num(g.target_lb) * 0.8), t = num(g.target_lb);
+    const weeks = Math.max(1, Math.round((pd(g.target_date) - pd(start)) / (7 * 864e5))), per = (t - b) / weeks;
+    const list = Array.from({ length: weeks }, (_, i) => { const wk = i + 1, dl = wk % 4 === 0 && wk !== weeks, top = r5(b + per * wk), use = dl ? r5(top * 0.9) : top; return { wk, from: addDays(start, i * 7), dl, top: use, work: r5(use * 0.85) }; });
+    const pace = per / bw * 100 > 1.25 ? ['Aggressive', 'down'] : per / bw * 100 > 0.6 ? ['Ambitious', 'flat'] : ['On track', 'up'];
+    return { b, t, weeks, per, list, pace };
+  };
+  paint(tok, `<section class="sec"><div><div class="kicker">DSI Pro</div><h2>Goal <span>plans</span></h2><p class="secSub">Each week has a heavy single to hit and a working weight for 3 sets of 3. Every fourth week backs off so you recover.</p></div></section>
+    <section class="sec">${dated.length ? `<div class="plans">${dated.map(g => { const p = plan(g); return `<article class="planCard" style="--c:${D.liftColor(g.lift)}">
+      <div class="bhTop"><h3>${esc(D.liftName(g.lift))}</h3><span class="big">${fmt(p.b)} → ${fmt(p.t)}</span></div>
+      <div class="pb"><i style="width:${Math.min(100, p.b / p.t * 100)}%;background:var(--c)"></i></div>
+      <p class="sub">${p.weeks} weeks to ${fmtD(g.target_date)} · +${p.per.toFixed(1)} lb a week · <span class="pill ${p.pace[1]}" style="margin:0">${p.pace[0]}</span></p>
+      <div class="kpi" style="grid-template-columns:1fr 1fr"><div><b style="color:var(--accent)">${fmt(p.list[0].top)}</b><span>This week top single</span></div><div><b>${fmt(p.list[0].work)}</b><span>Work sets 3x3</span></div></div>
+      <details><summary>Every week</summary><table class="wkT"><thead><tr><th>Week</th><th>From</th><th class="r">3x3</th><th class="r">Top</th></tr></thead><tbody>${p.list.map(w => `<tr${w.dl ? ' class="dl"' : ''}><td>${w.wk}${w.dl ? ' · deload' : ''}</td><td>${fmtD(w.from)}</td><td class="r n">${w.work}</td><td class="r n tgt">${w.top}</td></tr>`).join('')}</tbody></table></details></article>`; }).join('')}</div>`
+      : '<div class="prEmpty"><b>No dated goals yet</b><p>Set a goal above your best and pick a date on <a href="/me">your account</a>.</p></div>'}</section>`);
+};
+
+const RATIOS = [['bench', 'squat', 0.65, 0.8, 'Bench to squat'], ['squat', 'dead', 0.78, 0.9, 'Squat to deadlift'], ['clean', 'squat', 0.62, 0.75, 'Clean to squat']];
+VIEWS.coach = async (_, tok) => {
+  if (!S.me) return needLogin(tok, 'see your coach');
+  if (!isPro()) return proGate(tok, '<span>Coach</span>');
+  const [board, last] = await Promise.all([loadBoard(), sb.from('lift_entries').select('performed_on').eq('profile_id', S.me.id).eq('is_pr', true).order('performed_on', { ascending: false }).limit(1).then(must)]);
+  const row = board.find(x => x.profile_id === S.me.id);
+  if (!row) return paint(tok, '<section class="sec narrow"><div class="prEmpty"><b>Log your four lifts first</b><p>The coach reads your bench, squat, deadlift and clean. <a href="/log">Log a lift</a>.</p></div></section>');
+  const have = D.LIFTS.filter(l => row[l.k]), missing = D.LIFTS.filter(l => !row[l.k]);
+  const ranked = [...have].sort((a, b) => row.p[a.k] - row.p[b.k]), weak = ranked[0], strong = ranked[ranked.length - 1];
+  const days = last[0] ? daysAgo(last[0].performed_on) : null;
+  const notes = RATIOS.filter(([a, b]) => row[a] && row[b]).map(([a, b, lo, hi, label]) => {
+    const r = row[a] / row[b], na = D.LIFTS.find(l => l.k === a).n, nb = D.LIFTS.find(l => l.k === b).n;
+    return { label, r, ok: r >= lo && r <= hi, text: r < lo ? `${na} is lagging your ${nb.toLowerCase()}. Bring it up to about ${fmt(r5(row[b] * lo))} lb.` : r > hi ? `${nb} is lagging your ${na.toLowerCase()}. Push it toward ${fmt(r5(row[a] / hi))} lb.` : 'Balanced. Keep them moving together.' };
+  });
+  paint(tok, `<section class="sec"><div><div class="kicker">DSI Pro</div><h2><span>Coach</span></h2><p class="secSub">Read from your lifts, your age and your bodyweight.</p></div></section>
+    ${weak && strong && weak !== strong ? `<section class="sec band"><div class="focus" style="--c:${weak.c}"><div class="kicker">Your focus</div><h3>${weak.n} is your weak link</h3><p>It sits at the ${row.p[weak.k]}th percentile for your age and size, while your ${strong.n.toLowerCase()} is at the ${row.p[strong.k]}th. Raising your weakest lift moves your DSI™ fastest.</p>
+      <div class="kpi" style="grid-template-columns:1fr 1fr"><div><b style="color:var(--accent)">${fmt(r5(row[weak.k] * 1.025))}</b><span>Next PR</span></div><div><b>5x3 @ ${fmt(r5(row[weak.k] * 0.8))}</b><span>Train 2x a week</span></div></div></div></section>` : ''}
+    ${missing.length ? `<section class="sec"><div class="prEmpty"><b>Missing lifts</b><p>${missing.map(l => l.n).join(', ')} ${missing.length > 1 ? 'are' : 'is'} blank, which scores as zero. <a href="/log">Log ${missing.length > 1 ? 'them' : 'it'}</a> for a true DSI™.</p></div></section>` : ''}
+    <section class="sec"><h2>Where you <span>rank</span></h2><div class="bars card" style="padding:18px 24px">${D.LIFTS.map(l => `<div class="brow" style="--c:${l.c}"><span class="ln">${l.n}</span><div class="pb"><i style="width:${row.p[l.k]}%"></i><s></s></div><span class="w">${row[l.k] ? fmt(row[l.k]) + ' lb' : 'n/a'}</span><span class="pc">${row.p[l.k] || 0}%</span></div>`).join('')}</div></section>
+    ${notes.length ? `<section class="sec"><h2><span>Balance</span></h2><div class="plist">${notes.map(n => `<article class="pcase" style="--c:${n.ok ? 'var(--up)' : 'var(--flat)'}"><div class="bhTop"><h3>${n.label}</h3><span class="big">${n.r.toFixed(2)}</span></div><p>${n.text}</p></article>`).join('')}</div></section>` : ''}
+    <section class="sec"><div class="pcase" style="--c:${days !== null && days > 45 ? 'var(--down)' : 'var(--up)'}"><div class="eyebrow">Momentum</div><p>${days === null ? 'No PRs yet. Your first logged lift sets the baseline.' : days > 45 ? `${days} days since your last PR. Drop the weight 10% for two weeks, then build back with triples.` : days === 0 ? 'PR today. Keep the streak going.' : `Last PR ${days} day${days === 1 ? '' : 's'} ago. Keep the streak going.`}</p></div><p class="hint" style="margin-top:10px">For bragging rights, not medical or training advice.</p></section>`);
+};
+
+const ALIAS = { 'bench press': 'bench', bp: 'bench', 'back squat': 'squat', dl: 'deadlift', dead: 'deadlift', 'c&j': 'clean_and_jerk', 'clean & jerk': 'clean_and_jerk', ohs: 'overhead_squat', fs: 'front_squat', press: 'strict_press', ohp: 'strict_press' };
+const BY_NAME = Object.fromEntries(D.ALL_LIFTS.flatMap(([id, n]) => [[id, id], [n.toLowerCase(), id], [id.replace(/_/g, ' '), id]]));
+function parseImport(text) {
+  const rows = [], bad = [];
+  const pdt = t => { let m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/); if (m) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`; m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/); if (m) return `${m[3].length === 2 ? '20' + m[3] : m[3]}-${pad(m[1])}-${pad(m[2])}`; return null; };
+  text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(line => {
+    const p = line.split(/[,\t;]/).map(x => x.trim());
+    if (p.length < 3) { bad.push(line); return; }
+    const date = pdt(p[0]), key = p[1].toLowerCase(), lift = BY_NAME[key] || ALIAS[key], w = Number(p[2].replace(/[^0-9.]/g, ''));
+    if (!date || !lift || !(w > 0 && w < 1500) || date > today()) { if (!/date/i.test(line)) bad.push(line); return; }
+    rows.push({ date, lift, w });
+  });
+  rows.sort((a, b) => a.date.localeCompare(b.date));
+  return { rows, bad };
+}
+VIEWS.import = async (_, tok) => {
+  if (!S.me) return needLogin(tok, 'import history');
+  if (!isPro()) return proGate(tok, 'Import <span>history</span>');
+  if (!paint(tok, `<section class="sec narrow"><div><div class="kicker">DSI Pro</div><h2>Import <span>history</span></h2><p class="secSub">Paste from a spreadsheet or notes. One lift per line: date, lift, weight.</p></div>
+    <pre class="sample">2025-03-14, bench, 225\n3/28/2025, back squat, 315\n2025-04-02, deadlift, 405</pre>
+    <textarea id="imp" rows="10" placeholder="Paste here" aria-label="Lifts to import"></textarea><div id="impPrev"></div>
+    <div class="row"><button class="btn" id="impGo" disabled>Import</button><span class="hint" id="impMsg"></span></div></section>`)) return;
+  const ta = $('#imp'), prev = $('#impPrev'), btn = $('#impGo');
+  const refresh = () => { const { rows, bad } = parseImport(ta.value); btn.disabled = !rows.length; btn.textContent = `Import ${rows.length || ''} lifts`;
+    prev.innerHTML = ta.value.trim() ? `<p class="sub">${rows.length} ready${bad.length ? ` · ${bad.length} skipped: ${esc(bad.slice(0, 3).join(' | '))}` : ''}</p>${rows.slice(0, 8).map(r => `<div class="impRow"><span>${fmtD(r.date)}</span><b>${esc(D.liftName(r.lift))}</b><span class="n">${fmt(r.w)}</span></div>`).join('')}` : ''; };
+  ta.oninput = refresh;
+  btn.onclick = async () => {
+    const { rows } = parseImport(ta.value); btn.disabled = true; let n = 0;
+    for (const r of rows) { const { error } = await sb.from('lift_entries').insert({ profile_id: S.me.id, lift: r.lift, weight_lb: r.w, performed_on: r.date, source: 'import' }); if (error) { $('#impMsg').textContent = `${n} imported. ${error.message}`; return; } n++; $('#impMsg').textContent = `${n} of ${rows.length}…`; }
+    ta.value = ''; refresh(); $('#impMsg').textContent = `${n} lifts added to your history.`; toast('Imported');
+  };
 };
 
 /* ---------- policies: privacy, terms, support ---------- */

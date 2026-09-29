@@ -299,3 +299,63 @@ table.wkT th{padding:8px}
 .doc p,.doc ul{margin:0;color:var(--ink)}
 .doc ul{padding-left:20px;display:grid;gap:6px}
 .doc a{color:var(--accent)}
+
+/* hub tiles */
+.tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.tool{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 18px;display:grid;gap:4px;text-decoration:none;transition:border-color .15s}
+.tool:hover{border-color:var(--accent)}
+.tool b{font:900 22px/1.05 var(--disp);text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.tool b .pill{margin:0}
+.tool span{color:var(--muted);font-size:14px}
+.dangerText{color:var(--down)!important;box-shadow:inset 0 0 0 1px rgba(240,98,98,.45)!important}
+.g select{font-size:13px;padding:6px 8px}
+.chips a.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* dialogs */
+.dlg{border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);padding:0;max-width:min(560px,calc(100vw - 32px));width:100%}
+.dlg::backdrop{background:rgba(5,8,14,.72)}
+.dlgIn{padding:22px;display:grid;gap:14px}
+.dlgIn h3{margin:0;font:900 28px/1.05 var(--disp);text-transform:uppercase}
+.dlgIn p{margin:0;color:var(--muted)}
+.dlgIn .chip{display:inline-flex;align-items:center;gap:6px}
+.dlgIn .chip input{accent-color:var(--accent)}
+.dlgIn.vid{padding:12px}
+.dlgIn.vid video{width:100%;max-height:75vh;border-radius:8px;background:#000}
+.vidBtn{border:0;background:var(--accent);color:#141414;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:11px;vertical-align:middle;margin-left:6px}
+
+/* chat extras */
+.msg .acts{display:flex;gap:10px;justify-content:flex-end}
+.msg:not(.mine) .acts{justify-content:flex-start}
+.msg .acts .x{font-size:11px}
+.msg .by a{text-decoration:none}
+.rulesGate{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+.rulesGate a{color:var(--accent)}
+
+/* rules */
+.rules{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.rule{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:8px;padding:16px 18px;display:grid;gap:6px}
+.rule span{font:600 13px var(--mono);color:var(--accent)}
+.rule b{font:900 22px/1.05 var(--disp);text-transform:uppercase}
+.rule p{margin:0;color:var(--muted)}
+
+/* pro tools */
+.chartCard{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 18px;display:grid;gap:8px}
+.chart{width:100%;height:auto;display:block}
+.chart text{font:500 12px var(--mono);fill:var(--muted)}
+.chart .gl{stroke:var(--line)}
+.chart .goal{stroke:var(--up);stroke-width:1.5;stroke-dasharray:5 5}
+.chart .goalT{fill:var(--up)}
+.plans{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.planCard{background:var(--panel);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:8px;padding:18px 20px;display:grid;gap:10px}
+.planCard h3{margin:0;font:900 26px/1 var(--disp);text-transform:uppercase}
+.planCard .pb{height:10px;background:var(--bg);border-radius:5px;overflow:hidden;position:relative}
+.planCard .pb i{position:absolute;inset:0 auto 0 0;border-radius:5px}
+.planCard summary{cursor:pointer;color:var(--accent);font-weight:600}
+.planCard tr.dl td{opacity:.6}
+.focus{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:8px;padding:20px 22px;display:grid;gap:10px}
+.focus h3{margin:0;font:900 30px/1.05 var(--disp);text-transform:uppercase}
+.focus p{margin:0;color:var(--muted);max-width:70ch}
+.sample{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font:500 13px var(--mono);color:var(--muted);margin:0}
+.impRow{display:grid;grid-template-columns:90px 1fr auto;gap:10px;padding:6px 0;border-top:1px solid var(--line);font-size:14px}
+.impRow .n{font-family:var(--mono)}
+@media (hover:hover){.msg .acts{opacity:0;transition:opacity .15s}.msg:hover .acts,.msg:focus-within .acts{opacity:1}}
