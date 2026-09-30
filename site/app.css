@@ -382,3 +382,4 @@ table.wkT th{padding:8px}
 .impDay textarea{width:100%}
 .impDay .field{margin-bottom:10px}
 @media (max-width:600px){.impHead{grid-template-columns:auto 1fr}.impHead [data-title]{grid-column:1/-1}}
+.upArrow{display:inline-block;margin-left:6px;font:700 12px var(--mono);color:var(--up);vertical-align:middle;white-space:nowrap}

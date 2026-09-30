@@ -73,3 +73,17 @@ export function target(l, p) {
   if (!base) return 0;
   return r5(base * l.f + (l.plus || 0));
 }
+
+// Gains from PRs set in the last week: pounds added per lift, plus what that did to the DSI and total.
+export function gains(r, days = 7) {
+  const out = { lift: {}, score: 0, total: 0 }, prev = { ...r };
+  let any = false;
+  for (const l of LIFTS) {
+    const dt = r[l.k + '_date'], pv = +r[l.k + '_prev'] || 0, now = +r[l.k] || 0;
+    if (!dt || !pv || now <= pv) continue;
+    if ((Date.now() - Date.parse(String(dt).slice(0, 10) + 'T12:00:00')) / 864e5 > days + 0.5) continue;
+    out.lift[l.k] = now - pv; prev[l.k] = pv; any = true;
+  }
+  if (any) { out.score = score(r) - score(prev); out.total = total(r) - total(prev); }
+  return out;
+}

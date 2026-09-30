@@ -53,7 +53,7 @@ async function loadBoard() {
   const rows = must(await sb.from('board').select('*'));
   S.board = rows.map(r => {
     const x = { ...r, bw: num(r.bw), age: num(r.age), bench: num(r.bench), squat: num(r.squat), dead: num(r.dead), clean: num(r.clean) };
-    x.score = D.score(x); x.total = D.total(x); x.p = D.pcts(x);
+    x.score = D.score(x); x.total = D.total(x); x.p = D.pcts(x); x.g = D.gains(x);
     return x;
   });
   return S.board;
@@ -240,11 +240,11 @@ function renderBoard() {
     </div>
     ${rows.length ? `<div class="tablewrap"><table class="lb"><thead><tr><th>#</th><th>Lifter</th><th class="r${f.sort === 'dsi' ? ' hl' : ''}">DSI™</th><th class="r${f.sort === 'total' ? ' hl' : ''}">Total</th>${D.LIFTS.map(l => `<th class="r c-${l.k}">${l.n}</th>`).join('')}</tr></thead><tbody>
     ${rows.map((r, i) => {
-      const club = D.clubOf(r.total);
+      const club = D.clubOf(r.total), up = v => v > 0 ? `<span class="upArrow" title="Up ${fmt(v)} this week">▲${fmt(v)}</span>` : '';
       return `<tr class="${S.me && S.me.id === r.profile_id ? 'me' : ''}"><td class="pos">${i + 1}</td>
       <td><div class="who"><a href="/u/${r.profile_id}">${esc(r.name)}</a>${r.roast_opt_in ? '<i class="fire" title="Opted in to roasts">🔥</i>' : ''}${r.has_protest ? '<span class="pill flat">Protest</span>' : ''}</div><div class="sub">${r.age ? 'Age ' + r.age + ' · ' : ''}${r.bw ? r.bw + ' lb · ' : ''}${esc(r.division)}</div></td>
-      <td class="r n big">${r.score}</td><td class="r n">${fmt(r.total)}${club ? `<span class="club">${fmt(club)}</span>` : ''}</td>
-      ${D.LIFTS.map(l => r[l.k] ? `<td class="r n">${fmt(r[l.k])}<div class="sub">${isNew(r[l.k + '_date']) ? `<span class="prDateNew">PR ${fmtD(r[l.k + '_date'])}</span>` : r.p[l.k] + 'th pct'}</div></td>` : '<td class="r sub">n/a</td>').join('')}
+      <td class="r n big">${r.score}${up(r.g.score)}</td><td class="r n">${fmt(r.total)}${up(r.g.total)}${club ? `<span class="club">${fmt(club)}</span>` : ''}</td>
+      ${D.LIFTS.map(l => r[l.k] ? `<td class="r n">${fmt(r[l.k])}${up(r.g.lift[l.k])}<div class="sub">${isNew(r[l.k + '_date']) ? `<span class="prDateNew">PR ${fmtD(r[l.k + '_date'])}</span>` : r.p[l.k] + 'th pct'}</div></td>` : '<td class="r sub">n/a</td>').join('')}
       </tr>`;
     }).join('')}</tbody></table></div>`
       : `<div class="empty">${f.div === 'women' ? 'No women on the board yet. The women\'s division is open, bring your crew.' : 'Nobody matches this filter yet.'}</div>`}`;

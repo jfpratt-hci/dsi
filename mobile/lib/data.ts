@@ -15,6 +15,7 @@ export type BoardRow = {
   score: number;
   total: number;
   p: Record<string, number>;
+  g: { lift: Record<string, number>; score: number; total: number };
 };
 
 const n = (v: unknown) => (v == null || v === '' ? 0 : Number(v));
@@ -24,7 +25,7 @@ export async function loadBoard(): Promise<BoardRow[]> {
   if (error) throw error;
   return (data ?? []).map((r: any) => {
     const x = { ...r, bw: n(r.bw), age: n(r.age), bench: n(r.bench), squat: n(r.squat), dead: n(r.dead), clean: n(r.clean) };
-    return { ...x, score: D.score(x), total: D.total(x), p: D.pcts(x) } as BoardRow;
+    return { ...x, score: D.score(x), total: D.total(x), p: D.pcts(x), g: D.gains(x) } as BoardRow;
   });
 }
 

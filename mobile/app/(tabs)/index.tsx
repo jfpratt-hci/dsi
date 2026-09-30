@@ -62,6 +62,7 @@ export default function Board() {
           <Card><Muted>{div === 'women' ? 'No women on the board yet. The division is open.' : 'Nobody here yet.'}</Muted></Card>
         ) : list.map((r, i) => {
           const val = sort === 'score' ? r.score : r[sort];
+          const gain = sort === 'score' ? r.g.score : sort === 'total' ? r.g.total : r.g.lift[sort] || 0;
           const sub = sort === 'score' ? `${r.total.toLocaleString()} lb total` : sort === 'total' ? `DSI ${r.score}` : isNew((r as any)[sort + '_date']) ? `PR ${fmtD((r as any)[sort + '_date'])}` : `${r.p[sort]}th percentile`;
           const mine = me?.id === r.profile_id;
           return (
@@ -73,7 +74,10 @@ export default function Board() {
                 <Muted>{r.age ? `Age ${r.age} · ` : ''}{r.bw ? `${r.bw} lb · ` : ''}{r.division}</Muted>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Mono style={{ fontSize: 22, color: sort in liftColor ? liftColor[sort] : C.ink }}>{val.toLocaleString()}</Mono>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+                  {gain > 0 ? <Text style={{ color: C.up, fontSize: 13, fontWeight: '700' }} accessibilityLabel={`up ${gain} this week`}>▲{gain.toLocaleString()}</Text> : null}
+                  <Mono style={{ fontSize: 22, color: sort in liftColor ? liftColor[sort] : C.ink }}>{val.toLocaleString()}</Mono>
+                </View>
                 <Muted style={{ fontSize: 12, color: sub.startsWith('PR') ? C.accent : C.muted }}>{sub}</Muted>
               </View>
             </Pressable>
