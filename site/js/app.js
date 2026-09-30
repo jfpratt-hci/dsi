@@ -194,7 +194,7 @@ VIEWS[''] = async (_, tok) => {
     ${weekPRs.length ? `<div class="prGrid">${weekPRs.slice(0, 8).map(prCard).join('')}</div>` : `<div class="prEmpty"><b>No PRs yet this week</b><p>Somebody has to go first. <a href="/log">Log a lift</a>.</p></div>`}
   </section>
   <section class="sec band" aria-labelledby="kings">
-    <div class="secHead"><div><div class="kicker">Heaviest on the board</div><h2 id="kings">Lift <span>kings</span></h2><p class="secSub">Tap a lift to sort the leaderboard by it.</p></div></div>
+    <div class="secHead"><div><div class="kicker">Heaviest on the board</div><h2 id="kings">Lift <span>kings</span></h2><p class="secSub">Tap a lift to sort the leaderboard by it${isPro() ? '' : ' with DSI Pro'}.</p></div></div>
     <div class="kings">${D.LIFTS.map(l => { const k = [...board].sort((a, b) => b[l.k] - a[l.k])[0]; return k && k[l.k] ? `<button class="king${S.bf.sort === l.k ? ' on' : ''}" style="--c:${l.c}" data-sort="${l.k}"><span class="eyebrow">${l.n}</span><b>${esc(k.name)}</b><span class="kv">${fmt(k[l.k])} lb</span>${isNew(k[l.k + '_date']) ? `<span class="prDateNew">PR ${fmtD(k[l.k + '_date'])}</span>` : ''}</button>` : ''; }).join('')}</div>
   </section>
   <section class="sec" aria-labelledby="lbh">
@@ -203,7 +203,7 @@ VIEWS[''] = async (_, tok) => {
   </section>
   ${S.me ? '' : `<section class="sec band cta2"><div class="secHead"><div><div class="kicker">Free to join</div><h2>Where do <span>you</span> rank?</h2><p class="secSub">Enter your four lifts, see your DSI™, and save your spot on the board in under a minute.</p></div><a class="btn" href="/join">Join the index</a></div></section>`}`;
   if (!paint(tok, html)) return;
-  $$('.king').forEach(b => b.onclick = () => { S.bf.sort = b.dataset.sort; renderBoard(); $('#lb').scrollIntoView({ behavior: 'smooth' }); $$('.king').forEach(k => k.classList.toggle('on', k.dataset.sort === S.bf.sort)); });
+  $$('.king').forEach(b => b.onclick = () => { if (!isPro()) return go('/pro'); S.bf.sort = b.dataset.sort; renderBoard(); $('#lb').scrollIntoView({ behavior: 'smooth' }); $$('.king').forEach(k => k.classList.toggle('on', k.dataset.sort === S.bf.sort)); });
   bindActions(main);
   renderBoard();
 };
@@ -223,7 +223,8 @@ function prCard(p) {
 
 function renderBoard() {
   const el = $('#lb'); if (!el) return;
-  const f = S.bf;
+  const f = S.bf, pro = isPro();
+  if (!pro) { f.sort = 'dsi'; f.age = 'all'; }
   const SORTS = [['dsi', 'Overall'], ['total', 'Total'], ...D.LIFTS.map(l => [l.k, l.n])];
   let rows = S.board.filter(r => f.div === 'all' || r.division === f.div)
     .filter(r => f.age === 'all' || (f.age === 'u40' ? r.age && r.age < 40 : f.age === '40s' ? r.age >= 40 && r.age < 50 : r.age >= 50));
@@ -231,10 +232,10 @@ function renderBoard() {
   rows = rows.filter(r => r[key]).sort((a, b) => b[key] - a[key] || b.score - a.score);
   const title = SORTS.find(s => s[0] === f.sort)[1];
   const divName = { all: '', men: "Men's ", women: "Women's ", open: 'Open ' }[f.div];
-  const chip = (grp, v, t) => `<button class="chip" data-${grp}="${v}" aria-pressed="${f[grp] === v}">${t}</button>`;
+  const chip = (grp, v, t) => `<button class="chip" data-${grp}="${v}" aria-pressed="${f[grp] === v}">${t}${grp === 'age' && v !== 'all' && !pro ? ' ' + PRO : ''}</button>`;
   el.innerHTML = `<div class="boardHead">
       <div class="bhTop"><h3 id="lbh">${esc(divName)}${esc(title)} <span>board</span></h3><p>${rows.length} ranked · 500 is the median for your age and size</p></div>
-      <div class="tabs" role="tablist">${SORTS.map(s => `<button class="tab" role="tab" data-sort="${s[0]}" aria-selected="${f.sort === s[0]}">${s[1]}</button>`).join('')}</div>
+      <div class="tabs" role="tablist">${SORTS.map(s => `<button class="tab" role="tab" data-sort="${s[0]}" aria-selected="${f.sort === s[0]}">${s[1]}${s[0] !== 'dsi' && !pro ? ' ' + PRO : ''}</button>`).join('')}</div>
       <div class="row"><div class="chips" aria-label="Division">${chip('div', 'all', 'All')}${chip('div', 'men', 'Men')}${chip('div', 'women', 'Women')}${chip('div', 'open', 'Open')}</div>
       <div class="chips" aria-label="Age">${chip('age', 'all', 'All ages')}${chip('age', 'u40', 'Under 40')}${chip('age', '40s', '40s')}${chip('age', '50p', '50+')}</div></div>
     </div>
@@ -248,9 +249,9 @@ function renderBoard() {
       </tr>`;
     }).join('')}</tbody></table></div>`
       : `<div class="empty">${f.div === 'women' ? 'No women on the board yet. The women\'s division is open, bring your crew.' : 'Nobody matches this filter yet.'}</div>`}`;
-  $$('[data-sort]', el).forEach(b => b.onclick = () => { f.sort = b.dataset.sort; renderBoard(); $$('.king').forEach(k => k.classList.toggle('on', k.dataset.sort === f.sort)); });
+  $$('[data-sort]', el).forEach(b => b.onclick = () => { if (!pro && b.dataset.sort !== 'dsi') return go('/pro'); f.sort = b.dataset.sort; renderBoard(); $$('.king').forEach(k => k.classList.toggle('on', k.dataset.sort === f.sort)); });
   $$('[data-div]', el).forEach(b => b.onclick = () => { f.div = b.dataset.div; renderBoard(); });
-  $$('[data-age]', el).forEach(b => b.onclick = () => { f.age = b.dataset.age; renderBoard(); });
+  $$('[data-age]', el).forEach(b => b.onclick = () => { if (!pro && b.dataset.age !== 'all') return go('/pro'); f.age = b.dataset.age; renderBoard(); });
 }
 
 /* ---------- PR wall ---------- */
@@ -306,10 +307,10 @@ VIEWS.u = async (id, tok) => {
   ${Object.keys(gl).length ? `<section class="sec"><h2>Goals</h2><div class="goalRows">${Object.keys(gl).map(id => { const now = bestOf[id] || 0, g = gl[id], pctg = Math.min(100, Math.round(now / g * 100)); return `<div class="g" style="--c:${D.liftColor(id)}"><h4>${esc(D.liftName(id))}</h4><div class="big">${fmt(g)} lb</div><div class="pb"><i style="width:${pctg}%"></i></div><div class="now">${now ? fmt(now) + ' now · ' + (g > now ? fmt(g - now) + ' to go' : 'done') : 'no lift yet'}</div></div>`; }).join('')}</div></section>` : ''}
   ${otherBests.length ? `<section class="sec"><h2>Other <span>lifts</span></h2><div class="goalRows">${otherBests.map(b => `<div class="g" style="--c:var(--muted)"><h4>${esc(D.liftName(b.lift))}</h4><div class="big">${fmt(b.weight_lb)} lb</div><div class="now">${fmtD(b.performed_on)}</div></div>`).join('')}</div></section>` : ''}
   <section class="sec"><h2>Lift <span>history</span></h2><div class="board"><div class="tablewrap"><table><thead><tr><th>Date</th><th>Lift</th><th class="r">Weight</th><th>Status</th><th></th></tr></thead><tbody>
-  ${must(hist).map(e => `<tr class="${e.status === 'struck' ? 'struck' : ''}"><td class="n">${fmtD(e.performed_on)}</td><td>${esc(D.liftName(e.lift))}${e.note ? `<div class="sub">${esc(e.note)}</div>` : ''}</td><td class="r n big">${fmt(e.weight_lb)}${e.video_path ? ` <button class="vidBtn" data-vid="${esc(e.video_path)}" aria-label="Play video">▶</button>` : ''}</td>
+  ${(isPro() ? must(hist) : must(hist).slice(0, 3)).map(e => `<tr class="${e.status === 'struck' ? 'struck' : ''}"><td class="n">${fmtD(e.performed_on)}</td><td>${esc(D.liftName(e.lift))}${e.note ? `<div class="sub">${esc(e.note)}</div>` : ''}</td><td class="r n big">${fmt(e.weight_lb)}${e.video_path ? ` <button class="vidBtn" data-vid="${esc(e.video_path)}" aria-label="Play video">▶</button>` : ''}</td>
     <td>${e.is_pr ? '<span class="pill acc">PR</span>' : ''}${e.status === 'protested' ? '<span class="pill flat">Under protest</span>' : e.status === 'struck' ? '<span class="pill down">Struck</span>' : ''}${e.source === 'workout' ? '<span class="sub"> from workout</span>' : ''}</td>
     <td class="r" data-host>${!mine && e.status === 'ok' && S.me ? `<button class="btn ghost sm" data-protest="lift_entry" data-ref="${e.id}" data-title="${esc(p.display_name + ' ' + D.liftName(e.lift) + ' ' + num(e.weight_lb) + ' lb')}">Protest</button>` : ''}${mine && e.status === 'ok' && !e.video_path && (e.is_pr || isPro()) ? `<button class="btn ghost sm" data-addvid="${e.id}">Add video</button> ` : ''}${mine && e.status === 'ok' ? `<button class="btn ghost sm" data-del="${e.id}">Delete</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">No lifts yet.</td></tr>'}
-  </tbody></table></div></div></section>`)) return;
+  </tbody></table></div></div>${!isPro() && must(hist).length > 3 ? `<p class="hint">Showing the latest 3 of ${must(hist).length}. <a href="/pro">See every lift with DSI Pro</a></p>` : ''}</section>`)) return;
   bindActions(main, () => route());
   bindVideo(main, () => route());
   if ($('#rpU')) $('#rpU').onclick = () => reportDialog({ type: 'profile', id, name: p.display_name, uid: id });
@@ -334,10 +335,10 @@ VIEWS.log = async (_, tok) => {
   const r = boardRow(S.me.id) || {};
   const opts = [...D.LIFTS.map(l => [l.db, D.liftName(l.db) + (r[l.k] ? ` (best ${fmt(r[l.k])})` : '')]), ...Object.entries(D.OTHER_LIFTS)];
   if (!paint(tok, `<section class="sec"><div><div class="kicker">New max</div><h2>Log a <span>lift</span></h2></div>
-    <p class="lede">Log a heavy single. Beat your old best and it lands on the PR wall with today's date.</p>
+    <p class="lede">Log a heavy single. Beat your old best and it lands on the PR wall with today's date.${isPro() ? '' : ' Free covers the four DSI lifts. <a href="/pro">DSI Pro</a> adds every other lift.'}</p>
     <form class="formCard" id="logF">
       <div class="fields">
-        <div class="field w2"><label for="lf-lift">Lift</label><select id="lf-lift" required>${opts.map(o => `<option value="${o[0]}">${esc(o[1])}</option>`).join('')}</select></div>
+        <div class="field w2"><label for="lf-lift">Lift</label><select id="lf-lift" required>${opts.map((o, i) => `<option value="${o[0]}"${i >= D.LIFTS.length && !isPro() ? ' disabled' : ''}>${esc(o[1])}${i >= D.LIFTS.length && !isPro() ? ' (Pro)' : ''}</option>`).join('')}</select></div>
         <div class="field"><label for="lf-w">Weight (lb)</label><input id="lf-w" type="number" inputmode="decimal" min="1" max="1499" step="0.5" required></div>
         <div class="field"><label for="lf-d">Date</label><input id="lf-d" type="date" value="${today()}" max="${today()}" required></div>
         <div class="field w4"><label for="lf-n">Note (optional)</label><input id="lf-n" type="text" maxlength="280" placeholder="Belt, no belt, witnesses, video link…"></div>
@@ -394,6 +395,9 @@ VIEWS.week = async (day, tok) => {
     let mine = '';
     if (!(w.lifts || []).length && !w.score_label) mine = `<div class="wkMine"><h3>Rest <span>day</span></h3><p class="hint">Nothing to log. Recover like it's your job.</p></div>`;
     else if (!S.me) mine = `<div class="wkMine"><h3>Your <span>numbers</span></h3><p class="hint">Sign in and every weight here is built from your own PRs. Then log what you actually did.</p><a class="btn" href="/login">Sign in</a></div>`;
+    else if (!isPro()) mine = `<div class="wkMine"><h3>Your <span>numbers</span> ${PRO}</h3>
+        <div class="tablewrap"><table class="wkT"><thead><tr><th>Lift</th><th>Scheme</th></tr></thead><tbody>${(w.lifts || []).map(l => `<tr><td><b>${esc(l.n)}</b><div class="sub">${esc(l.why)}</div></td><td class="n">${esc(l.sch)}</td></tr>`).join('')}</tbody></table></div>
+        <p class="hint">DSI Pro turns every lift here into a target weight built from your own PRs, then lets you log what you did and rank on the day board.</p><a class="btn" href="/pro">See DSI Pro</a></div>`;
     else {
       const ent = (myLog && myLog.entries) || {};
       mine = `<form class="wkMine" id="wkF"><h3>${esc(S.me.display_name)}'s <span>numbers</span></h3>
@@ -478,12 +482,12 @@ VIEWS.chat = async (roomId, tok) => {
     ${joinable.map(g => `<div class="room"><b>${esc(g.name)}</b><button class="btn ghost sm" data-join="${g.id}">Join</button></div>`).join('')}
     ${pro.filter(g => !joinable.includes(g)).map(g => `<a class="room" href="/pro"><b>${esc(g.name)}</b><span class="pill acc">Pro</span></a>`).join('')}
     <h4>Threads</h4>${threads.map(sideRoom).join('') || '<p class="empty" style="padding:8px 14px">Hit Talk on any PR, day or protest to start one.</p>'}
-    ${S.me.role === 'admin' ? `<h4>New group</h4><form id="ng" class="inlineForm" style="margin:0 10px 10px"><input id="ng-name" maxlength="40" placeholder="Name, like Masters 50+" required><select id="ng-tier"><option value="free">Everyone can join</option><option value="pro">DSI Pro only</option></select><label class="check"><input type="checkbox" id="ng-open" checked><span class="sub">Open to join</span></label><button class="btn sm">Create</button></form>` : ''}
+    ${isPro() ? `<h4>New group</h4><form id="ng" class="inlineForm" style="margin:0 10px 10px"><input id="ng-name" maxlength="40" minlength="3" placeholder="Name, like Masters 50+" required><select id="ng-tier"><option value="free">Everyone can join</option><option value="pro">DSI Pro only</option></select><label class="check"><input type="checkbox" id="ng-open" checked><span class="sub">Open to join</span></label><button class="btn sm">Create</button></form>` : `<h4>New group</h4><a class="room" href="/pro"><b>Start your own group</b><span class="pill acc">Pro</span></a>`}
   </aside>
   ${room ? `<div class="thread"><div class="thHead"><h3>${esc(room.title)}</h3>${back ? `<a class="chip" href="${back[0]}">${back[1]}</a>` : ''}</div>
     <div class="msgs" id="msgs" aria-live="polite"><p class="empty">Loading…</p></div>
-    ${S.me.terms_accepted_at ? '' : `<div class="rulesGate"><span>Agree to the <a href="/rules">community rules</a> to post.</span><button class="btn sm" type="button" id="agreeRules">I agree</button></div>`}
-    <form class="compose" id="cmp"${S.me.terms_accepted_at ? '' : ' hidden'}><label class="vh" for="cmp-t">Message</label><textarea id="cmp-t" maxlength="1000" placeholder="${S.me.roast_opt_in ? 'Say something. Roasts welcome.' : 'Say something'}" required></textarea><button class="btn">Send</button></form></div>`
+    ${room.kind !== 'group' && !isPro() ? `<div class="rulesGate"><span>Posting in PR, day and protest threads is part of DSI Pro. Your group rooms are free.</span><a class="btn sm" href="/pro">See Pro</a></div>` : S.me.terms_accepted_at ? '' : `<div class="rulesGate"><span>Agree to the <a href="/rules">community rules</a> to post.</span><button class="btn sm" type="button" id="agreeRules">I agree</button></div>`}
+    <form class="compose" id="cmp"${S.me.terms_accepted_at && (room.kind === 'group' || isPro()) ? '' : ' hidden'}><label class="vh" for="cmp-t">Message</label><textarea id="cmp-t" maxlength="1000" placeholder="${S.me.roast_opt_in ? 'Say something. Roasts welcome.' : 'Say something'}" required></textarea><button class="btn">Send</button></form></div>`
       : '<div class="prEmpty"><b>No rooms yet</b></div>'}
   </div></section>`)) return;
 
@@ -494,9 +498,11 @@ VIEWS.chat = async (roomId, tok) => {
   const ng = $('#ng');
   if (ng) ng.onsubmit = async e => {
     e.preventDefault();
-    const name = $('#ng-name').value.trim(), slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'group';
-    const { error } = await sb.from('groups').insert({ name, slug, kind: 'custom', is_open: $('#ng-open').checked, min_tier: $('#ng-tier').value });
-    if (error) return toast(error.message); toast('Group created'); route();
+    const name = $('#ng-name').value.trim();
+    const { data: gid, error } = await sb.rpc('create_group', { p_name: name, p_open: $('#ng-open').checked, p_pro_only: $('#ng-tier').value === 'pro' });
+    if (error) return toast(error.message);
+    const { data: r } = await sb.from('chat_rooms').select('id').eq('kind', 'group').eq('group_id', gid).maybeSingle();
+    toast('Group created'); r ? go('/chat/' + r.id) : route();
   };
   if (!room) return;
 
@@ -630,11 +636,16 @@ VIEWS.me = async (_, tok) => {
         <div class="field"><label for="pf-bw">Bodyweight (lb)</label><input id="pf-bw" type="number" min="80" max="450" step="0.1" value="${esc(m.bodyweight || '')}" required></div>
         <div class="field"><label for="pf-sex">Sex</label><select id="pf-sex">${[['male', 'Male'], ['female', 'Female'], ['unspecified', 'Prefer not to say']].map(o => `<option value="${o[0]}"${m.sex === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select></div>
         <div class="field"><label for="pf-div">Division</label><select id="pf-div">${[['men', 'Men'], ['women', 'Women'], ['open', 'Open']].map(o => `<option value="${o[0]}"${m.division === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select></div>
-        <div class="field w2"><span class="lbl">Roasts</span><label class="check" style="text-transform:none;letter-spacing:0;font:500 15px var(--sans);color:var(--ink)"><input type="checkbox" id="pf-roast"${m.roast_opt_in ? ' checked' : ''}><span>Roast me. Show the savage verdict on my card and put a 🔥 by my name.</span></label></div>
+        <div class="field w2"><span class="lbl">Roasts</span><label class="check" style="text-transform:none;letter-spacing:0;font:500 15px var(--sans);color:var(--ink)"><input type="checkbox" id="pf-roast"${m.roast_opt_in ? ' checked' : ''}${pro ? '' : ' disabled'}><span>Roast me. Show the savage verdict on my card and put a 🔥 by my name.${pro ? '' : ' <a href="/pro">DSI Pro</a>'}</span></label></div>
       </div>
       <div class="row"><button class="btn" type="submit">${first ? 'Join the board' : 'Save'}</button><span class="hint" id="pf-msg"></span></div>
     </form></section>
-    ${first ? '' : `<section class="sec band"><div class="secHead"><div><div class="kicker">What you're chasing</div><h2>Goals</h2>${pro ? '<p class="secSub">Pick a date and your goal plan updates.</p>' : `<p class="secSub">Add a date and get a weekly plan with <a href="/pro">DSI Pro</a>.</p>`}</div></div>
+    ${first ? '' : !pro ? `<section class="sec band"><div class="secHead"><div><div class="kicker">What you're chasing</div><h2>Goals ${PRO}</h2><p class="secSub">Set a number and a date, and get a week by week plan to hit it.</p></div><a class="btn sm" href="/pro">See Pro</a></div></section>
+    <section class="sec"><div><div class="kicker">Community</div><h2>Rules and <span>safety</span></h2></div>
+      <div class="tools">${tile('/rules', 'Community rules', m.terms_accepted_at ? 'You agreed on ' + fmtD(m.terms_accepted_at) + '.' : 'Agree before posting in chat.')}${tile('/blocked', 'Blocked lifters', S.blocked.size ? S.blocked.size + ' blocked' : 'Nobody blocked.')}${tile('/protests', 'Protests', 'The Commissioner\'s court.')}</div></section>
+    <section class="sec"><div><div class="kicker">Account</div><h2>Your <span>account</span></h2></div>
+      <div class="row"><span class="pill acc" style="margin:0">Member</span><a class="btn ghost sm" href="/pro">Membership</a><button class="btn ghost sm" id="so">Sign out</button><button class="btn ghost sm dangerText" id="delAcct">Delete account</button></div>
+      <p class="hint">Deleting removes your profile, every lift, goal, log, message and video, and your login. It cannot be undone.</p></section>` : `<section class="sec band"><div class="secHead"><div><div class="kicker">What you're chasing</div><h2>Goals</h2>${pro ? '<p class="secSub">Pick a date and your goal plan updates.</p>' : `<p class="secSub">Add a date and get a weekly plan with <a href="/pro">DSI Pro</a>.</p>`}</div></div>
       <form class="formCard" id="gf"><div class="goalRows" id="gRows">${goalIds.map(goalCard).join('')}</div>
       <div class="row"><label class="vh" for="g-add">Add a goal for another lift</label><select id="g-add" style="max-width:280px"><option value="">Add a goal for another lift…</option>${D.ALL_LIFTS.filter(([id]) => !goalIds.includes(id)).map(([id, n]) => `<option value="${id}">${esc(n)}</option>`).join('')}</select><button class="btn ghost sm" type="button" id="g-addb">Add</button></div>
       <div class="row"><button class="btn" type="submit">Save goals</button><span class="hint">Clear a box to remove that goal.</span></div></form></section>
@@ -803,14 +814,14 @@ VIEWS.reports = async (_, tok) => {
 };
 
 /* ---------- Pro ---------- */
-const PERKS = [['Progress charts', 'Every lift over time, with your goal line and PR markers.', '/progress'], ['Goal plans', 'Set a date and get a week by week path to your number.', '/plans'], ['Coach', 'Your weak link, your ratios, and what to train next.', '/coach'], ['Video on any set', 'Attach video to any lift, not just PRs.', '/log'], ['Pro groups', 'Private rooms for Pro lifters.', '/chat'], ['History import', 'Bring years of lifts in from a spreadsheet.', '/import']];
+const PERKS = [['Your target weights', 'Every workout turned into weights built from your own PRs.', '/week'], ['Workout logging and day boards', 'Log what you did and see how you stack up each day.', '/week'], ['Every board and filter', 'Total and single lift boards, age brackets.', '/'], ['Goals, plans and charts', 'Set a date and get a week by week path to your number.', '/plans'], ['Coach', 'Your weak link, your ratios, and what to train next.', '/coach'], ['Video on any set', 'Proof on every lift, not just PRs.', '/log'], ['Threads, groups and roast mode', 'Post in every thread, start your own groups, opt in to the roast.', '/chat'], ['Full history and imports', 'Every lift you ever logged, plus years more from a spreadsheet.', '/import']];
 VIEWS.pro = async (_, tok) => {
   const pro = isPro();
   paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">DSI Pro</div><h2>Train with a <span>plan</span></h2><p class="secSub">Everything in Member, plus the tools that turn numbers into progress.</p></div>
     ${pro ? '<span class="pill up" style="margin:0">Pro is active on your account</span>' : '<div class="kpi"><div><b>$9.99</b><span>a month</span></div><div><b>$59.99</b><span>a year</span></div></div>'}</div></section>
     <section class="sec band"><div class="tools">${PERKS.map(([t, d, h]) => `<a class="tool" href="${pro ? h : '/pro'}"><b>${t}</b><span>${d}</span></a>`).join('')}</div>
-    ${pro ? '' : '<div class="row" style="margin-top:14px"><button class="btn" disabled>Coming soon</button><span class="hint">Pro memberships open soon on the website and in the apps.</span></div>'}</section>
-    <section class="sec"><div><div class="kicker">Always free</div><h2>Member</h2></div><p class="lede">Leaderboards, the PR wall, daily workouts with your numbers, lift logging, goals, video on PRs, chat and protests.</p></section>`);
+    ${pro ? '' : '<div class="row" style="margin-top:14px"><button class="btn" disabled>Coming soon</button><span class="hint">Pro memberships open soon in the DSI app.</span></div>'}</section>
+    <section class="sec"><div><div class="kicker">Always free</div><h2>Member</h2></div><p class="lede">Your DSI, the overall board, the PR wall, logging your four DSI lifts, video on PRs, the daily workouts, group chat and protests.</p></section>`);
 };
 function proGate(tok, what) {
   return paint(tok, `<section class="sec narrow"><div><div class="kicker">DSI Pro</div><h2>${what}</h2><p class="secSub">This is part of DSI Pro.</p></div><div class="row"><a class="btn" href="/pro">See DSI Pro</a></div></section>`);
