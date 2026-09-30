@@ -820,7 +820,7 @@ VIEWS.pro = async (_, tok) => {
   paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">DSI Pro</div><h2>Train with a <span>plan</span></h2><p class="secSub">Everything in Member, plus the tools that turn numbers into progress.</p></div>
     ${pro ? '<span class="pill up" style="margin:0">Pro is active on your account</span>' : '<div class="kpi"><div><b>$9.99</b><span>a month</span></div><div><b>$59.99</b><span>a year</span></div></div>'}</div></section>
     <section class="sec band"><div class="tools">${PERKS.map(([t, d, h]) => `<a class="tool" href="${pro ? h : '/pro'}"><b>${t}</b><span>${d}</span></a>`).join('')}</div>
-    ${pro ? '' : '<div class="row" style="margin-top:14px"><button class="btn" disabled>Coming soon</button><span class="hint">Pro memberships open soon in the DSI app.</span></div>'}</section>
+    ${pro ? '' : '<div class="row" style="margin-top:14px"><a class="btn" href="https://apps.apple.com/app/id6817336072">Get Pro in the DSI app</a><span class="hint">Start Pro on your iPhone. It unlocks here too, on the same login.</span></div>'}</section>
     <section class="sec"><div><div class="kicker">Always free</div><h2>Member</h2></div><p class="lede">Your DSI, the overall board, the PR wall, logging your four DSI lifts, video on PRs, the daily workouts, group chat and protests.</p></section>`);
 };
 function proGate(tok, what) {
