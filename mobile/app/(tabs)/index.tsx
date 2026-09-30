@@ -29,7 +29,7 @@ export default function Board() {
     .filter(r => r[sort])
     .sort((a, b) => b[sort] - a[sort] || b.score - a.score), [rows, sort, div]);
 
-  const newPRs = (rows ?? []).flatMap(r => LIFTS.filter(l => isNew((r as any)[l.k + '_date']) && (r as any)[l.k]).map(l => ({ r, l })));
+  const newPRs = (rows ?? []).flatMap(r => LIFTS.filter(l => isNew((r as any)[l.k + '_date']) && (r as any)[l.k]).map(l => ({ r, l }))).sort((a, b) => String((b.r as any)[b.l.k + '_date']).localeCompare(String((a.r as any)[a.l.k + '_date'])));
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>

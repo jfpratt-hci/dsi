@@ -162,7 +162,7 @@ function bindActions(root, reload) {
 
 /* ---------- home: boards ---------- */
 VIEWS[''] = async (_, tok) => {
-  const [board, prs] = await Promise.all([loadBoard(), sb.from('pr_feed').select('*').gte('performed_on', monday(today())).limit(60)]);
+  const [board, prs] = await Promise.all([loadBoard(), sb.from('pr_feed').select('*').gte('performed_on', monday(today())).order('created_at', { ascending: false }).limit(60)]);
   const weekPRs = must(prs);
   const top = [...board].sort((a, b) => b.score - a.score)[0];
   const heavy = [...board].sort((a, b) => b.total - a.total)[0];
@@ -254,15 +254,26 @@ function renderBoard() {
 }
 
 /* ---------- PR wall ---------- */
-VIEWS.prs = async (_, tok) => {
-  const feed = must(await sb.from('pr_feed').select('*').limit(200));
-  const wk = monday(today());
-  const thisWeek = feed.filter(p => p.performed_on >= wk), earlier = feed.filter(p => p.performed_on < wk);
-  if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">Every PR, dated</div><h2>PR <span>wall</span></h2></div>${S.me ? '<a class="btn" href="/log">Log a lift</a>' : ''}</div>
-    <p class="lede">A PR counts when it beats your old best. Think one is fishy? Protest it and the Commissioner rules.</p></section>
-    <section class="sec"><h2>This <span>week</span></h2>${thisWeek.length ? `<div class="prGrid">${thisWeek.map(prCard).join('')}</div>` : '<div class="prEmpty"><b>Quiet week so far</b><p>First PR of the week gets the spotlight.</p></div>'}</section>
-    <section class="sec"><h2>Earlier</h2>${earlier.length ? `<div class="prGrid">${earlier.map(prCard).join('')}</div>` : '<p class="empty">Nothing older yet.</p>'}</section>`)) return;
+VIEWS.prs = async (day, tok) => {
+  // The wall resets every Monday. Newest PR on top as it comes in. /prs/<date> shows that past week.
+  const cur = monday(today()), wk = /^\d{4}-\d{2}-\d{2}$/.test(day || '') ? monday(day) : cur, end = addDays(wk, 7), live = wk === cur;
+  const [feed, prev] = await Promise.all([
+    sb.from('pr_feed').select('*').gte('performed_on', wk).lt('performed_on', end).order('created_at', { ascending: false }).limit(300).then(must),
+    sb.from('pr_feed').select('id', { count: 'exact', head: true }).lt('performed_on', wk),
+  ]);
+  const hasOlder = (prev.count || 0) > 0;
+  if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${live ? 'Resets every Monday' : 'Past week'}</div><h2>PR <span>wall</span></h2>
+      <p class="secSub">${live ? `Week of ${fmtD(wk)}. Newest PRs land on top the moment they're logged.` : `Week of ${fmtD(wk)} to ${fmtD(addDays(wk, 6))}.`}</p></div>
+      <div class="row">${hasOlder ? `<a class="btn ghost sm" href="/prs/${addDays(wk, -7)}">← Last week</a>` : ''}${live ? '' : `<a class="btn ghost sm" href="/prs">This week</a>`}${S.me && live ? '<a class="btn sm" href="/log">Log a lift</a>' : ''}</div></div>
+      <p class="lede">A PR counts when it beats your old best. Think one is fishy? Protest it and the Commissioner rules.</p></section>
+    <section class="sec">${feed.length ? `<div class="prGrid" id="prGrid">${feed.map(prCard).join('')}</div>` : `<div class="prEmpty" id="prGrid"><b>${live ? 'Fresh week, empty wall' : 'No PRs that week'}</b><p>${live ? 'First PR of the week gets the top spot.' : ''}</p></div>`}</section>`)) return;
   bindActions(main, () => route());
+  if (live) {
+    const ch = sb.channel('prwall').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'lift_entries' }, p => {
+      if (p.new.is_pr && p.new.prev_best && p.new.performed_on >= wk) { toast('New PR just landed'); route(); }
+    }).subscribe();
+    S.channels.push(ch);
+  }
 };
 
 /* ---------- lifter page ---------- */

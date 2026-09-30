@@ -62,7 +62,7 @@ export const fmt = (n: number) => Number(n || 0).toLocaleString('en-US');
 export const ageOf = (by: number | null | undefined) => (by ? new Date().getFullYear() - by : 0);
 
 export type Entry = { id: string; profile_id: string; lift: string; weight_lb: number; performed_on: string; is_pr: boolean; prev_best: number | null; status: string; note: string | null; source: string; video_path: string | null };
-export type PR = { id: string; profile_id: string; name: string; lift: string; weight_lb: number; prev_best: number | null; performed_on: string; status: string };
+export type PR = { id: string; profile_id: string; name: string; lift: string; weight_lb: number; prev_best: number | null; performed_on: string; status: string; created_at?: string };
 
 export function videoUrl(path: string) {
   return sb.storage.from('lift-videos').getPublicUrl(path).data.publicUrl;
