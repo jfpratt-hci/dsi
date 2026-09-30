@@ -66,20 +66,12 @@ export default function Pro() {
           <Muted style={{ fontSize: 14 }}>{me?.role === 'admin' || me?.role === 'commissioner' ? 'Included with your staff role.' : me?.pro_source === 'app_store' ? 'Thanks for backing the index.' : 'Granted by the DSI team.'}</Muted>
           {me?.pro_source === 'app_store' ? <Btn ghost label="Manage subscription" onPress={manage} style={{ marginTop: 10 }} /> : null}
         </Card>
-      ) : !SALES_ON ? (
-        <>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginVertical: 10 }}>
-            <Mono style={{ fontSize: 34 }}>$9.99</Mono><Muted style={{ fontSize: 15 }}>a month, or $59.99 a year</Muted>
-          </View>
-          <Btn label="Coming soon" onPress={() => {}} disabled />
-          <Muted style={{ textAlign: 'center', marginTop: 10, fontSize: 13 }}>Pro memberships open in an upcoming update.</Muted>
-        </>
-      ) : !plans ? <ActivityIndicator color={C.accent} style={{ marginVertical: 20 }} /> : !plans.length ? (
+      ) : SALES_ON && !plans ? <ActivityIndicator color={C.accent} style={{ marginVertical: 20 }} /> : !plans?.length ? (
         <Card><Muted>Pro is not available in your store right now. Try again later.</Muted></Card>
       ) : (
         <>
           <View style={{ gap: 10, marginVertical: 10 }}>
-            {plans.map(p => (
+            {plans!.map(p => (
               <Pressable key={p.id} onPress={() => setPick(p.id)} accessibilityRole="radio" accessibilityState={{ selected: pick === p.id }}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 12, borderWidth: 2, borderColor: pick === p.id ? C.accent : C.line, backgroundColor: C.panel }}>
                 <View style={{ flex: 1 }}><Text style={{ color: C.ink, fontWeight: '800', fontSize: 17 }}>{p.title}</Text>{p.per === 'a year' ? <Muted style={{ fontSize: 13 }}>Best value</Muted> : null}</View>

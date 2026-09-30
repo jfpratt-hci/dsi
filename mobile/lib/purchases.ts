@@ -1,5 +1,5 @@
 // DSI Pro purchases through RevenueCat (Apple and Google billing).
-// Sales stay off until the RevenueCat keys are in app.json (extra.revenuecat). Until then Pro screens say "Coming soon".
+// Sales stay off until the RevenueCat keys are in app.json (extra.revenuecat). Without them the Pro screen shows that Pro is unavailable in this build.
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import Purchases, { type PurchasesPackage } from 'react-native-purchases';
