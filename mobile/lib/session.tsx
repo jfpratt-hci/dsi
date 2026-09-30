@@ -13,6 +13,12 @@ export type Profile = {
   tier: string;
   role: string;
   terms_accepted_at: string | null;
+  reminder_hour: number;
+  notify_reminders: boolean;
+  notify_prs: boolean;
+  notify_program: boolean;
+  pro_until: string | null;
+  pro_source: string | null;
 };
 
 type Ctx = {
@@ -24,10 +30,11 @@ type Ctx = {
   blocked: Set<string>;
   reloadMe: () => Promise<void>;
   reloadBlocks: () => Promise<void>;
+  setStorePro: (on: boolean) => void;
 };
 const SessionCtx = createContext<Ctx>({
   session: null, me: null, ready: false, isPro: false, isStaff: false, blocked: new Set(),
-  reloadMe: async () => {}, reloadBlocks: async () => {},
+  reloadMe: async () => {}, reloadBlocks: async () => {}, setStorePro: () => {},
 });
 
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -35,6 +42,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Profile | null>(null);
   const [blocked, setBlocked] = useState<Set<string>>(new Set());
   const [ready, setReady] = useState(false);
+  // Pro bought in the app store shows at once; the server confirms it through the purchase webhook.
+  const [storePro, setStorePro] = useState(false);
 
   const loadBlocks = useCallback(async (pid: string | null) => {
     if (!pid) { setBlocked(new Set()); return; }
@@ -63,12 +72,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [loadMe]);
 
   const isStaff = !!me && (me.role === 'admin' || me.role === 'commissioner');
-  const isPro = !!me && (me.tier === 'pro' || isStaff);
+  const isPro = !!me && (me.tier === 'pro' || isStaff || storePro);
 
   return (
     <SessionCtx.Provider value={{
       session, me, ready, isPro, isStaff, blocked,
-      reloadMe: () => loadMe(session), reloadBlocks: () => loadBlocks(me?.id ?? null),
+      reloadMe: () => loadMe(session), reloadBlocks: () => loadBlocks(me?.id ?? null), setStorePro,
     }}>
       {children}
     </SessionCtx.Provider>

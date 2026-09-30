@@ -13,7 +13,8 @@ type Msg = { id: string; room_id: string; profile_id: string; body: string; dele
 
 export default function Room() {
   const { id, title } = useLocalSearchParams<{ id: string; title?: string }>();
-  const { me, isStaff, blocked, reloadBlocks } = useSession();
+  const { me, isStaff, isPro, blocked, reloadBlocks } = useSession();
+  const [kind, setKind] = useState<string | null>(null);
   const [msgs, setMsgs] = useState<Msg[] | null>(null);
   const [names, setNames] = useState<Record<string, string>>({});
   const [text, setText] = useState('');
@@ -26,6 +27,8 @@ export default function Room() {
     const { data } = await sb.from('profiles').select('id,display_name').in('id', need);
     setNames(n => ({ ...n, ...Object.fromEntries((data ?? []).map((p: any) => [p.id, p.display_name || 'Someone'])) }));
   }
+
+  useEffect(() => { sb.from('chat_rooms').select('kind').eq('id', id).maybeSingle().then(({ data }) => setKind(data?.kind ?? 'group')); }, [id]);
 
   useEffect(() => {
     let alive = true;
@@ -100,6 +103,11 @@ export default function Room() {
               </Pressable>
             );
           }} />
+        {kind && kind !== 'group' && !isPro ? (
+          <Pressable onPress={() => router.push('/pro')} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16, borderTopWidth: 1, borderTopColor: C.line, backgroundColor: '#0B1019' }}>
+            <Text style={{ color: C.ink, fontWeight: '600' }}>Posting in threads is part of DSI Pro</Text><Text style={{ color: C.accent, fontWeight: '800' }}>›</Text>
+          </Pressable>
+        ) : (
         <View style={{ flexDirection: 'row', gap: 8, padding: 10, borderTopWidth: 1, borderTopColor: C.line, backgroundColor: '#0B1019' }}>
           <TextInput value={text} onChangeText={setText} placeholder={me?.roast_opt_in ? 'Say something. Roasts welcome.' : 'Say something'} placeholderTextColor="#5A6478"
             multiline maxLength={1000} accessibilityLabel="Message"
@@ -109,6 +117,7 @@ export default function Room() {
             <Text style={{ color: '#141414', fontSize: 20, fontWeight: '900' }}>↑</Text>
           </Pressable>
         </View>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

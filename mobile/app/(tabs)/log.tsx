@@ -57,7 +57,8 @@ export default function Log() {
     setBest({ ...best, [lift]: Math.max(b, n) });
     setLast({ id: data.id, pr: !!data.is_pr });
     setW('');
-    setMsg(data.is_pr ? `New ${liftName(lift)} PR: ${data.prev_best ? data.prev_best + ' → ' : ''}${n} lb! It's on the PR wall.` : `Logged ${n} lb. Your best is still ${data.prev_best}.`);
+    if (data.is_pr && data.prev_best) { setMsg(''); router.push({ pathname: '/pr/[id]', params: { id: data.id, celebrate: '1' } }); return; }
+    setMsg(data.is_pr ? `${liftName(lift)} baseline set at ${n} lb. Beat it for your first PR.` : `Logged ${n} lb. Your best is still ${data.prev_best}.`);
   }
 
   return (
@@ -65,7 +66,7 @@ export default function Log() {
       <Title accent="lift">Log a</Title>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         {MAIN.map(id => <Chip key={id} label={liftName(id)} on={lift === id} onPress={() => { setLift(id); setW(''); }} />)}
-        <Chip label={more ? 'Fewer' : 'More lifts'} on={false} onPress={() => setMore(!more)} />
+        <Chip label={more ? 'Fewer' : isPro ? 'More lifts' : 'More lifts · Pro'} on={false} onPress={() => (isPro ? setMore(!more) : router.push('/pro'))} />
       </View>
       {more ? <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>{MORE.map(id => <Chip key={id} label={liftName(id)} on={lift === id} onPress={() => { setLift(id); setW(''); }} />)}</View> : null}
 

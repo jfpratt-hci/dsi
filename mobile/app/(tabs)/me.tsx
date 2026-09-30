@@ -5,6 +5,9 @@ import { Alert, Linking, Text, View } from 'react-native';
 import { Btn, Card, Eyebrow, Group, Mono, Muted, PctBar, Row, Screen, Title } from '@/components/ui';
 import { C } from '@/constants/Colors';
 import { colorOf, fmt, LIFTS, loadBoard, verdict, type BoardRow } from '@/lib/data';
+import { inviteCrew } from '@/lib/invite';
+import { unregisterPush } from '@/lib/notify';
+import { stopPurchases } from '@/lib/purchases';
 import { useSession } from '@/lib/session';
 import { sb } from '@/lib/supabase';
 
@@ -37,7 +40,7 @@ export default function Me() {
   const role = me?.role === 'admin' ? 'Founder' : me?.role === 'commissioner' ? 'Commissioner' : isPro ? 'DSI Pro' : 'Member';
 
   function signOut() {
-    Alert.alert('Sign out?', undefined, [{ text: 'Cancel', style: 'cancel' }, { text: 'Sign out', onPress: () => sb.auth.signOut() }]);
+    Alert.alert('Sign out?', undefined, [{ text: 'Cancel', style: 'cancel' }, { text: 'Sign out', onPress: async () => { await unregisterPush(); await stopPurchases(); await sb.auth.signOut(); } }]);
   }
   function deleteAccount() {
     Alert.alert('Delete your account?', 'This permanently deletes your profile, every lift, goal, log and message, and your login. It cannot be undone.', [
@@ -80,7 +83,8 @@ export default function Me() {
       <Group title="You">
         <Row first label="My card and lift history" onPress={() => me && router.push({ pathname: '/lifter/[id]', params: { id: me.id } })} />
         <Row label="Edit profile" onPress={() => router.push('/profile')} />
-        <Row label="Goals" onPress={() => router.push('/goals')} />
+        <Row label="Goals" pro onPress={() => router.push(isPro ? '/goals' : '/pro')} />
+        <Row label="Settings and notifications" onPress={() => router.push('/settings')} />
       </Group>
 
       <Group title="DSI Pro">
@@ -93,6 +97,8 @@ export default function Me() {
 
       <Group title="Community">
         <Row first label="PR wall" onPress={() => router.push('/prs')} />
+        <Row label="Invite your crew" onPress={() => inviteCrew(me?.display_name)} />
+        <Row label="Plate calculator" onPress={() => router.push('/plates')} />
         <Row label="Protests" onPress={() => router.push('/protests')} />
         {isStaff ? <Row label="Reports" detail={openReports ? `${openReports} open` : 'None open'} onPress={() => router.push('/reports')} /> : null}
         <Row label="Blocked lifters" onPress={() => router.push('/blocked')} />

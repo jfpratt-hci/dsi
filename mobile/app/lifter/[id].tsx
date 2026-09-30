@@ -2,7 +2,7 @@ import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 
-import { Btn, Card, Eyebrow, Group, Loading, Mono, Muted, PctBar, Screen } from '@/components/ui';
+import { Btn, Card, Eyebrow, Group, Loading, Mono, Muted, PctBar, ProBadge, Screen } from '@/components/ui';
 import { C } from '@/constants/Colors';
 import { ageOf, block, clubOf, colorOf, fmt, fmtD, isMain, liftName, LIFTS, loadBoard, pcts, score, total, unblock, verdict, type Entry } from '@/lib/data';
 import { useSession } from '@/lib/session';
@@ -10,7 +10,7 @@ import { sb } from '@/lib/supabase';
 
 export default function Lifter() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { me, blocked, reloadBlocks } = useSession();
+  const { me, blocked, reloadBlocks, isPro } = useSession();
   const [p, setP] = useState<any>(null);
   const [row, setRow] = useState<any>(null);
   const [hist, setHist] = useState<Entry[] | null>(null);
@@ -124,7 +124,7 @@ export default function Lifter() {
       <Eyebrow style={{ marginTop: 10, marginBottom: 8 }}>Lift history</Eyebrow>
       {hist.length === 0 ? <Card><Muted>No lifts yet.</Muted></Card> : (
         <Group>
-          {hist.map((e, i) => (
+          {(isPro ? hist : hist.slice(0, 3)).map((e, i) => (
             <View key={e.id} style={{ flexDirection: 'row', alignItems: 'center', padding: 12, borderTopWidth: i ? 1 : 0, borderTopColor: C.line, opacity: e.status === 'struck' ? 0.45 : 1 }}>
               <View style={{ width: 4, alignSelf: 'stretch', backgroundColor: colorOf(e.lift), borderRadius: 2, marginRight: 10 }} />
               <View style={{ flex: 1 }}>
@@ -139,6 +139,11 @@ export default function Lifter() {
           ))}
         </Group>
       )}
+      {!isPro && hist.length > 3 ? (
+        <Pressable onPress={() => router.push('/pro')} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 12 }}>
+          <Muted>See all {hist.length} lifts, dated</Muted><ProBadge />
+        </Pressable>
+      ) : null}
       {mine ? <Btn ghost label="Edit profile" onPress={() => router.push('/profile')} style={{ marginTop: 6 }} /> : null}
     </Screen>
   );

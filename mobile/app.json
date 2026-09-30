@@ -50,7 +50,14 @@
           "microphonePermission": "DSI records sound with your lift video."
         }
       ],
-      "expo-video"
+      "expo-video",
+      [
+        "expo-notifications",
+        {
+          "color": "#F2C94C",
+          "mode": "production"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -59,6 +66,10 @@
     "extra": {
       "eas": {
         "projectId": "3acc4ce1-280f-40f1-963f-b922019f93a3"
+      },
+      "revenuecat": {
+        "ios": "",
+        "android": ""
       }
     }
   }

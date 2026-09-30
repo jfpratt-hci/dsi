@@ -23,7 +23,7 @@ export function PRCard({ p, onChange }: { p: PR; onChange?: () => void }) {
         <Text style={{ backgroundColor: hot ? C.accent : C.line, color: hot ? '#141414' : C.ink, fontSize: 10, fontWeight: '800', letterSpacing: 1.4, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 3, overflow: 'hidden' }}>{hot ? 'NEW PR' : 'PR'}</Text>
         <Muted>{fmtD(p.performed_on)}</Muted>
       </View>
-      <Pressable onPress={() => router.push({ pathname: '/lifter/[id]', params: { id: p.profile_id } })}>
+      <Pressable onPress={() => router.push({ pathname: '/pr/[id]', params: { id: p.id } })} accessibilityRole="button" accessibilityLabel={`${p.name} ${liftName(p.lift)} PR details`}>
         <Text style={{ color: C.ink, fontSize: 28, fontWeight: '900', textTransform: 'uppercase', marginTop: 6 }}>{p.name}</Text>
       </Pressable>
       <Text style={{ color: C.muted, fontSize: 15 }}>{liftName(p.lift)} <Mono style={{ fontSize: 17 }}>{fmt(p.weight_lb)} lb</Mono>{p.status === 'protested' ? <Text style={{ color: C.flat }}>  Under protest</Text> : null}</Text>

@@ -35,6 +35,13 @@ export default function Goals() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   if (!me) return <Screen stack><Muted>Sign in first.</Muted></Screen>;
+  if (!isPro) return (
+    <Screen stack>
+      <Title eyebrow="DSI Pro" accent="goals">Your</Title>
+      <Card><Muted style={{ fontSize: 15 }}>Set a goal for any lift, pick a date, and get a week by week plan to hit it. Goals come with DSI Pro.</Muted></Card>
+      <Btn label="See DSI Pro" onPress={() => router.replace('/pro')} />
+    </Screen>
+  );
   if (!goals) return <Screen stack><Loading /></Screen>;
 
   const set = (lift: string, patch: Partial<G>) => setGoals(goals.map(g => (g.lift === lift ? { ...g, ...patch } : g)));

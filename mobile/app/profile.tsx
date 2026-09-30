@@ -9,7 +9,7 @@ import { sb } from '@/lib/supabase';
 import { colorOf, fmt, LIFTS, pcts, score, today, total, verdict } from '@/lib/data';
 
 export default function ProfileEdit() {
-  const { me, reloadMe } = useSession();
+  const { me, reloadMe, isPro } = useSession();
   const { first } = useLocalSearchParams<{ first?: string }>();
   const yr = new Date().getFullYear();
   const [name, setName] = useState(me?.display_name ?? '');
@@ -55,10 +55,10 @@ export default function ProfileEdit() {
       {field('Division', <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>{[['men', 'Men'], ['women', 'Women'], ['open', 'Open']].map(([k, l]) => <Chip key={k} label={l} on={div === k} onPress={() => setDiv(k)} />)}</View>)}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.panel, borderRadius: 12, borderWidth: 1, borderColor: C.line, padding: 14, marginBottom: 16 }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: C.ink, fontWeight: '700', fontSize: 16 }}>Roast me 🔥</Text>
+          <Text style={{ color: C.ink, fontWeight: '700', fontSize: 16 }}>Roast me 🔥{isPro ? '' : '  · Pro'}</Text>
           <Muted style={{ fontSize: 14 }}>Show the savage verdict on your card and let people know you can take it.</Muted>
         </View>
-        <Switch value={roast} onValueChange={setRoast} trackColor={{ true: C.accent, false: C.line }} thumbColor={C.ink} accessibilityLabel="Roast me" />
+        <Switch value={roast} onValueChange={v => (v && !isPro ? router.push('/pro') : setRoast(v))} trackColor={{ true: C.accent, false: C.line }} thumbColor={C.ink} accessibilityLabel="Roast me" />
       </View>
       {first ? <LiftsBlock lifts={lifts} setLifts={setLifts} by={Number(by)} bw={Number(bw)} yr={yr} /> : null}
       <Btn label={first ? 'Join the board' : 'Save'} onPress={save} disabled={busy} />

@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Btn, Card, Eyebrow, Group, Loading, Muted, Row, s, Title } from '@/components/ui';
@@ -40,7 +40,12 @@ export default function Chat() {
   if (!me) return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
       <View style={s.pad}>
-        <Title eyebrow="Talk it out">Chat</Title>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Title eyebrow="Talk it out">Chat</Title>
+          {me ? <Pressable onPress={() => router.push(isPro ? '/newgroup' : '/pro')} accessibilityRole="button" style={{ borderWidth: 1, borderColor: C.line, borderRadius: 18, paddingHorizontal: 14, height: 36, justifyContent: 'center', marginTop: 18 }}>
+            <Text style={{ color: C.ink, fontWeight: '700', fontSize: 13 }}>+ New group{isPro ? '' : ' · Pro'}</Text>
+          </Pressable> : null}
+        </View>
         <Card><Muted style={{ fontSize: 15 }}>Sign in to chat with your division and crew.</Muted></Card>
         <Btn label="Sign in" onPress={() => router.push('/login')} />
       </View>
@@ -63,7 +68,12 @@ export default function Chat() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
       <ScrollView contentContainerStyle={s.pad} refreshControl={<RefreshControl tintColor={C.accent} refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}>
-        <Title eyebrow="Talk it out">Chat</Title>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Title eyebrow="Talk it out">Chat</Title>
+          {me ? <Pressable onPress={() => router.push(isPro ? '/newgroup' : '/pro')} accessibilityRole="button" style={{ borderWidth: 1, borderColor: C.line, borderRadius: 18, paddingHorizontal: 14, height: 36, justifyContent: 'center', marginTop: 18 }}>
+            <Text style={{ color: C.ink, fontWeight: '700', fontSize: 13 }}>+ New group{isPro ? '' : ' · Pro'}</Text>
+          </Pressable> : null}
+        </View>
         {!rooms ? <Loading /> : <>
           <Group title="Groups">
             {groupRooms.length ? groupRooms.map((r, i) => (

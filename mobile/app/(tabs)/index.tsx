@@ -1,18 +1,21 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card, Chip, Eyebrow, Loading, Mono, Muted, s, Title } from '@/components/ui';
+import { Btn, Card, Chip, Eyebrow, Loading, Mono, Muted, ProBadge, s, Title } from '@/components/ui';
 import { C, liftColor } from '@/constants/Colors';
 import { fmtD, isNew, LIFTS, loadBoard, type BoardRow } from '@/lib/data';
 import { useSession } from '@/lib/session';
 
 type Sort = 'score' | 'total' | 'bench' | 'squat' | 'dead' | 'clean';
+const AGES: [string, string][] = [['all', 'All ages'], ['u40', 'Under 40'], ['40s', '40s'], ['50p', '50+']];
 const SORTS: [Sort, string][] = [['score', 'Overall'], ['total', 'Total'], ['bench', 'Bench'], ['squat', 'Squat'], ['dead', 'Deadlift'], ['clean', 'Clean']];
 
 export default function Board() {
-  const { me } = useSession();
+  const { me, isPro } = useSession();
+  const [age, setAge] = useState('all');
+  const [sheet, setSheet] = useState(false);
   const [rows, setRows] = useState<BoardRow[] | null>(null);
   const [err, setErr] = useState('');
   const [sort, setSort] = useState<Sort>('score');
@@ -26,8 +29,9 @@ export default function Board() {
 
   const list = useMemo(() => (rows ?? [])
     .filter(r => div === 'all' || r.division === div)
+    .filter(r => age === 'all' || (age === 'u40' ? r.age && r.age < 40 : age === '40s' ? r.age >= 40 && r.age < 50 : r.age >= 50))
     .filter(r => r[sort])
-    .sort((a, b) => b[sort] - a[sort] || b.score - a.score), [rows, sort, div]);
+    .sort((a, b) => b[sort] - a[sort] || b.score - a.score), [rows, sort, div, age]);
 
   const newPRs = (rows ?? []).flatMap(r => LIFTS.filter(l => isNew((r as any)[l.k + '_date']) && (r as any)[l.k]).map(l => ({ r, l }))).sort((a, b) => String((b.r as any)[b.l.k + '_date']).localeCompare(String((a.r as any)[a.l.k + '_date'])));
 
@@ -51,11 +55,27 @@ export default function Board() {
         ))}
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }}>
-          {SORTS.map(([k, label]) => <Chip key={k} label={label} on={sort === k} onPress={() => setSort(k)} />)}
+          {SORTS.map(([k, label]) => <Chip key={k} label={k === 'score' || isPro ? label : label + ' · Pro'} on={sort === k} onPress={() => (k === 'score' || isPro ? setSort(k) : router.push('/pro'))} />)}
         </ScrollView>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 6 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 6, alignItems: 'center' }}>
           {[['all', 'All'], ['men', 'Men'], ['women', 'Women'], ['open', 'Open']].map(([k, label]) => <Chip key={k} label={label} on={div === k} onPress={() => setDiv(k)} />)}
+          <Chip label={age === 'all' ? 'Filters' : AGES.find(a => a[0] === age)![1]} on={age !== 'all'} onPress={() => setSheet(true)} />
         </View>
+        <Modal visible={sheet} transparent animationType="slide" onRequestClose={() => setSheet(false)}>
+          <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }} onPress={() => setSheet(false)} accessibilityLabel="Close filters" />
+          <View style={{ backgroundColor: C.panel, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 40, borderTopWidth: 1, borderColor: C.line }}>
+            <Text style={{ color: C.ink, fontSize: 24, fontWeight: '900', textTransform: 'uppercase', marginBottom: 14 }}>Filters</Text>
+            <Eyebrow style={{ marginBottom: 6 }}>Division</Eyebrow>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 14 }}>
+              {[['all', 'All'], ['men', 'Men'], ['women', 'Women'], ['open', 'Open']].map(([k, label]) => <Chip key={k} label={label} on={div === k} onPress={() => setDiv(k)} />)}
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}><Eyebrow>Age</Eyebrow>{isPro ? null : <ProBadge />}</View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 18 }}>
+              {AGES.map(([k, label]) => <Chip key={k} label={label} on={age === k} onPress={() => { if (k !== 'all' && !isPro) { setSheet(false); router.push('/pro'); return; } setAge(k); }} />)}
+            </View>
+            <Btn label="Show lifters" onPress={() => setSheet(false)} />
+          </View>
+        </Modal>
 
         {err ? <Muted style={{ color: C.down }}>{err}</Muted> : null}
         {!rows ? <Loading /> : list.length === 0 ? (
