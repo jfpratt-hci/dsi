@@ -42,14 +42,22 @@ export function normcdf(z) {
   return z > 0 ? 1 - p : p;
 }
 const rnd = x => Math.floor(x + 0.5);
+// Whole number percentile. The DSI score is built from these, so it stays unchanged.
 export function pct(b, w, bw, a) {
   if (!w) return 0;
   return Math.max(1, Math.min(99, rnd(normcdf(Math.log(w / med(b, bw, a)) / 0.25) * 100)));
 }
+// Display percentile with one decimal, 0.1 to 99.9.
+export function pct1(b, w, bw, a) {
+  if (!w) return 0;
+  return Math.max(0.1, Math.min(99.9, Math.round(normcdf(Math.log(w / med(b, bw, a)) / 0.25) * 1000) / 10));
+}
+export const fmtPct = v => (+v || 0).toFixed(1);
 const bwOf = r => +r.bw || 185, ageOf = r => +r.age || 30;
-export const pcts = r => Object.fromEntries(LIFTS.map(l => [l.k, pct(l.b, +r[l.k] || 0, bwOf(r), ageOf(r))]));
+export const pcts = r => Object.fromEntries(LIFTS.map(l => [l.k, pct1(l.b, +r[l.k] || 0, bwOf(r), ageOf(r))]));
+export const pctsWhole = r => Object.fromEntries(LIFTS.map(l => [l.k, pct(l.b, +r[l.k] || 0, bwOf(r), ageOf(r))]));
 export function score(r) {
-  const p = pcts(r);
+  const p = pctsWhole(r);
   return rnd(LIFTS.reduce((s, l) => s + p[l.k], 0) / 4 * 10);
 }
 export const total = r => LIFTS.reduce((s, l) => s + (+r[l.k] || 0), 0);

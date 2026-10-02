@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Btn, Card, Chip, Eyebrow, Loading, Mono, Muted, ProBadge, s, Title } from '@/components/ui';
 import { C, liftColor } from '@/constants/Colors';
-import { fmtD, isNew, LIFTS, loadBoard, type BoardRow } from '@/lib/data';
+import { fmtD, isNew, LIFTS, loadBoard, type BoardRow, fmtPct } from '@/lib/data';
 import { useSession } from '@/lib/session';
 
 type Sort = 'score' | 'total' | 'bench' | 'squat' | 'dead' | 'clean';
@@ -83,7 +83,7 @@ export default function Board() {
         ) : list.map((r, i) => {
           const val = sort === 'score' ? r.score : r[sort];
           const gain = sort === 'score' ? r.g.score : sort === 'total' ? r.g.total : r.g.lift[sort] || 0;
-          const sub = sort === 'score' ? `${r.total.toLocaleString()} lb total` : sort === 'total' ? `DSI ${r.score}` : isNew((r as any)[sort + '_date']) ? `PR ${fmtD((r as any)[sort + '_date'])}` : `${r.p[sort]}th percentile`;
+          const sub = sort === 'score' ? `${r.total.toLocaleString()} lb total` : sort === 'total' ? `DSI ${r.score}` : isNew((r as any)[sort + '_date']) ? `PR ${fmtD((r as any)[sort + '_date'])}` : `${fmtPct(r.p[sort])} percentile`;
           const mine = me?.id === r.profile_id;
           return (
             <Pressable key={r.profile_id} accessibilityRole="button" onPress={() => router.push({ pathname: '/lifter/[id]', params: { id: r.profile_id } })}

@@ -371,7 +371,7 @@ table.wkT th{padding:8px}
 @media (max-width:420px){.barR .acct{padding:8px 10px;letter-spacing:.06em}}
 .joinCard .kpi{grid-template-columns:repeat(3,1fr)}.joinCard .kpi div:nth-child(3){border-left:1px solid var(--line)}.joinCard .kpi div{border-top:0!important}.joinCard .kpi b{font-size:22px}
 .joinCard .bars{padding:8px 0}
-.joinCard .brow{grid-template-columns:72px 1fr 44px 40px;gap:8px}
+.joinCard .brow{grid-template-columns:72px 1fr 44px 48px;gap:8px}
 .joinMini{display:none;margin:12px 0 0;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--panel2)}
 .joinMini b{font:900 30px/1 var(--disp);color:var(--accent);margin-right:10px;vertical-align:middle}
 @media (max-width:860px){.joinMini{display:block}}

@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 
 import { Btn, Card, Eyebrow, Loading, Mono, Muted, PctBar, Screen } from '@/components/ui';
 import { C } from '@/constants/Colors';
-import { colorOf, fmt, LIFTS, loadBoard, type BoardRow } from '@/lib/data';
+import { colorOf, fmt, LIFTS, loadBoard, type BoardRow, fmtPct } from '@/lib/data';
 import { useSession } from '@/lib/session';
 import { sb } from '@/lib/supabase';
 
@@ -54,7 +54,7 @@ export default function Coach() {
         <Card accent={colorOf(weak.db)}>
           <Eyebrow style={{ color: C.accent }}>Your focus</Eyebrow>
           <Text style={{ color: C.ink, fontSize: 22, fontWeight: '900', textTransform: 'uppercase', marginTop: 4 }}>{weak.n} is your weak link</Text>
-          <Muted style={{ fontSize: 15, marginTop: 4 }}>It sits at the {row.p[weak.k]}th percentile for your age and size, while your {strong.n.toLowerCase()} is at the {row.p[strong.k]}th. Raising your weakest lift moves your DSI™ fastest.</Muted>
+          <Muted style={{ fontSize: 15, marginTop: 4 }}>It sits at the {fmtPct(row.p[weak.k])} percentile for your age and size, while your {strong.n.toLowerCase()} is at the {fmtPct(row.p[strong.k])}. Raising your weakest lift moves your DSI™ fastest.</Muted>
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
             <View style={{ flex: 1, backgroundColor: '#0B1019', borderRadius: 10, padding: 10 }}><Eyebrow>Next PR</Eyebrow><Mono style={{ fontSize: 22, color: C.accent }}>{fmt(r5(val(weak.k) * 1.025) || 5)}</Mono></View>
             <View style={{ flex: 1, backgroundColor: '#0B1019', borderRadius: 10, padding: 10 }}><Eyebrow>Train 2x a week</Eyebrow><Mono style={{ fontSize: 22 }}>5x3 @ {fmt(r5(val(weak.k) * 0.8))}</Mono></View>
@@ -72,7 +72,7 @@ export default function Coach() {
           <View key={l.k} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
             <Text style={{ width: 70, color: C.ink, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' }}>{l.n}</Text>
             <PctBar pct={row.p[l.k] || 0} color={colorOf(l.db)} />
-            <Mono style={{ width: 40, textAlign: 'right', fontSize: 13 }}>{row.p[l.k] || 0}</Mono>
+            <Mono style={{ width: 44, textAlign: 'right', fontSize: 13 }}>{fmtPct(row.p[l.k])}</Mono>
           </View>
         ))}
       </Card>

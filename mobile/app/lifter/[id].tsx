@@ -4,7 +4,7 @@ import { Alert, Pressable, Text, View } from 'react-native';
 
 import { Btn, Card, Eyebrow, Group, Loading, Mono, Muted, PctBar, ProBadge, Screen } from '@/components/ui';
 import { C } from '@/constants/Colors';
-import { ageOf, block, clubOf, colorOf, fmt, fmtD, isMain, liftName, LIFTS, loadBoard, pcts, score, total, unblock, verdict, type Entry } from '@/lib/data';
+import { ageOf, block, clubOf, colorOf, fmt, fmtD, isMain, liftName, LIFTS, loadBoard, pcts, score, total, unblock, verdict, type Entry, fmtPct } from '@/lib/data';
 import { useSession } from '@/lib/session';
 import { sb } from '@/lib/supabase';
 
@@ -84,7 +84,7 @@ export default function Lifter() {
               <Text style={{ width: 70, color: C.ink, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' }}>{l.n}</Text>
               <PctBar pct={row.p[l.k] || 0} color={colorOf(l.db)} />
               <Mono style={{ width: 62, textAlign: 'right', fontSize: 14 }}>{row[l.k] ? fmt(row[l.k]) : 'n/a'}</Mono>
-              <Mono style={{ width: 36, textAlign: 'right', fontSize: 12, color: C.muted }}>{row.p[l.k] || 0}%</Mono>
+              <Mono style={{ width: 46, textAlign: 'right', fontSize: 12, color: C.muted }}>{fmtPct(row.p[l.k])}%</Mono>
             </View>
           ))}
           <Muted style={{ fontSize: 12 }}>The line is the median for {row.age ? `age ${row.age}` : 'their age'} at {row.bw || 185} lb.</Muted>

@@ -44,6 +44,7 @@ export const isNew = (s: string | null) => !!s && (Date.now() - new Date(s + 'T1
 /* ---------- shared lookups used across screens ---------- */
 export const ALL_LIFTS = D.ALL_LIFTS as [string, string][];
 export const pcts: (r: any) => Record<string, number> = D.pcts;
+export const fmtPct: (v: number) => string = D.fmtPct;
 export const score: (r: any) => number = D.score;
 export const total: (r: any) => number = D.total;
 export const clubOf: (t: number) => number | undefined = D.clubOf;
