@@ -10,6 +10,22 @@ export function install(X) {
   const runs = gid => isStaff() || (S.myGyms || []).some(x => x.gym_id === gid);
   const owns = gid => (S.me && S.me.role === 'admin') || (S.myGyms || []).some(x => x.gym_id === gid && x.role === 'owner');
 
+  /* ---------- parts: a day is Part A, B, C and sometimes D ---------- */
+  // Part A is never logged. B, C and D can each log one weight (reps are assumed done).
+  // Stored on the workout row: sections [{ part, name, text }] and lifts [{ id: 'b', part: 'B', n, sch, b, f | rx, why }].
+  const LET = ['A', 'B', 'C', 'D'];
+  const PH = { A: 'Warmup', B: 'Strength', C: 'Conditioning', D: 'Accessory' };
+  const isParts = w => !!w && ((w.sections || []).some(s => s.part) || (w.lifts || []).some(l => l.part));
+  function partsOf(w, withD) {
+    const secs = (w && w.sections) || [], lifts = (w && w.lifts) || [], np = isParts(w);
+    return LET.map((L, i) => { const s = (np ? secs.find(x => x.part === L) : secs[i]) || {}; return { L, name: s.name || '', text: s.text || '', lift: lifts.find(l => l.part === L) || null }; })
+      .filter(p => p.L !== 'D' || withD || p.text || p.lift);
+  }
+  // What a screen shows: the parts with something in them. Older days keep every section they had.
+  const shownParts = w => isParts(w) ? partsOf(w).filter(p => p.text || p.lift) : ((w && w.sections) || []).map((s, i) => ({ L: String.fromCharCode(65 + i), name: s.name, text: s.text, lift: null }));
+  const liftLabel = l => l.part ? `${l.part} · ${l.n}` : l.n;
+  X.parts = { isParts, partsOf, shownParts, liftLabel };
+
   async function gymData(gid, day) {
     const [g, members, staff, board, ws] = await Promise.all([
       sb.from('gyms').select('*').eq('id', gid).maybeSingle().then(must),
@@ -53,7 +69,8 @@ export function install(X) {
     const tvUrl = location.origin + '/tv/' + gid;
     if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.city || 'Gym')} · ${members.length} lifters</div><h2>${esc(g.name)}</h2><p class="secSub">Your gym's page. Post the day, enter results, and run the big screen.</p></div><a class="btn ghost sm" href="/gyms/${gid}">Gym board</a></div>
       <div class="tools">
-        <a class="tool" href="/program?gym=${gid}"><b>Post the workout</b><span>From your programming page, a whiteboard photo or pasted text. Members get their own target weights.</span></a>
+        <a class="tool" href="/wod/${gid}"><b>Edit workouts</b><span>Type or fix the day: Part A, B, C and sometimes D. Pick the weight members log for each part.</span></a>
+        <a class="tool" href="/program?gym=${gid}"><b>Import a week</b><span>From your programming page, Kilo, a whiteboard photo or pasted text. Then fix anything in Edit workouts.</span></a>
         <a class="tool" href="/results/${gid}"><b>Enter results</b><span>Type in everyone's weights and scores from the floor. They go straight to the day board.</span></a>
         <a class="tool" href="/tv/${gid}" target="_blank"><b>Big screen</b><span>Open this on the gym TV. It updates live all day.</span></a>
         <a class="tool" href="/week"><b>The week</b><span>What your members see on their phones.</span></a>
@@ -81,6 +98,96 @@ export function install(X) {
     $$('[data-cl]').forEach(b => b.onclick = async () => { const { error } = await sb.rpc('decide_gym_claim', { p_id: b.dataset.cl, p_approve: !!b.dataset.ok }); if (error) return toast(error.message); toast(b.dataset.ok ? 'Approved. They run that gym now.' : 'Declined'); route(); });
   };
 
+  /* ---------- edit a day: /wod/<gym id or dsi>?day=YYYY-MM-DD ---------- */
+  const BASE_OPTS = [['squat', 'Squat'], ['dead', 'Deadlift'], ['clean', 'Clean'], ['bench', 'Bench']];
+  VIEWS.wod = async (gid, tok) => {
+    if (!S.me) return needLogin(tok, 'edit workouts');
+    const dsi = gid === 'dsi';
+    if (dsi ? !isStaff() : !runs(gid)) return paint(tok, '<section class="prEmpty"><b>Coaches only</b><p>Gym owners and coaches edit their gym\'s workouts.</p></section>');
+    const q0 = new URLSearchParams(location.search).get('day');
+    const day = /^\d{4}-\d{2}-\d{2}$/.test(q0 || '') ? q0 : today();
+    let wq = sb.from('workouts').select('*').eq('day', day);
+    wq = dsi ? wq.is('gym_id', null) : wq.eq('gym_id', gid);
+    const [g, ws] = await Promise.all([dsi ? { name: 'The DSI week' } : sb.from('gyms').select('id,name').eq('id', gid).maybeSingle().then(must), wq.then(must), loadBoard()]);
+    if (!g) throw new Error('No gym here.');
+    const w = ws[0] || null;
+    const nLogs = w ? ((await sb.from('workout_logs').select('id', { count: 'exact', head: true }).eq('workout_id', w.id)).count || 0) : 0;
+    const old = w && !isParts(w) && (w.lifts || []).length;
+    const me = X.boardRow(S.me.id) || {};
+    const ps = partsOf(w, true);
+    const box = p => {
+      const l = p.lift || {}, tt = l.rx && l.rx.length ? 'rx' : l.f ? 'f' : '';
+      return `<article class="wodPart" data-p="${p.L}"${p.L === 'D' && !p.text && !p.lift ? ' hidden' : ''}>
+        <div class="wodPH"><i>${p.L}</i><label class="vh" for="wp-${p.L}">Part ${p.L} name</label><input id="wp-${p.L}" data-name maxlength="40" value="${esc(p.name)}" placeholder="${PH[p.L]}">${p.L === 'D' ? '<button type="button" class="btn ghost sm" data-rmd>Remove</button>' : ''}</div>
+        <label class="vh" for="wt-${p.L}">Part ${p.L} workout</label><textarea id="wt-${p.L}" data-text rows="7" maxlength="2000" placeholder="${p.L === 'A' ? 'Warmup, skill or mobility' : 'Sets, reps and movements'}">${esc(p.text)}</textarea>
+        ${p.L === 'A' ? '<p class="hint">Part A is not logged.</p>' : `
+        <label class="check"><input type="checkbox" data-trk${p.lift ? ' checked' : ''}><span>Members log a weight for Part ${p.L}</span></label>
+        <div class="wodTrk"${p.lift ? '' : ' hidden'}>
+          <div class="field"><label for="wn-${p.L}">Movement</label><input id="wn-${p.L}" data-n maxlength="60" value="${esc(l.n || '')}" placeholder="Front squat"></div>
+          <div class="field"><label for="ws-${p.L}">Scheme</label><input id="ws-${p.L}" data-sch maxlength="60" value="${esc(l.sch || '')}" placeholder="5 x 3, build"></div>
+          <div class="field"><label for="wtt-${p.L}">Target weight</label><select id="wtt-${p.L}" data-tt><option value=""${tt === '' ? ' selected' : ''}>No target</option><option value="f"${tt === 'f' ? ' selected' : ''}>Percent of a lift</option><option value="rx"${tt === 'rx' ? ' selected' : ''}>Rx weight</option></select></div>
+          <div class="field" data-for="f rx"><label for="wb-${p.L}">Based on their</label><select id="wb-${p.L}" data-b>${BASE_OPTS.map(([k, n]) => `<option value="${k}"${(l.b || 'squat') === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
+          <div class="field" data-for="f"><label for="wf-${p.L}">Percent</label><input id="wf-${p.L}" data-f type="number" inputmode="numeric" min="1" max="150" value="${l.f ? Math.round(l.f * 100) : ''}" placeholder="75"></div>
+          <div class="field" data-for="rx"><label for="wr0-${p.L}">Rx lb</label><input id="wr0-${p.L}" data-rx0 type="number" inputmode="numeric" min="1" max="1499" value="${l.rx ? l.rx[0] : ''}" placeholder="135"></div>
+          <div class="field" data-for="rx"><label for="wr1-${p.L}">Rx+ lb</label><input id="wr1-${p.L}" data-rx1 type="number" inputmode="numeric" min="1" max="1499" value="${l.rx && l.rx[1] !== l.rx[0] ? l.rx[1] : ''}" placeholder="optional"></div>
+          <p class="hint" data-prev></p>
+        </div>`}
+      </article>`;
+    };
+    const dest = dsi ? '/week/' + day + (S.me.gym_id ? '?src=dsi' : '') : '/week/' + day;
+    if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>${w ? 'Edit the' : 'Post the'} <span>workout</span></h2>
+        <p class="secSub">Part A is the warmup and is never logged. Parts B, C and D can each log one weight. Everyone is assumed to do all the reps.</p></div>
+        <div class="row"><a class="btn ghost sm" href="/wod/${gid}?day=${addDays(day, -1)}">← Day before</a><input type="date" id="wd-day" value="${day}" aria-label="Pick a day" style="max-width:170px"><a class="btn ghost sm" href="/wod/${gid}?day=${addDays(day, 1)}">Next day →</a></div></div></section>
+      <section class="sec"><form id="wodF" class="wodEd">
+        <div class="field"><label for="wd-t">Title</label><input id="wd-t" maxlength="80" value="${esc((w && w.title) || '')}" placeholder="Front squat + Grace"></div>
+        ${old ? '<p class="hint" style="color:var(--flat)">This day still has the old lift list. Saving switches it to Parts, so pick the weight each part logs.</p>' : ''}
+        <div class="wodGrid">${ps.map(box).join('')}</div>
+        <button type="button" class="btn ghost sm" id="addD"${ps[3].text || ps[3].lift ? ' hidden' : ''}>+ Add Part D</button>
+        <div class="row" style="margin-top:16px"><button class="btn" type="submit">${w ? 'Save changes' : 'Post the workout'}</button><a class="btn ghost" href="${dest}">See it on the week</a>${dsi ? '' : `<a class="btn ghost" href="/results/${gid}?day=${day}">Enter results</a><a class="btn ghost" href="/tv/${gid}" target="_blank">Big screen</a>`}<span class="hint" id="wd-msg">${nLogs ? `${nLogs} logged already. Their weights stay with each part letter.` : ''}</span></div>
+      </form></section>`)) return;
+    $('#wd-day').onchange = e => { if (e.target.value) go(`/wod/${gid}?day=${e.target.value}`); };
+    const build = a => {
+      const L = a.dataset.p, trk = $('[data-trk]', a);
+      if (!trk || !trk.checked) return null;
+      const n = $('[data-n]', a).value.trim(), tt = $('[data-tt]', a).value, b = $('[data-b]', a).value;
+      const prev = (ps.find(p => p.L === L) || {}).lift || {};
+      const l = { id: L.toLowerCase(), part: L, n, sch: $('[data-sch]', a).value.trim() };
+      const bn = (BASE_OPTS.find(x => x[0] === b) || [, ''])[1].toLowerCase();
+      if (tt === 'f') { const f = +$('[data-f]', a).value; if (f > 0) { l.b = b; l.f = Math.round(f) / 100; l.why = `${Math.round(f)}% of your ${bn}`; } }
+      if (tt === 'rx') { const r0 = +$('[data-rx0]', a).value, r1 = +$('[data-rx1]', a).value; if (r0 > 0) { l.b = b; l.rx = [r0, r1 > r0 ? r1 : r0]; l.why = `${r0} Rx${r1 > r0 ? `, ${r1} Rx+ once your ${bn} is strong enough` : ''}`; } }
+      if (!l.why) l.why = 'Log the weight you used';
+      if (prev.max) l.max = true;
+      return l;
+    };
+    const preview = a => { const out = $('[data-prev]', a); if (!out) return; const l = build(a); const t = l && D.target(l, me); out.textContent = t ? `Your target: ${t} lb` : ''; };
+    $$('.wodPart').forEach(a => {
+      const trk = $('[data-trk]', a), tk = $('.wodTrk', a);
+      const sync = () => { if (!tk) return; tk.hidden = !trk.checked; const tt = $('[data-tt]', a).value; $$('[data-for]', a).forEach(f => { f.hidden = !tt || !f.dataset.for.split(' ').includes(tt); }); preview(a); };
+      if (trk) { trk.onchange = sync; a.addEventListener('input', sync); a.addEventListener('change', sync); sync(); }
+    });
+    const dBox = $('.wodPart[data-p="D"]');
+    $('#addD').onclick = e => { dBox.hidden = false; e.target.hidden = true; $('[data-text]', dBox).focus(); };
+    $('[data-rmd]', dBox).onclick = () => { dBox.hidden = true; $('#addD').hidden = false; $('[data-text]', dBox).value = ''; $('[data-name]', dBox).value = ''; const t = $('[data-trk]', dBox); t.checked = false; t.dispatchEvent(new Event('change')); };
+    $('#wodF').onsubmit = async e => {
+      e.preventDefault();
+      const msg = $('#wd-msg'), sections = [], lifts = [];
+      for (const a of $$('.wodPart')) {
+        if (a.hidden) continue;
+        const L = a.dataset.p, text = $('[data-text]', a).value.trim(), name = $('[data-name]', a).value.trim(), l = build(a);
+        if (l && !l.n) { msg.textContent = `Part ${L} logs a weight. Name the movement.`; $('[data-n]', a).focus(); return; }
+        if (text || l) sections.push({ part: L, name: name || PH[L], text });
+        if (l) lifts.push(l);
+      }
+      if (!sections.length) { msg.textContent = 'Write at least one part.'; return; }
+      const title = $('#wd-t').value.trim() || sections.filter(s => s.part !== 'A').map(s => (lifts.find(l => l.part === s.part) || {}).n || s.name).slice(0, 2).join(' + ') || sections[0].name;
+      const b = e.target.querySelector('button[type=submit]'); b.disabled = true; msg.textContent = 'Saving…';
+      const { error } = await sb.from('workouts').upsert({ day, gym_id: dsi ? null : gid, title, sections, lifts, score_label: null, score_type: null, source: (w && w.source) || (dsi ? null : g.name) }, { onConflict: 'gym_id,day' });
+      b.disabled = false;
+      if (error) { msg.textContent = error.message; return; }
+      toast(w ? 'Workout saved' : 'Workout posted'); route();
+    };
+  };
+
   /* ---------- coaches enter results ---------- */
   VIEWS.results = async (gid, tok) => {
     if (!S.me) return needLogin(tok, 'enter results');
@@ -89,10 +196,10 @@ export function install(X) {
     const { g, members, w, logs, rowOf } = await gymData(gid, day);
     const nav = `<div class="row"><a class="btn ghost sm" href="/results/${gid}?day=${addDays(day, -1)}">← Day before</a>${day !== today() ? `<a class="btn ghost sm" href="/results/${gid}">Today</a>` : ''}<a class="btn ghost sm" href="/results/${gid}?day=${addDays(day, 1)}">Next day →</a></div>`;
     if (!w || w.gym_id !== gid) return paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>Enter <span>results</span></h2></div>${nav}</div>
-      <div class="prEmpty"><b>${esc(g.name)} has no workout posted for this day</b><p>Results go on your own gym's workout. Post it first.</p><p><a class="btn" href="/program?gym=${gid}">Post the workout</a></p></div></section>`);
+      <div class="prEmpty"><b>${esc(g.name)} has no workout posted for this day</b><p>Results go on your own gym's workout. Post it first.</p><p><a class="btn" href="/wod/${gid}?day=${day}">Post the workout</a></p></div></section>`);
     const lifts = w.lifts || [], logOf = id => logs.find(l => l.profile_id === id);
-    if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>${esc(w.title)}</h2><p class="secSub">Type what each member lifted. Blank means they did not do it. Targets show in grey.</p></div>${nav}</div>
-      <form id="rsF"><div class="board"><div class="tablewrap"><table class="wkT rsT"><thead><tr><th>Member</th>${lifts.map(l => `<th class="r">${esc(l.n)}<div class="sub">${esc(l.sch)}</div></th>`).join('')}${w.score_label ? `<th class="r">${esc(w.score_label)}</th>` : ''}</tr></thead><tbody>
+    if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>${esc(w.title)}</h2><p class="secSub">Type the weight each member used. Blank means they did not do it. Targets show in grey.</p><p><a class="btn ghost sm" href="/wod/${gid}?day=${day}">Edit this workout</a></p></div>${nav}</div>
+      <form id="rsF"><div class="board"><div class="tablewrap"><table class="wkT rsT"><thead><tr><th>Member</th>${lifts.map(l => `<th class="r">${esc(liftLabel(l))}<div class="sub">${esc(l.sch)}</div></th>`).join('')}${w.score_label ? `<th class="r">${esc(w.score_label)}</th>` : ''}</tr></thead><tbody>
       ${members.map(m => { const lg = logOf(m.id), ent = (lg && lg.entries) || {}, r = rowOf(m); return `<tr data-pid="${m.id}"><td><b>${esc(m.display_name)}</b>${lg ? ' <span class="pill up">Logged</span>' : ''}</td>
         ${lifts.map(l => { const t = D.target(l, r); return `<td class="r"><input class="wkIn" type="number" inputmode="decimal" step="any" min="0" max="1499" data-l="${esc(l.id)}" value="${esc(ent[l.id] ?? '')}" placeholder="${t || ''}" aria-label="${esc(m.display_name + ' ' + l.n)}"></td>`; }).join('')}
         ${w.score_label ? `<td class="r"><input class="wkIn wkScore" maxlength="40" data-score value="${esc((lg && lg.score) || '')}" placeholder="${w.score_type === 'time' ? '12:34' : ''}" aria-label="${esc(m.display_name + ' ' + w.score_label)}"></td>` : ''}</tr>`; }).join('') || `<tr><td class="empty" colspan="${lifts.length + 2}">No members yet. Members pick ${esc(g.name)} on the Gym league page.</td></tr>`}
@@ -164,7 +271,7 @@ export function install(X) {
       const head = (k, t) => `<header class="tvHead"><div class="tvGym"><img src="/assets/mark.svg" alt="DSI" class="tvLogo"><div><b>${esc(g.name)}</b><span>${esc(k)}</span></div></div><div class="tvTitle">${t}</div><div class="tvClock">${clock()}</div></header>`;
       // 1. Workout of the day
       out.push(`${head(fmtDW(today()), 'Workout of the <em>day</em>')}<div class="tvBody tvWodS">
-        ${w ? `<h1>${esc(w.title)}</h1><div class="tvSecsBig">${(w.sections || []).map((s2, i) => `<div><b><i>${String.fromCharCode(65 + i)}</i>${esc(s2.name)}</b><p>${esc(s2.text)}</p></div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
+        ${w ? `<h1>${esc(w.title)}</h1><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${p.lift ? `<span class="tvLog">Log your ${esc(p.lift.n)} weight</span>` : ''}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
         : `<h1>Rest or not posted</h1><p class="tvEmpty">Coaches post the day at dandystrength.com/gym/${esc(g.id)}</p>`}</div>`);
       // 2. Today's targets (one screen per 12 members)
       const lifts = (w && w.lifts) || [];
@@ -173,14 +280,14 @@ export function install(X) {
         for (let p = 0; p < pages; p++) {
           const chunk = members.slice(p * PER_TARGETS, p * PER_TARGETS + PER_TARGETS);
           out.push(`${head(fmtDW(today()), `Today's <em>targets</em>${pages > 1 ? ` <small>${p + 1}/${pages}</small>` : ''}`)}<div class="tvBody">
-            <table class="tvT tvBig"><thead><tr><th>Lifter</th>${lifts.map(l => `<th>${esc(l.n)}<span>${esc(l.sch)}</span></th>`).join('')}</tr></thead><tbody>
+            <table class="tvT tvBig"><thead><tr><th>Lifter</th>${lifts.map(l => `<th>${esc(liftLabel(l))}<span>${esc(l.sch)}</span></th>`).join('')}</tr></thead><tbody>
             ${chunk.map(m => { const r = rowOf(m), ent = ((logs.find(l => l.profile_id === m.id) || {}).entries) || {}; return `<tr><td>${esc(m.display_name)}</td>${lifts.map(l => { const t = D.target(l, r), v = num(ent[l.id]); return `<td class="${v ? (t && v >= t ? 'hit' : 'did') : ''}">${v || t || '·'}</td>`; }).join('')}</tr>`; }).join('') || `<tr><td colspan="${lifts.length + 1}">No members yet. Pick ${esc(g.name)} on the Gym league page.</td></tr>`}
             </tbody></table><div class="tvKey"><span class="hit">■</span> hit the target <span class="did">■</span> logged <span>■</span> your target, built from your own PRs</div></div>`);
         }
       }
       // 3. Live day board
-      const board = (wk, lg, n) => { const ls = (wk && wk.lifts) || [], show = ls.slice(0, 3), rk = ranked(wk, lg).slice(0, n);
-        return rk.length ? `<table class="tvT tvBig tvRank"><thead><tr><th>#</th><th>Lifter</th>${show.map(l => `<th>${esc(l.n)}</th>`).join('')}${wk && wk.score_label ? `<th>${esc(wk.score_label)}</th>` : ''}</tr></thead><tbody>
+      const board = (wk, lg, n) => { const ls = ((wk && wk.lifts) || []).filter(l => l.part !== 'D' || lg.some(x => num((x.entries || {})[l.id]))), show = ls.slice(0, 3), rk = ranked(wk, lg).slice(0, n);
+        return rk.length ? `<table class="tvT tvBig tvRank"><thead><tr><th>#</th><th>Lifter</th>${show.map(l => `<th>${esc(liftLabel(l))}</th>`).join('')}${wk && wk.score_label ? `<th>${esc(wk.score_label)}</th>` : ''}</tr></thead><tbody>
           ${rk.map((l, i) => `<tr class="${i === 0 ? 'top' : ''}"><td>${i + 1}</td><td>${esc(nameOf(l.profile_id))}</td>${show.map(x => `<td>${num((l.entries || {})[x.id]) || '·'}</td>`).join('')}${wk && wk.score_label ? `<td class="sc">${esc(l.score || '·')}</td>` : ''}</tr>`).join('')}</tbody></table>`
           : '<p class="tvEmpty">Nobody has logged yet. Be first.</p>'; };
       out.push(`${head(fmtDW(today()), `Today's <em>board</em>`)}<div class="tvBody">${w ? `<div class="tvSub">${esc(w.title)} · ${logs.length} of ${members.length} logged</div>` : ''}${board(w, logs, 12)}</div>`);

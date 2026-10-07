@@ -46,10 +46,10 @@ export default function ProfileEdit() {
     <Screen stack>
       <Title eyebrow={first ? 'Welcome to the index' : 'Your account'} accent="profile">{first ? 'Set up your' : 'Edit'}</Title>
       {first ? <Muted style={{ fontSize: 15, marginBottom: 14 }}>Your board name shows on the leaderboard. Age and bodyweight make the score fair. Then enter your four lifts and see your DSI™.</Muted> : null}
-      {field('Board name', <TextInput value={name} onChangeText={setName} maxLength={24} autoCapitalize="words" style={s.input} placeholder="Dandy" placeholderTextColor="#5A6478" accessibilityLabel="Board name" />)}
+      {field('Board name', <TextInput value={name} onChangeText={setName} maxLength={24} autoCapitalize="words" style={s.input} accessibilityLabel="Board name" />)}
       <View style={{ flexDirection: 'row', gap: 12 }}>
-        <View style={{ flex: 1 }}>{field('Birth year', <TextInput value={by} onChangeText={v => setBy(v.replace(/[^0-9]/g, ''))} maxLength={4} keyboardType="number-pad" style={s.input} placeholder="1980" placeholderTextColor="#5A6478" accessibilityLabel="Birth year" />)}</View>
-        <View style={{ flex: 1 }}>{field('Bodyweight lb', <TextInput value={bw} onChangeText={v => setBw(v.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad" style={s.input} placeholder="200" placeholderTextColor="#5A6478" accessibilityLabel="Bodyweight in pounds" />)}</View>
+        <View style={{ flex: 1 }}>{field('Birth year', <TextInput value={by} onChangeText={v => setBy(v.replace(/[^0-9]/g, ''))} maxLength={4} keyboardType="number-pad" style={s.input} accessibilityLabel="Birth year" />)}</View>
+        <View style={{ flex: 1 }}>{field('Bodyweight lb', <TextInput value={bw} onChangeText={v => setBw(v.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad" style={s.input} accessibilityLabel="Bodyweight in pounds" />)}</View>
       </View>
       {field('Sex', <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>{[['male', 'Male'], ['female', 'Female'], ['unspecified', 'Prefer not to say']].map(([k, l]) => <Chip key={k} label={l} on={sex === k} onPress={() => { setSex(k); if (k === 'female' && div === 'men') setDiv('women'); }} />)}</View>)}
       {field('Division', <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>{[['men', 'Men'], ['women', 'Women'], ['open', 'Open']].map(([k, l]) => <Chip key={k} label={l} on={div === k} onPress={() => setDiv(k)} />)}</View>)}

@@ -233,6 +233,8 @@ tr.struck td{opacity:.45;text-decoration:line-through}
 .wkProg h3,.wkMine h3{margin:0;font:900 30px/1 var(--disp);text-transform:uppercase}
 .wkSec{border-left:3px solid var(--line);padding-left:12px;display:grid;gap:2px}
 .wkSec b{font:800 17px var(--disp);text-transform:uppercase;letter-spacing:.02em}
+.wkSec b .wkL{font-style:normal;display:inline-grid;place-items:center;width:22px;height:22px;margin-right:8px;border-radius:4px;background:var(--accent);color:#111;font-size:13px;vertical-align:2px}
+.wkSec .sub{color:var(--accent);font-weight:600}
 .wkSec p{margin:0;color:var(--muted);font-size:14px}
 .rest{border-left:3px solid var(--up);padding-left:12px;font-size:16px}
 table.wkT td{padding:10px 8px}
@@ -508,7 +510,10 @@ main.wrap>.tvDeck,.tvDeck{position:fixed;inset:0;margin:0;padding:0;overflow-y:a
 .tvBody{grid-column:1/-1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:1vw}
 .tvFoot{grid-column:1/-1;display:flex;justify-content:flex-end}
 .tvWodS h1{font:900 5vw/.95 var(--disp);text-transform:uppercase;margin:.4vw 0 .6vw}
-.tvSecsBig{display:grid;grid-template-columns:repeat(auto-fit,minmax(26vw,1fr));gap:1.4vw}
+.tvSecsBig{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.4vw;align-items:start}
+.tvSecsBig.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.tvSecsBig.four p{font-size:1.35vw}
+.tvLog{display:block;margin-top:.9vw;font:700 1vw var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
 .tvSecsBig>div{background:var(--panel);border:1px solid var(--line);border-radius:.6vw;padding:1.2vw 1.4vw}
 .tvSecsBig b{display:flex;align-items:center;gap:.8vw;font:800 1.7vw var(--disp);text-transform:uppercase;letter-spacing:.03em}
 .tvSecsBig b i{font-style:normal;display:grid;place-items:center;width:2.4vw;height:2.4vw;border-radius:.4vw;background:var(--accent);color:var(--bg);font:900 1.5vw var(--disp)}
@@ -549,3 +554,18 @@ main.wrap>.tvDeck,.tvDeck{position:fixed;inset:0;margin:0;padding:0;overflow-y:a
 .tvEmpty{font:500 1.8vw var(--sans)}
 main.wrap>.tvDots{padding:0;margin:0;left:auto}
 .tvS .tvBt{font-size:1.5vw;padding:.5vw 0}
+
+/* workout editor: Parts A to D on a grid */
+.wodEd{display:grid;gap:16px}
+.wodGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.wodGrid:has(.wodPart[data-p="D"]:not([hidden])){grid-template-columns:repeat(4,minmax(0,1fr))}
+.wodPart{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:12px;align-content:start}
+.wodPH{display:flex;gap:10px;align-items:center}
+.wodPH i{font:800 18px var(--sans);font-style:normal;width:36px;height:36px;flex:none;display:grid;place-items:center;border-radius:6px;background:var(--accent);color:#111}
+.wodPH input{flex:1;font-weight:700}
+.wodPart textarea{min-height:150px;resize:vertical}
+.wodTrk{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:4px;border-top:1px solid var(--line)}
+.wodTrk .field:has([data-n]),.wodTrk .field:has([data-sch]),.wodTrk .field:has([data-tt]),.wodTrk .field:has([data-b]),.wodTrk .field:has([data-f]),.wodTrk .hint{grid-column:1/-1}
+.wodTrk .hint{margin:0;color:var(--accent);font-weight:600}
+@media (max-width:1000px){.wodGrid,.wodGrid:has(.wodPart[data-p="D"]:not([hidden])){grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.wodGrid,.wodGrid:has(.wodPart[data-p="D"]:not([hidden])){grid-template-columns:1fr}}

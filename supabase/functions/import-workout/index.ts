@@ -21,31 +21,36 @@ const SCHEMA = {
         properties: {
           day: { type: 'string', description: 'YYYY-MM-DD' },
           title: { type: 'string', description: 'Short title, like "Squat hypertrophy + cleans" or "Helen + 2"' },
-          sections: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, text: { type: 'string' } }, required: ['name', 'text'] } },
-          lifts: {
+          parts: {
             type: 'array',
-            description: 'Loaded movements a lifter would enter a weight for. Empty on rest days or bodyweight only days.',
+            description: "The day split into Part A, B, C and sometimes D, in the gym's order. Part A is the warmup or skill. If the gym has more than four pieces, put the extras in Part D.",
             items: {
               type: 'object',
               properties: {
-                id: { type: 'string', description: 'short lowercase id, unique within the day, like fs, ohs, rdl, clc' },
-                n: { type: 'string', description: 'Movement name' },
-                sch: { type: 'string', description: 'Sets x reps or total reps, like "4 x 8" or "30 reps"' },
-                b: { type: 'string', enum: ['bench', 'squat', 'dead', 'clean'], description: 'Which of the four DSI lifts this movement scales from' },
-                f: { type: 'number', description: 'Target as a fraction of b for percentage work, like 0.65. Omit when rx is used.' },
-                rx: { type: 'array', items: { type: 'number' }, description: 'Prescribed weights [Rx, Rx+] in lb for the men\'s standard. Omit when f is used.' },
-                max: { type: 'boolean', description: 'True only when the day builds to a heavy single or 1RM of this movement' },
-                why: { type: 'string', description: 'One short line explaining the target, like "65% of your deadlift" or "135 Rx. Go 185 once your clean is 265+"' },
+                name: { type: 'string', description: 'Short name like Warmup, Strength, Conditioning, Accessory' },
+                text: { type: 'string', description: "The gym's wording for this part, short and clean" },
+                track: {
+                  type: 'object',
+                  description: 'Parts B, C and D only, never Part A. The one loaded movement a member logs a weight for in this part. Omit when the part has no loaded movement.',
+                  properties: {
+                    n: { type: 'string', description: 'Movement name' },
+                    sch: { type: 'string', description: 'Sets x reps, like "5 x 3" or "5 rounds"' },
+                    b: { type: 'string', enum: ['bench', 'squat', 'dead', 'clean'], description: 'Which of the four DSI lifts this movement scales from' },
+                    f: { type: 'number', description: 'Target as a fraction of b for percentage work, like 0.65. Omit when rx is used.' },
+                    rx: { type: 'array', items: { type: 'number' }, description: "Prescribed weights [Rx, Rx+] in lb for the men's standard. Omit when f is used." },
+                    max: { type: 'boolean', description: 'True only when the part builds to a heavy single or 1RM' },
+                    why: { type: 'string', description: 'One short line explaining the target, like "65% of your deadlift"' },
+                  },
+                  required: ['n', 'sch', 'b', 'why'],
+                },
               },
-              required: ['id', 'n', 'sch', 'b', 'why'],
+              required: ['name', 'text'],
             },
           },
-          score_label: { type: 'string', description: 'What the conditioning is scored by, like Time, Rounds + reps, Load. Empty if not scored.' },
-          score_type: { type: 'string', enum: ['time', 'text', ''] },
           rest_note: { type: 'string', description: 'Only for rest days' },
           pr_lift: { type: 'string', enum: ['bench', 'squat', 'deadlift', 'clean', ''], description: 'Set when the day is a max out of one of the four DSI lifts' },
         },
-        required: ['day', 'title', 'sections', 'lifts'],
+        required: ['day', 'title', 'parts'],
       },
     },
     source: { type: 'string', description: 'Gym or program name if shown' },
@@ -100,7 +105,7 @@ Deno.serve(async req => {
     const today = new Date().toISOString().slice(0, 10);
     content.push({ type: 'text', text: `Today is ${today}. ${start ? `If the workouts do not show dates, the first one is ${start} and each next workout is the next day.` : 'If the workouts do not show dates, start today and go one per day.'}
 Convert every workout into a DSI day with the save_days tool.
-Rules: keep the gym's wording in sections (warmup, strength, conditioning), short and clean. Use lb. For each loaded movement pick the DSI base lift it scales from (squat family to squat, hinges and swings to dead, Olympic lifts to clean, presses to bench). Use f for percentage or hypertrophy work (typical: front squat 0.58, overhead squat 0.37, RDL 0.55, sumo deadlift 0.65, strict press 0.45, push press 0.55). Use rx for prescribed WOD weights. Set max true and pr_lift only on max out days. Never invent workouts that are not in the source.` });
+Rules: split each day into Part A, B, C and sometimes D, keeping the gym's wording short and clean. Part A is never tracked. Members only log a weight (reps are assumed done), so for Parts B, C and D set track to the one main loaded movement, or leave it out. Use lb. For each tracked movement pick the DSI base lift it scales from (squat family to squat, hinges and swings to dead, Olympic lifts to clean, presses to bench). Use f for percentage or hypertrophy work (typical: front squat 0.58, overhead squat 0.37, RDL 0.55, sumo deadlift 0.65, strict press 0.45, push press 0.55). Use rx for prescribed WOD weights. Set max true and pr_lift only on max out days. Never invent workouts that are not in the source.` });
 
     const ai = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
