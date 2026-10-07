@@ -330,20 +330,21 @@ export function install(X) {
       const [base, yday] = await Promise.all([gymData(gid, d), dayOf(gid, addDays(d, -1))]);
       const ids = base.members.map(m => m.id);
       const [prs, by, bt] = await Promise.all([
-        ids.length ? sb.from('lift_entries').select('id,profile_id,lift,weight_lb,prev_best,performed_on').in('profile_id', ids).eq('is_pr', true).not('prev_best', 'is', null).neq('status', 'struck').gte('performed_on', addDays(d, -13)).order('performed_on', { ascending: false }).limit(10).then(must) : [],
+        ids.length ? sb.from('lift_entries').select('id,profile_id,lift,weight_lb,prev_best,performed_on').in('profile_id', ids).eq('is_pr', true).not('prev_best', 'is', null).neq('status', 'struck').gte('performed_on', addDays(d, -29)).order('performed_on', { ascending: false }).limit(10).then(must) : [],
         X.compete.allEntries(),
         sb.from('battles').select('*').eq('status', 'accepted').eq('week_start', monday(d)).then(must),
       ]);
       const q = X.compete.quarter(d);
       const rows = base.members.map(m => ({ m, r: base.rowOf(m) })).filter(x => x.r.score);
-      const lb = rows.map(x => ({ ...x, s: X.compete.gainIn(by.get(x.m.id) || [], x.r, q.start, d) })).sort((a, b) => b.r.score - a.r.score);
-      st = { ...base, yday, prs, lb, q, by, battles: bt.filter(b => ids.includes(b.challenger) || ids.includes(b.opponent)) };
+      const from30 = addDays(d, -29);
+      const lb = rows.map(x => ({ ...x, s: X.compete.gainIn(by.get(x.m.id) || [], x.r, from30, d) })).sort((a, b) => b.r.score - a.r.score);
+      st = { ...base, yday, prs, lb, q, by, from30, battles: bt.filter(b => ids.includes(b.challenger) || ids.includes(b.opponent)) };
     };
     const nameOf = id => (st.members.find(m => m.id === id) || {}).display_name || (S.board.find(r => r.profile_id === id) || {}).name || 'Someone';
     const clock = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
     const screens = () => {
-      const { g, w, logs, members, rowOf, lb, prs, q, battles, by, yday } = st;
+      const { g, w, logs, members, rowOf, lb, prs, q, battles, by, yday, from30 } = st;
       const out = [];
       const head = (k, t) => `<header class="tvHead"><div class="tvGym"><img src="/assets/mark.svg" alt="DSI" class="tvLogo"><div><b>${esc(g.name)}</b><span>${esc(k)}</span></div></div><div class="tvTitle">${t}</div><div class="tvClock">${clock()}</div></header>`;
       // 1. Workout of the day
@@ -378,11 +379,11 @@ export function install(X) {
         out.push(`${head('Best lifts on the board', `${label} <em>leaderboard</em>`)}<div class="tvBody">${rs.length ? `<div class="tvCols">${col('DSI™', 'score', '')}${col('Total', 'total', '')}${D.LIFTS.map(l => col(l.n, l.k, '')).join('')}</div><div class="tvKey">Best lifts in pounds. DSI scores each lifter against people their age and size.</div>`
           : `<p class="tvEmpty">No ${label.toLowerCase().replace("'s", '')} on the ${esc(g.name)} board yet. Get your DSI at dandystrength.com/join</p>`}</div>`);
       }
-      // 7. Season, battles and PRs
-      out.push(`${head('Season ' + q.q + ' · ' + fmtD(q.start) + ' to ' + fmtD(q.end), `${esc(q.name)} <em>standings</em>`)}<div class="tvBody tvGrid2">
-        <div><h3 class="tvH3">Most DSI gained this season</h3><table class="tvT tvRank"><tbody>${[...lb].sort((a, b) => b.s.pts - a.s.pts).filter(x => x.s.pts).slice(0, 8).map((x, i) => `<tr class="${i === 0 ? 'top' : ''}"><td>${i + 1}</td><td>${esc(x.m.display_name)}</td><td class="sc">+${x.s.pts}</td></tr>`).join('') || '<tr><td>Nobody has gained yet this season.</td></tr>'}</tbody></table>
+      // 7. The last 30 days: DSI gained, battles and PRs
+      out.push(`${head(fmtD(from30) + ' to ' + fmtD(today()), `Last 30 <em>days</em>`)}<div class="tvBody tvGrid2">
+        <div><h3 class="tvH3">Most DSI gained</h3><table class="tvT tvRank"><thead><tr><th></th><th>Lifter</th><th>Pounds added</th><th>DSI</th></tr></thead><tbody>${[...lb].sort((a, b) => b.s.pts - a.s.pts || b.s.lb - a.s.lb).filter(x => x.s.pts || x.s.lb).slice(0, 8).map((x, i) => `<tr class="${i === 0 ? 'top' : ''}"><td>${i + 1}</td><td>${esc(x.m.display_name)}</td><td>+${fmt(x.s.lb)} lb</td><td class="sc">+${x.s.pts}</td></tr>`).join('') || '<tr><td>Nobody has gained in the last 30 days.</td></tr>'}</tbody></table>
           ${battles.length ? `<h3 class="tvH3">Battles this week</h3>${battles.slice(0, 4).map(b => { const a = X.compete.gainIn(by.get(b.challenger) || [], S.board.find(r => r.profile_id === b.challenger) || {}, b.week_start, today()), o = X.compete.gainIn(by.get(b.opponent) || [], S.board.find(r => r.profile_id === b.opponent) || {}, b.week_start, today()); return `<div class="tvBt"><span>${esc(nameOf(b.challenger))} <b>+${a.pts}</b></span><i>vs</i><span><b>+${o.pts}</b> ${esc(nameOf(b.opponent))}</span></div>`; }).join('')}` : ''}</div>
-        <div><h3 class="tvH3">Latest PRs</h3><ol class="tvPRs">${prs.map(p => `<li><b>${esc(nameOf(p.profile_id))}</b><span>${esc(D.liftName(p.lift))} ${fmt(p.weight_lb)} lb</span><em>+${fmt(num(p.weight_lb) - num(p.prev_best))}</em><small>${fmtD(p.performed_on)}</small></li>`).join('') || '<li class="none">No PRs in the last two weeks. Somebody fix that.</li>'}</ol></div></div>`);
+        <div><h3 class="tvH3">Latest PRs</h3><ol class="tvPRs">${prs.map(p => `<li><b>${esc(nameOf(p.profile_id))}</b><span>${esc(D.liftName(p.lift))} ${fmt(p.weight_lb)} lb</span><em>+${fmt(num(p.weight_lb) - num(p.prev_best))}</em><small>${fmtD(p.performed_on)}</small></li>`).join('') || '<li class="none">No PRs in the last 30 days. Somebody fix that.</li>'}</ol></div></div>`);
       return out;
     };
 
