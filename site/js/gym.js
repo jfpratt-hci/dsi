@@ -116,62 +116,117 @@ export function install(X) {
     };
   };
 
-  /* ---------- the big screen ---------- */
+  /* ---------- the big screen: a deck of full page screens ---------- */
+  // Screens advance on their own every 15 seconds. Scroll, swipe, arrow keys or the dots move by hand;
+  // after a minute without input the deck starts moving again.
   let tvTimers = [];
   const clearTv = () => { tvTimers.forEach(t => clearInterval(t)); tvTimers = []; };
+  const SLIDE_MS = 15000, IDLE_MS = 60000, PER_TARGETS = 12;
+  const secsOf = s => { const m = String(s || '').match(/^(\d+):(\d{1,2})$/); return m ? +m[1] * 60 + +m[2] : null; };
+  function ranked(w, logs) {
+    const lifts = (w && w.lifts) || [], key = (lifts.find(l => l.max) || lifts[0] || {}).id, isT = w && w.score_type === 'time';
+    return logs.filter(l => l.status !== 'struck').sort((a, b) => {
+      if (isT) { const x = secsOf(a.score), y = secsOf(b.score); if (x != null || y != null) return (x ?? 1e9) - (y ?? 1e9); }
+      const sa = parseFloat(String(a.score || '').replace(/[^0-9.]/g, '')), sb2 = parseFloat(String(b.score || '').replace(/[^0-9.]/g, ''));
+      if (!isNaN(sa) || !isNaN(sb2)) return (isNaN(sb2) ? -1 : sb2) - (isNaN(sa) ? -1 : sa);
+      return num((b.entries || {})[key]) - num((a.entries || {})[key]);
+    });
+  }
+  async function dayOf(gid, day) {
+    const ws = must(await sb.from('workouts').select('*').eq('day', day).or(`gym_id.is.null,gym_id.eq.${gid}`));
+    const w = ws.find(x => x.gym_id === gid) || ws.find(x => !x.gym_id) || null;
+    return { day, w, logs: w ? must(await sb.from('workout_logs').select('*').eq('workout_id', w.id)) : [] };
+  }
+
   VIEWS.tv = async (gid, tok) => {
     clearTv();
-    let state = null, page = 0, lastDay = today();
+    let st = null, cur = 0, lastTouch = 0;
     const load = async () => {
       const d = today();
-      const base = await gymData(gid, d);
+      const [base, yday] = await Promise.all([gymData(gid, d), dayOf(gid, addDays(d, -1))]);
       const ids = base.members.map(m => m.id);
-      const since = addDays(d, -13);
       const [prs, by, bt] = await Promise.all([
-        ids.length ? sb.from('lift_entries').select('id,profile_id,lift,weight_lb,prev_best,performed_on,created_at').in('profile_id', ids).eq('is_pr', true).not('prev_best', 'is', null).neq('status', 'struck').gte('performed_on', since).order('created_at', { ascending: false }).limit(12).then(must) : [],
+        ids.length ? sb.from('lift_entries').select('id,profile_id,lift,weight_lb,prev_best,performed_on').in('profile_id', ids).eq('is_pr', true).not('prev_best', 'is', null).neq('status', 'struck').gte('performed_on', addDays(d, -13)).order('performed_on', { ascending: false }).limit(10).then(must) : [],
         X.compete.allEntries(),
         sb.from('battles').select('*').eq('status', 'accepted').eq('week_start', monday(d)).then(must),
       ]);
       const q = X.compete.quarter(d);
-      const lb = base.members.map(m => { const r = base.rowOf(m); return { m, r, s: X.compete.gainIn(by.get(m.id) || [], r, q.start, d) }; }).filter(x => x.r.score).sort((a, b) => b.r.score - a.r.score);
-      state = { ...base, prs, lb, q, battles: bt.filter(b => ids.includes(b.challenger) || ids.includes(b.opponent)), by };
+      const rows = base.members.map(m => ({ m, r: base.rowOf(m) })).filter(x => x.r.score);
+      const lb = rows.map(x => ({ ...x, s: X.compete.gainIn(by.get(x.m.id) || [], x.r, q.start, d) })).sort((a, b) => b.r.score - a.r.score);
+      st = { ...base, yday, prs, lb, q, by, battles: bt.filter(b => ids.includes(b.challenger) || ids.includes(b.opponent)) };
     };
-    const nameOf = id => (state.members.find(m => m.id === id) || {}).display_name || S.board.find(r => r.profile_id === id)?.name || 'Someone';
-    const draw = () => {
-      if (tok !== S.tok || !state) return;
-      const { g, w, logs, members, rowOf, lb, prs, q, battles, by } = state;
+    const nameOf = id => (st.members.find(m => m.id === id) || {}).display_name || (S.board.find(r => r.profile_id === id) || {}).name || 'Someone';
+    const clock = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+    const screens = () => {
+      const { g, w, logs, members, rowOf, lb, prs, q, battles, by, yday } = st;
+      const out = [];
+      const head = (k, t) => `<header class="tvHead"><div class="tvGym"><img src="/assets/mark.svg" alt="DSI" class="tvLogo"><div><b>${esc(g.name)}</b><span>${esc(k)}</span></div></div><div class="tvTitle">${t}</div><div class="tvClock">${clock()}</div></header>`;
+      // 1. Workout of the day
+      out.push(`${head(fmtDW(today()), 'Workout of the <em>day</em>')}<div class="tvBody tvWodS">
+        ${w ? `<h1>${esc(w.title)}</h1><div class="tvSecsBig">${(w.sections || []).map((s2, i) => `<div><b><i>${String.fromCharCode(65 + i)}</i>${esc(s2.name)}</b><p>${esc(s2.text)}</p></div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
+        : `<h1>Rest or not posted</h1><p class="tvEmpty">Coaches post the day at dandystrength.com/gym/${esc(g.id)}</p>`}</div>`);
+      // 2. Today's targets (one screen per 12 members)
       const lifts = (w && w.lifts) || [];
-      const per = 10, pages = Math.max(1, Math.ceil(members.length / per));
-      page = page % pages;
-      const shown = members.slice(page * per, page * per + per);
-      const logOf = id => logs.find(l => l.profile_id === id);
-      const isT = w && w.score_type === 'time';
-      const secs = s => { const m = String(s || '').match(/^(\d+):(\d{1,2})$/); return m ? +m[1] * 60 + +m[2] : 1e9; };
-      const key = (lifts.find(l => l.max) || lifts[0] || {}).id;
-      const day = logs.filter(l => l.status !== 'struck').sort((a, b) => (isT && (a.score || b.score) ? secs(a.score) - secs(b.score) : 0) || num((b.entries || {})[key]) - num((a.entries || {})[key])).slice(0, 8);
-      const clock = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-      main.innerHTML = `<div class="tvWrap">
-        <header class="tvHead"><div class="tvGym"><img src="/assets/mark.svg" alt="DSI" class="tvLogo"><div><b>${esc(g.name)}</b><span>${esc(fmtDW(today()))}</span></div></div><div class="tvClock">${clock}</div></header>
-        <section class="tvCard tvWod"><div class="tvK">Today${w && !w.gym_id ? ' · DSI week' : ''}</div><h1>${w ? esc(w.title) : 'No workout posted'}</h1>
-          ${w ? `<div class="tvSecs">${(w.sections || []).slice(0, 4).map(s => `<div><b>${esc(s.name)}</b><p>${esc(s.text)}</p></div>`).join('')}</div>` : `<p class="tvEmpty">Coaches post the day at dandystrength.com/gym/${esc(g.id)}</p>`}
-          ${lifts.length ? `<table class="tvT"><thead><tr><th>Lifter</th>${lifts.map(l => `<th>${esc(l.n)}<span>${esc(l.sch)}</span></th>`).join('')}</tr></thead><tbody>
-          ${shown.map(m => { const r = rowOf(m), ent = ((logOf(m.id) || {}).entries) || {}; return `<tr><td>${esc(m.display_name)}</td>${lifts.map(l => { const t = D.target(l, r), v = num(ent[l.id]); return `<td class="${v ? (t && v >= t ? 'hit' : 'did') : ''}">${v ? v : t ? t : '·'}</td>`; }).join('')}</tr>`; }).join('')}
-          </tbody></table>${pages > 1 ? `<div class="tvPage">Page ${page + 1} of ${pages}</div>` : ''}<div class="tvKey"><span class="hit">■</span> hit the target <span class="did">■</span> logged <span>■</span> target</div>` : ''}
-        </section>
-        <section class="tvCard tvDay"><div class="tvK">Day board</div>
-          ${day.length ? `<ol class="tvList">${day.map((l, i) => `<li><span class="p">${i + 1}</span><span class="n">${esc(nameOf(l.profile_id))}</span><span class="v">${esc(l.score || (key && (l.entries || {})[key] ? (l.entries || {})[key] + ' lb' : ''))}</span></li>`).join('')}</ol>` : '<p class="tvEmpty">Nobody has logged yet. Be first.</p>'}
-        </section>
-        <section class="tvCard tvLb"><div class="tvK">${esc(g.name)} leaderboard · ${esc(q.name)}</div>
-          <table class="tvT tvSmall"><thead><tr><th>#</th><th>Lifter</th><th>DSI</th><th>Season</th></tr></thead><tbody>
-          ${lb.slice(0, 8).map((x, i) => `<tr><td>${i + 1}</td><td>${esc(x.m.display_name)}</td><td>${x.r.score}</td><td>${x.s.pts ? '+' + x.s.pts : '·'}</td></tr>`).join('') || '<tr><td colspan="4">Log your four lifts to get on the board.</td></tr>'}
-          </tbody></table>
-          ${battles.length ? `<div class="tvK" style="margin-top:14px">Battles this week</div>${battles.slice(0, 3).map(b => { const end = today(), a = X.compete.gainIn(by.get(b.challenger) || [], S.board.find(r => r.profile_id === b.challenger) || {}, b.week_start, end), o = X.compete.gainIn(by.get(b.opponent) || [], S.board.find(r => r.profile_id === b.opponent) || {}, b.week_start, end); return `<div class="tvBt"><span>${esc(nameOf(b.challenger))} <b>+${a.pts}</b></span><i>vs</i><span><b>+${o.pts}</b> ${esc(nameOf(b.opponent))}</span></div>`; }).join('')}` : ''}
-        </section>
-        <footer class="tvTicker"><b>PRs</b><div class="tvRun">${prs.length ? prs.map(p => `<span>${esc(nameOf(p.profile_id))} · ${esc(D.liftName(p.lift))} ${fmt(p.weight_lb)} lb <em>+${fmt(num(p.weight_lb) - num(p.prev_best))}</em> · ${fmtD(p.performed_on)}</span>`).join('') : '<span>No PRs in the last two weeks. Somebody fix that.</span>'}</div><span class="tvUrl">dandystrength.com</span></footer>
-      </div>`;
+      if (lifts.length) {
+        const pages = Math.max(1, Math.ceil(members.length / PER_TARGETS));
+        for (let p = 0; p < pages; p++) {
+          const chunk = members.slice(p * PER_TARGETS, p * PER_TARGETS + PER_TARGETS);
+          out.push(`${head(fmtDW(today()), `Today's <em>targets</em>${pages > 1 ? ` <small>${p + 1}/${pages}</small>` : ''}`)}<div class="tvBody">
+            <table class="tvT tvBig"><thead><tr><th>Lifter</th>${lifts.map(l => `<th>${esc(l.n)}<span>${esc(l.sch)}</span></th>`).join('')}</tr></thead><tbody>
+            ${chunk.map(m => { const r = rowOf(m), ent = ((logs.find(l => l.profile_id === m.id) || {}).entries) || {}; return `<tr><td>${esc(m.display_name)}</td>${lifts.map(l => { const t = D.target(l, r), v = num(ent[l.id]); return `<td class="${v ? (t && v >= t ? 'hit' : 'did') : ''}">${v || t || '·'}</td>`; }).join('')}</tr>`; }).join('') || `<tr><td colspan="${lifts.length + 1}">No members yet. Pick ${esc(g.name)} on the Gym league page.</td></tr>`}
+            </tbody></table><div class="tvKey"><span class="hit">■</span> hit the target <span class="did">■</span> logged <span>■</span> your target, built from your own PRs</div></div>`);
+        }
+      }
+      // 3. Live day board
+      const board = (wk, lg, n) => { const ls = (wk && wk.lifts) || [], show = ls.slice(0, 3), rk = ranked(wk, lg).slice(0, n);
+        return rk.length ? `<table class="tvT tvBig tvRank"><thead><tr><th>#</th><th>Lifter</th>${show.map(l => `<th>${esc(l.n)}</th>`).join('')}${wk && wk.score_label ? `<th>${esc(wk.score_label)}</th>` : ''}</tr></thead><tbody>
+          ${rk.map((l, i) => `<tr class="${i === 0 ? 'top' : ''}"><td>${i + 1}</td><td>${esc(nameOf(l.profile_id))}</td>${show.map(x => `<td>${num((l.entries || {})[x.id]) || '·'}</td>`).join('')}${wk && wk.score_label ? `<td class="sc">${esc(l.score || '·')}</td>` : ''}</tr>`).join('')}</tbody></table>`
+          : '<p class="tvEmpty">Nobody has logged yet. Be first.</p>'; };
+      out.push(`${head(fmtDW(today()), `Today's <em>board</em>`)}<div class="tvBody">${w ? `<div class="tvSub">${esc(w.title)} · ${logs.length} of ${members.length} logged</div>` : ''}${board(w, logs, 12)}</div>`);
+      // 4. Yesterday's results
+      out.push(`${head(fmtDW(yday.day), `Yesterday's <em>results</em>`)}<div class="tvBody">${yday.w ? `<div class="tvSub">${esc(yday.w.title)} · ${yday.logs.length} logged</div>${board(yday.w, yday.logs, 12)}` : '<p class="tvEmpty">No workout yesterday.</p>'}</div>`);
+      // 5 and 6. Men's and women's leaderboards for the major lifts
+      for (const [sex, label] of [['male', "Men's"], ['female', "Women's"]]) {
+        const rs = lb.filter(x => (x.r.sex || '') === sex);
+        const col = (t, key, unit) => { const top = [...rs].filter(x => num(x.r[key])).sort((a, b) => num(b.r[key]) - num(a.r[key])).slice(0, 8);
+          return `<div class="tvCol"><h3>${t}</h3><ol>${top.map((x, i) => `<li class="${i === 0 ? 'top' : ''}"><span>${esc(x.m.display_name)}</span><b>${fmt(x.r[key])}${unit}</b></li>`).join('') || '<li class="none">Nobody yet</li>'}</ol></div>`; };
+        out.push(`${head('Best lifts on the board', `${label} <em>leaderboard</em>`)}<div class="tvBody">${rs.length ? `<div class="tvCols">${col('DSI™', 'score', '')}${col('Total', 'total', '')}${D.LIFTS.map(l => col(l.n, l.k, '')).join('')}</div><div class="tvKey">Best lifts in pounds. DSI scores each lifter against people their age and size.</div>`
+          : `<p class="tvEmpty">No ${label.toLowerCase().replace("'s", '')} on the ${esc(g.name)} board yet. Get your DSI at dandystrength.com/join</p>`}</div>`);
+      }
+      // 7. Season, battles and PRs
+      out.push(`${head('Season ' + q.q + ' · ' + fmtD(q.start) + ' to ' + fmtD(q.end), `${esc(q.name)} <em>standings</em>`)}<div class="tvBody tvGrid2">
+        <div><h3 class="tvH3">Most DSI gained this season</h3><table class="tvT tvRank"><tbody>${[...lb].sort((a, b) => b.s.pts - a.s.pts).filter(x => x.s.pts).slice(0, 8).map((x, i) => `<tr class="${i === 0 ? 'top' : ''}"><td>${i + 1}</td><td>${esc(x.m.display_name)}</td><td class="sc">+${x.s.pts}</td></tr>`).join('') || '<tr><td>Nobody has gained yet this season.</td></tr>'}</tbody></table>
+          ${battles.length ? `<h3 class="tvH3">Battles this week</h3>${battles.slice(0, 4).map(b => { const a = X.compete.gainIn(by.get(b.challenger) || [], S.board.find(r => r.profile_id === b.challenger) || {}, b.week_start, today()), o = X.compete.gainIn(by.get(b.opponent) || [], S.board.find(r => r.profile_id === b.opponent) || {}, b.week_start, today()); return `<div class="tvBt"><span>${esc(nameOf(b.challenger))} <b>+${a.pts}</b></span><i>vs</i><span><b>+${o.pts}</b> ${esc(nameOf(b.opponent))}</span></div>`; }).join('')}` : ''}</div>
+        <div><h3 class="tvH3">Latest PRs</h3><ol class="tvPRs">${prs.map(p => `<li><b>${esc(nameOf(p.profile_id))}</b><span>${esc(D.liftName(p.lift))} ${fmt(p.weight_lb)} lb</span><em>+${fmt(num(p.weight_lb) - num(p.prev_best))}</em><small>${fmtD(p.performed_on)}</small></li>`).join('') || '<li class="none">No PRs in the last two weeks. Somebody fix that.</li>'}</ol></div></div>`);
+      return out;
     };
-    const alertPR = async e => {
-      if (!state || !state.members.some(m => m.id === e.profile_id) || !e.is_pr || e.prev_best == null) return;
+
+    let deck = null;
+    const draw = () => {
+      if (tok !== S.tok || !st) return;
+      const list = screens();
+      main.innerHTML = `<div class="tvDeck" id="tvDeck" tabindex="0">${list.map((h, i) => `<section class="tvS" data-i="${i}">${h}<footer class="tvFoot"><span class="tvUrl">dandystrength.com</span></footer></section>`).join('')}</div>
+        <nav class="tvDots" aria-label="Screens">${list.map((_, i) => `<button type="button" data-go="${i}" aria-label="Screen ${i + 1}"${i === cur ? ' aria-current="true"' : ''}></button>`).join('')}</nav>`;
+      deck = $('#tvDeck');
+      cur = Math.min(cur, list.length - 1);
+      deck.scrollTop = cur * deck.clientHeight;
+      deck.addEventListener('scroll', () => { const i = Math.round(deck.scrollTop / deck.clientHeight); if (i !== cur) { cur = i; $$('.tvDots button').forEach((b, k) => b.toggleAttribute('aria-current', k === cur)); } }, { passive: true });
+      ['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach(ev => deck.addEventListener(ev, () => { lastTouch = Date.now(); }, { passive: true }));
+      $$('.tvDots button').forEach(b => b.onclick = () => { lastTouch = Date.now(); goTo(+b.dataset.go); });
+      deck.focus({ preventScroll: true });
+    };
+    const goTo = i => { if (!deck) return; const n = deck.children.length; cur = (i + n) % n; deck.scrollTo({ top: cur * deck.clientHeight, behavior: matchMedia('(prefers-reduced-motion:reduce)').matches ? 'auto' : 'smooth' }); };
+    const onKey = e => {
+      if (tok !== S.tok) return document.removeEventListener('keydown', onKey);
+      const k = { ArrowDown: 1, ArrowRight: 1, PageDown: 1, ' ': 1, ArrowUp: -1, ArrowLeft: -1, PageUp: -1 }[e.key];
+      if (k) { e.preventDefault(); lastTouch = Date.now(); goTo(cur + k); }
+      if (e.key === 'f') document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(() => {});
+    };
+    document.addEventListener('keydown', onKey);
+
+    const alertPR = e => {
+      if (!st || !st.members.some(m => m.id === e.profile_id) || !e.is_pr || e.prev_best == null) return;
       const box = document.createElement('div'); box.className = 'tvAlert';
       box.innerHTML = `<div><span>New PR</span><b>${esc(nameOf(e.profile_id))}</b><strong>${esc(D.liftName(e.lift))} ${fmt(e.weight_lb)} lb</strong><em>+${fmt(num(e.weight_lb) - num(e.prev_best))} lb</em></div>`;
       document.body.appendChild(box); setTimeout(() => box.remove(), 12000);
@@ -180,17 +235,16 @@ export function install(X) {
     await load();
     if (tok !== S.tok) return;
     draw();
-    try { document.documentElement.requestFullscreen && document.addEventListener('dblclick', () => document.documentElement.requestFullscreen().catch(() => {}), { once: true }); } catch {}
-    let busy = false;
+    let busy = false, lastDay = today();
     const refresh = async () => { if (busy || tok !== S.tok) return; busy = true; try { await load(); draw(); } catch (e) { console.error(e); } busy = false; };
     const ch = sb.channel('tv-' + gid)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'workout_logs' }, p => { if (state && state.w && (p.new || {}).workout_id === state.w.id) refresh(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'workout_logs' }, p => { const wid = (p.new || {}).workout_id; if (st && ((st.w && wid === st.w.id) || (st.yday.w && wid === st.yday.w.id))) refresh(); })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'lift_entries' }, p => { alertPR(p.new); refresh(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'workouts' }, () => refresh())
       .subscribe();
     S.channels.push(ch);
-    tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); page++; draw(); }, 15000));
-    tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); if (today() !== lastDay) { lastDay = today(); page = 0; } refresh(); }, 5 * 60 * 1000));
-    tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); const c = document.querySelector('.tvClock'); if (c) c.textContent = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); }, 20000));
+    tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); if (Date.now() - lastTouch > IDLE_MS) goTo(cur + 1); }, SLIDE_MS));
+    tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); if (today() !== lastDay) { lastDay = today(); cur = 0; } refresh(); }, 5 * 60 * 1000));
+    tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); $$('.tvClock').forEach(c => { c.textContent = clock(); }); }, 20000));
   };
 }
