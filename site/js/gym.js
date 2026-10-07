@@ -26,6 +26,16 @@ export function install(X) {
   const liftLabel = l => l.part ? `${l.part} · ${l.n}` : l.n;
   X.parts = { isParts, partsOf, shownParts, liftLabel };
 
+  // A gym can be reached by its id or its short big screen name (gyms.slug).
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  async function gymIdOf(key) {
+    if (UUID.test(key || '')) return key;
+    const g = must(await sb.from('gyms').select('id').eq('slug', String(key || '').toLowerCase()).maybeSingle());
+    if (!g) throw new Error('No gym here.');
+    return g.id;
+  }
+  const SLUG = /^[a-z0-9]([a-z0-9-]{1,38}[a-z0-9])$/;
+
   async function gymData(gid, day) {
     const [g, members, staff, board, ws] = await Promise.all([
       sb.from('gyms').select('*').eq('id', gid).maybeSingle().then(must),
@@ -66,17 +76,18 @@ export function install(X) {
     const claims = S.me.role === 'admin' ? must(await sb.from('gym_claims').select('*').eq('status', 'pending').order('created_at')) : [];
     const claimNames = claims.length ? new Map(must(await sb.from('profiles').select('id,display_name').in('id', claims.map(c => c.profile_id))).map(p => [p.id, p.display_name])) : new Map();
     const claimGyms = claims.length ? new Map(must(await sb.from('gyms').select('id,name').in('id', claims.map(c => c.gym_id))).map(x => [x.id, x.name])) : new Map();
-    const tvUrl = location.origin + '/tv/' + gid;
+    const tvUrl = location.origin + '/tv/' + (g.slug || gid);
     if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.city || 'Gym')} · ${members.length} lifters</div><h2>${esc(g.name)}</h2><p class="secSub">Your gym's page. Post the day, enter results, and run the big screen.</p></div><a class="btn ghost sm" href="/gyms/${gid}">Gym board</a></div>
       <div class="tools">
         <a class="tool" href="/wod/${gid}"><b>Edit workouts</b><span>Type or fix the day: Part A, B, C and sometimes D. Pick the weight members log for each part.</span></a>
         <a class="tool" href="/program?gym=${gid}"><b>Import a week</b><span>From your programming page, Kilo, a whiteboard photo or pasted text. Then fix anything in Edit workouts.</span></a>
         <a class="tool" href="/results/${gid}"><b>Enter results</b><span>Type in everyone's weights and scores from the floor. They go straight to the day board.</span></a>
-        <a class="tool" href="/tv/${gid}" target="_blank"><b>Big screen</b><span>Open this on the gym TV. It updates live all day.</span></a>
+        <a class="tool" href="/tv/${g.slug || gid}" target="_blank"><b>Big screen</b><span>Open this on the gym TV. It updates live all day.</span></a>
         <a class="tool" href="/week"><b>The week</b><span>What your members see on their phones.</span></a>
       </div>
       <div class="formCard"><div class="formH">Big screen link<span class="sub">Open it in the TV's browser, a Fire Stick or a laptop on HDMI, then go full screen. No login needed.</span></div>
-        <div class="row"><input id="tvUrl" readonly value="${esc(tvUrl)}" style="max-width:420px"><button class="btn ghost sm" type="button" id="tvCopy">Copy link</button></div></div></section>
+        <div class="row"><input id="tvUrl" readonly value="${esc(tvUrl)}" style="max-width:420px"><button class="btn ghost sm" type="button" id="tvCopy">Copy link</button></div>
+        ${owns(gid) ? `<form class="row" id="slF"><label for="sl-v" class="sub">Change it: ${esc(location.host)}/tv/</label><input id="sl-v" maxlength="40" value="${esc(g.slug || '')}" placeholder="yourgym" autocapitalize="none" spellcheck="false" style="max-width:220px"><button class="btn sm">Save link</button><span class="hint" id="sl-msg">Letters, numbers and dashes. The old link stops working.</span></form>` : ''}</div></section>
     <section class="sec"><h2>Coaches</h2>
       <div class="board"><div class="tablewrap"><table><thead><tr><th>Name</th><th>Role</th><th></th></tr></thead><tbody>
       ${staffRows.map(s => `<tr><td><a href="/u/${s.profile_id}">${esc(s.name)}</a></td><td>${s.role === 'owner' ? 'Owner' : 'Coach'}</td><td class="r">${s.role === 'coach' && owns(gid) ? `<button class="btn ghost sm" data-rmc="${s.profile_id}">Remove</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">No coaches yet.</td></tr>'}
@@ -89,6 +100,15 @@ export function install(X) {
     ${claims.length ? `<section class="sec"><h2>Gym owner <span>requests</span></h2><div class="board"><div class="tablewrap"><table><thead><tr><th>Lifter</th><th>Gym</th><th>Their note</th><th></th></tr></thead><tbody>
       ${claims.map(c => `<tr><td><a href="/u/${c.profile_id}">${esc(claimNames.get(c.profile_id) || 'Someone')}</a></td><td><a href="/gyms/${c.gym_id}">${esc(claimGyms.get(c.gym_id) || '')}</a></td><td>${esc(c.note || '')}</td><td class="r"><button class="btn sm" data-cl="${c.id}" data-ok="1">Approve</button> <button class="btn ghost sm" data-cl="${c.id}">Decline</button></td></tr>`).join('')}
       </tbody></table></div></div></section>` : ''}`)) return;
+    const sl = $('#slF');
+    if (sl) sl.onsubmit = async e => {
+      e.preventDefault();
+      const v = $('#sl-v').value.trim().toLowerCase().replace(/\s+/g, '-'), m = $('#sl-msg');
+      if (v && (!SLUG.test(v) || UUID.test(v))) { m.textContent = 'Use 3 to 40 letters, numbers or dashes, starting and ending with a letter or number.'; return; }
+      const { error } = await sb.from('gyms').update({ slug: v || null }).eq('id', gid);
+      if (error) { m.textContent = /gyms_slug_key|duplicate/.test(error.message) ? 'Another gym already has that link. Try another.' : error.message; return; }
+      toast(v ? 'Big screen link is now /tv/' + v : 'Big screen link reset'); route();
+    };
     $('#tvCopy').onclick = async () => { try { await navigator.clipboard.writeText(tvUrl); toast('Link copied'); } catch { $('#tvUrl').select(); } };
     $$('[data-rmc]').forEach(b => b.onclick = async () => { const { error } = await sb.from('gym_staff').delete().eq('gym_id', gid).eq('profile_id', b.dataset.rmc); if (error) return toast(error.message); toast('Coach removed'); route(); });
     const co = $('#coF');
@@ -245,8 +265,9 @@ export function install(X) {
     return { day, w, logs: w ? must(await sb.from('workout_logs').select('*').eq('workout_id', w.id)) : [] };
   }
 
-  VIEWS.tv = async (gid, tok) => {
+  VIEWS.tv = async (key, tok) => {
     clearTv();
+    const gid = await gymIdOf(key);
     let st = null, cur = 0, lastTouch = 0;
     const load = async () => {
       const d = today();
