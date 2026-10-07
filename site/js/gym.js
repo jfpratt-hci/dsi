@@ -211,12 +211,21 @@ export function install(X) {
       deck = $('#tvDeck');
       cur = Math.min(cur, list.length - 1);
       deck.scrollTop = cur * deck.clientHeight;
-      deck.addEventListener('scroll', () => { const i = Math.round(deck.scrollTop / deck.clientHeight); if (i !== cur) { cur = i; $$('.tvDots button').forEach((b, k) => b.toggleAttribute('aria-current', k === cur)); } }, { passive: true });
+      deck.addEventListener('scroll', () => { if (moving) return; const i = Math.round(deck.scrollTop / deck.clientHeight); if (i !== cur) { cur = i; dots(); } }, { passive: true });
       ['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach(ev => deck.addEventListener(ev, () => { lastTouch = Date.now(); }, { passive: true }));
       $$('.tvDots button').forEach(b => b.onclick = () => { lastTouch = Date.now(); goTo(+b.dataset.go); });
       deck.focus({ preventScroll: true });
     };
-    const goTo = i => { if (!deck) return; const n = deck.children.length; cur = (i + n) % n; deck.scrollTo({ top: cur * deck.clientHeight, behavior: matchMedia('(prefers-reduced-motion:reduce)').matches || document.hidden ? 'auto' : 'smooth' }); const want = cur; setTimeout(() => { if (deck && cur === want && Math.abs(deck.scrollTop - want * deck.clientHeight) > 2) deck.scrollTop = want * deck.clientHeight; }, 1500); };
+    let moving = null;
+    const dots = () => $$('.tvDots button').forEach((b, k) => b.toggleAttribute('aria-current', k === cur));
+    const goTo = i => {
+      if (!deck) return;
+      const n = deck.children.length; cur = (i + n) % n; dots();
+      const want = cur; clearTimeout(moving);
+      deck.scrollTo({ top: want * deck.clientHeight, behavior: matchMedia('(prefers-reduced-motion:reduce)').matches || document.hidden ? 'auto' : 'smooth' });
+      // Ignore in between scroll positions until it lands; settle it if a smooth scroll stalls.
+      moving = setTimeout(() => { moving = null; if (deck && cur === want && Math.abs(deck.scrollTop - want * deck.clientHeight) > 2) deck.scrollTop = want * deck.clientHeight; }, 1500);
+    };
     // A smooth scroll can stall when the tab is hidden; settle on the nearest screen when it comes back.
     const onVis = () => { if (tok !== S.tok) return document.removeEventListener('visibilitychange', onVis); if (!document.hidden && deck) deck.scrollTop = cur * deck.clientHeight; };
     document.addEventListener('visibilitychange', onVis);
