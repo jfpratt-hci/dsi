@@ -410,7 +410,7 @@ VIEWS.week = async (day, tok) => {
   else {
     const prog = `<div class="wkProg"><div class="eyebrow">${esc(fmtDW(w.day))}${w.day === tdy ? ' · Today' : ''}${w.source ? ' · ' + esc(w.source) : ''}</div><h3>${esc(w.title)}</h3>
       ${w.rest_note ? `<p class="rest">${esc(w.rest_note)}</p>` : ''}
-      ${P().shownParts(w).map(p => `<div class="wkSec"><b>${P().isParts(w) ? `<i class="wkL">${p.L}</i>` : ''}${esc(p.name)}</b><p>${esc(p.text)}</p>${p.lift || p.time ? `<div class="sub">Log your ${[p.lift ? esc(p.lift.n) + ' weight' : '', p.time ? 'time' : ''].filter(Boolean).join(' and ')}</div>` : ''}</div>`).join('')}
+      ${P().shownParts(w).map(p => `<div class="wkSec"><b>${P().isParts(w) ? `<i class="wkL">${p.L}</i>` : ''}${esc(p.name)}</b><p>${esc(p.text)}</p>${P().logWords(p) ? `<div class="sub">Log your ${P().logWords(p)}</div>` : ''}</div>`).join('')}
       <div class="row">${canEdit(w) ? `<a class="btn sm" href="/wod/${w.gym_id || 'dsi'}?day=${w.day}">Edit workout</a>` : ''}<button class="btn ghost sm" data-thread="workout" data-ref="${w.id}" data-title="${esc(fmtD(w.day) + ' · ' + w.title)}">Day thread</button>${w.benchmark ? `<a class="chip" href="/benchmarks/${encodeURIComponent(w.benchmark)}">Benchmark: ${esc(w.benchmark)}</a>` : ''}${w.gym_id && S.myGyms.some(g => g.gym_id === w.gym_id) ? `<a class="btn sm" href="/results/${w.gym_id}?day=${w.day}">Enter results</a><a class="btn ghost sm" href="/tv/${w.gym_id}">Big screen</a>` : ''}</div>
       ${isStaff() ? `<form class="row" id="bmF"><label class="vh" for="bm-n">Benchmark name</label><input id="bm-n" maxlength="40" value="${esc(w.benchmark || '')}" placeholder="Name it as a benchmark, like Fran" style="max-width:260px"><button class="btn ghost sm">Save</button></form>` : ''}</div>`;
     let mine = '';
@@ -418,13 +418,14 @@ VIEWS.week = async (day, tok) => {
     if (!its.length && !w.score_label) mine = `<div class="wkMine"><h3>Rest <span>day</span></h3><p class="hint">Nothing to log. Recover like it's your job.</p></div>`;
     else if (!S.me) mine = `<div class="wkMine"><h3>Your <span>numbers</span></h3><p class="hint">Sign in and every weight here is built from your own PRs. Then log what you actually did.</p><a class="btn" href="/login">Sign in</a></div>`;
     else if (!isPro()) mine = `<div class="wkMine"><h3>Your <span>numbers</span> ${PRO}</h3>
-        <div class="tablewrap"><table class="wkT"><thead><tr><th>${P().isParts(w) ? 'Part' : 'Lift'}</th><th>Scheme</th></tr></thead><tbody>${its.map(it => `<tr><td><b>${esc(it.label)}</b><div class="sub">${esc(it.lift ? it.lift.why : 'Your time')}</div></td><td class="n">${esc(it.sch)}</td></tr>`).join('')}</tbody></table></div>
+        <div class="tablewrap"><table class="wkT"><thead><tr><th>${P().isParts(w) ? 'Part' : 'Lift'}</th><th>Scheme</th></tr></thead><tbody>${its.map(it => `<tr><td><b>${esc(it.label)}</b><div class="sub">${esc(it.lift ? it.lift.why : it.kind === 'r' ? 'Your total reps' : 'Your time')}</div></td><td class="n">${esc(it.sch)}</td></tr>`).join('')}</tbody></table></div>
         <p class="hint">DSI Pro turns every lift here into a target weight built from your own PRs, then lets you log what you did and rank on the day board.</p><a class="btn" href="/pro">See DSI Pro</a></div>`;
     else {
       const ent = (myLog && myLog.entries) || {};
       mine = `<form class="wkMine" id="wkF"><h3>${esc(S.me.display_name)}'s <span>numbers</span></h3>
         <div class="tablewrap"><table class="wkT"><thead><tr><th>${P().isParts(w) ? 'Part' : 'Lift'}</th><th>Scheme</th><th class="r">Target</th><th class="r">${P().isParts(w) ? 'Yours' : 'Actual'}</th></tr></thead><tbody>
-        ${its.map(it => { if (it.kind === 't') return `<tr><td><b>${esc(it.label)}</b><div class="sub">Minutes and seconds</div></td><td class="n"></td><td class="r tgt"></td><td class="r"><input class="wkIn wkTime" inputmode="numeric" maxlength="8" data-id="${esc(it.key)}" data-kind="t" value="${esc(P().fmtT(ent[it.key]))}" placeholder="m:ss" aria-label="${esc(it.label)}"></td></tr>`;
+        ${its.map(it => { if (it.kind === 'r') return `<tr><td><b>${esc(it.label)}</b><div class="sub">Total reps</div></td><td class="n"></td><td class="r tgt"></td><td class="r"><input class="wkIn" type="number" inputmode="numeric" step="1" min="0" max="99999" data-id="${esc(it.key)}" data-kind="r" value="${esc(ent[it.key] ?? '')}" placeholder="reps" aria-label="${esc(it.label)}"></td></tr>`;
+          if (it.kind === 't') return `<tr><td><b>${esc(it.label)}</b><div class="sub">Minutes and seconds</div></td><td class="n"></td><td class="r tgt"></td><td class="r"><input class="wkIn wkTime" inputmode="numeric" maxlength="8" data-id="${esc(it.key)}" data-kind="t" value="${esc(P().fmtT(ent[it.key]))}" placeholder="m:ss" aria-label="${esc(it.label)}"></td></tr>`;
           const l = it.lift, t = D.target(l, meRow); return `<tr><td><b>${esc(it.label)}</b><div class="sub">${esc(l.why)}</div></td><td class="n">${esc(l.sch)}</td><td class="r tgt">${t ? t + ' lb' : 'n/a'}</td><td class="r"><input class="wkIn" type="number" inputmode="numeric" step="any" min="0" max="1499" data-id="${esc(l.id)}" value="${esc(ent[l.id] ?? '')}" placeholder="${t || 'lb'}" aria-label="${esc(l.n)} weight used">${l.part ? '' : `<a class="setsLink" href="/lift/${w.id}/${encodeURIComponent(l.id)}">Sets${(myLog && myLog.sets && myLog.sets[l.id] && myLog.sets[l.id].length) ? ' · ' + myLog.sets[l.id].length : ''}</a>`}</td></tr>`; }).join('')}
         ${w.score_label ? `<tr><td><b>${esc(w.score_label)}</b><div class="sub">${w.score_type === 'time' ? 'mm:ss' : 'Your score'}</div></td><td></td><td></td><td class="r"><input class="wkIn wkScore" type="text" maxlength="40" id="wkScore" value="${esc(myLog?.score || '')}" placeholder="${w.score_type === 'time' ? '12:34' : 'score'}" aria-label="${esc(w.score_label)}"></td></tr>` : ''}
         </tbody></table></div>
@@ -454,6 +455,7 @@ VIEWS.week = async (day, tok) => {
     let bad = '';
     $$('.wkIn[data-id]', f).forEach(i => { const v = i.value.trim(); if (!v) return;
       if (i.dataset.kind === 't') { const x = P().parseT(v); if (x > 0) entries[i.dataset.id] = x; else bad = `"${v}" is not a time. Use minutes and seconds, like 8:45.`; }
+      else if (i.dataset.kind === 'r') entries[i.dataset.id] = Math.max(0, Math.min(99999, Math.round(+v) || 0));
       else entries[i.dataset.id] = Math.max(0, Math.min(1499, Math.round(+v * 2) / 2 || 0)); });
     if (bad) { msg.textContent = bad; return; }
     const score = $('#wkScore') ? $('#wkScore').value.trim().slice(0, 40) : '';
@@ -489,7 +491,7 @@ function dayBoard(w, logs) {
   ${rows.map((x, i) => {
     const br = boardRow(x.profile_id) || {}, nm = nameOf(x.profile_id), mine = S.me && S.me.id === x.profile_id;
     return `<tr class="${mine ? 'me' : ''}${x.status === 'struck' ? ' struck' : ''}"><td class="pos">${i + 1}</td><td class="who"><a href="/u/${x.profile_id}">${esc(nm)}</a>${x.status === 'protested' ? '<span class="pill flat">Protest</span>' : ''}</td>
-    ${its.map(it => { if (it.kind === 't') { const v = ev(x, it.key); return `<td class="r n">${v ? `<b>${P().fmtT(v)}</b>` : '<span class="sub">n/a</span>'}</td>`; } const l = it.lift, v = num(x.entries[l.id]), t = D.target(l, br); return `<td class="r n">${v ? `<span class="${t && v >= t ? 'hit' : ''}">${v}</span>${t ? `<div class="sub">${Math.round(v / t * 100)}% of target</div>` : ''}` : '<span class="sub">n/a</span>'}</td>`; }).join('')}
+    ${its.map(it => { if (it.kind !== 'w') { const v = ev(x, it.key); return `<td class="r n">${v ? `<b>${P().cell(it, v)}</b>` : '<span class="sub">n/a</span>'}</td>`; } const l = it.lift, v = num(x.entries[l.id]), t = D.target(l, br); return `<td class="r n">${v ? `<span class="${t && v >= t ? 'hit' : ''}">${v}</span>${t ? `<div class="sub">${Math.round(v / t * 100)}% of target</div>` : ''}` : '<span class="sub">n/a</span>'}</td>`; }).join('')}
     ${w.score_label ? `<td class="r n big">${esc(x.score || '')}</td>` : ''}
     <td class="r" data-host>${S.me && !mine && x.status === 'ok' ? `<button class="btn ghost sm" data-protest="workout_log" data-ref="${x.id}" data-title="${esc(nm + ' · ' + fmtD(w.day) + ' log')}">Protest</button>` : ''}</td></tr>`;
   }).join('')}</tbody></table></div>` : '<div class="empty">Log your lifts and you show up here.</div>'}</div>`;
@@ -1145,7 +1147,7 @@ VIEWS.program = async (_, tok) => {
       if (!d.parts) return d.sections && d.sections.some(x => x.part) ? d : { ...d, lifts: (d.lifts || []).map(fix) };
       const ps = d.parts.slice(0, 4).map(x => ({ ...x }));
       if (d.parts.length > 4) ps[3].text = [ps[3].text, ...d.parts.slice(4).map(x => `${x.name}: ${x.text}`)].join('\n');
-      return { ...d, sections: ps.map((x, i) => ({ part: 'ABCD'[i], name: x.name, text: x.text, ...(i && x.time ? { time: true } : {}) })),
+      return { ...d, sections: ps.map((x, i) => ({ part: 'ABCD'[i], name: x.name, text: x.text, ...(i && x.time ? { time: true } : {}), ...(i && x.reps ? { reps: true } : {}) })),
         lifts: ps.map((x, i) => (i && x.track && x.track.n ? fix({ ...x.track, id: 'abcd'[i], part: 'ABCD'[i] }) : null)).filter(Boolean), score_label: null, score_type: null };
     };
     const days = draft.days.map(norm);

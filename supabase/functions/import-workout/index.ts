@@ -30,6 +30,7 @@ const SCHEMA = {
                 name: { type: 'string', description: 'Short name like Warmup, Strength, Conditioning, Accessory' },
                 text: { type: 'string', description: "The gym's wording for this part, short and clean" },
                 time: { type: 'boolean', description: 'Parts B, C and D only. True when members record a time for this part (for time, time cap, race).' },
+                reps: { type: 'boolean', description: 'Parts B, C and D only. True when the part is scored by total reps (max reps, AMRAP scored in reps).' },
                 track: {
                   type: 'object',
                   description: 'Parts B, C and D only, never Part A. The one loaded movement a member logs a weight for in this part. Omit when the part has no loaded movement.',
@@ -107,7 +108,7 @@ Deno.serve(async req => {
     const today = new Date().toISOString().slice(0, 10);
     content.push({ type: 'text', text: `Today is ${today}. ${start ? `If the workouts do not show dates, the first one is ${start} and each next workout is the next day.` : 'If the workouts do not show dates, start today and go one per day.'}
 Convert every workout into a DSI day with the save_days tool.
-Rules: split each day into Part A, B, C and sometimes D, keeping the gym's wording short and clean. Part A is never tracked. Members only log a weight (reps are assumed done), so for Parts B, C and D set track to the one main loaded movement, or leave it out, and set time true when the part is done for time. Use lb. For each tracked movement pick the DSI base lift it scales from (squat family to squat, hinges and swings to dead, Olympic lifts to clean, presses to bench). Use f for percentage or hypertrophy work (typical: front squat 0.58, overhead squat 0.37, RDL 0.55, sumo deadlift 0.65, strict press 0.45, push press 0.55). Use rx for the men's prescribed weights and rxw for the women's (a weight written 95/65 is 95 men, 65 women). Set max true and pr_lift only on max out days. Never invent workouts that are not in the source.` });
+Rules: split each day into Part A, B, C and sometimes D, keeping the gym's wording short and clean. Part A is never tracked. Members only log a weight (reps are assumed done), so for Parts B, C and D set track to the one main loaded movement, or leave it out, set time true when the part is done for time, and set reps true when it is scored by total reps. Use lb. For each tracked movement pick the DSI base lift it scales from (squat family to squat, hinges and swings to dead, Olympic lifts to clean, presses to bench). Use f for percentage or hypertrophy work (typical: front squat 0.58, overhead squat 0.37, RDL 0.55, sumo deadlift 0.65, strict press 0.45, push press 0.55). Use rx for the men's prescribed weights and rxw for the women's (a weight written 95/65 is 95 men, 65 women). Set max true and pr_lift only on max out days. Never invent workouts that are not in the source.` });
 
     const ai = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',

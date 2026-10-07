@@ -18,11 +18,11 @@ export function install(X) {
   const isParts = w => !!w && ((w.sections || []).some(s => s.part) || (w.lifts || []).some(l => l.part));
   function partsOf(w, withD) {
     const secs = (w && w.sections) || [], lifts = (w && w.lifts) || [], np = isParts(w);
-    return LET.map((L, i) => { const s = (np ? secs.find(x => x.part === L) : secs[i]) || {}; return { L, name: s.name || '', text: s.text || '', time: !!s.time, lift: lifts.find(l => l.part === L) || null }; })
-      .filter(p => p.L !== 'D' || withD || p.text || p.lift || p.time);
+    return LET.map((L, i) => { const s = (np ? secs.find(x => x.part === L) : secs[i]) || {}; return { L, name: s.name || '', text: s.text || '', time: !!s.time, reps: !!s.reps, lift: lifts.find(l => l.part === L) || null }; })
+      .filter(p => p.L !== 'D' || withD || p.text || p.lift || p.time || p.reps);
   }
   // What a screen shows: the parts with something in them. Older days keep every section they had.
-  const shownParts = w => isParts(w) ? partsOf(w).filter(p => p.text || p.lift || p.time) : ((w && w.sections) || []).map((s, i) => ({ L: String.fromCharCode(65 + i), name: s.name, text: s.text, lift: null, time: false }));
+  const shownParts = w => isParts(w) ? partsOf(w).filter(p => p.text || p.lift || p.time || p.reps) : ((w && w.sections) || []).map((s, i) => ({ L: String.fromCharCode(65 + i), name: s.name, text: s.text, lift: null, time: false, reps: false }));
   const liftLabel = l => l.part ? `${l.part} · ${l.n}` : l.n;
   // Everything a member logs for a day, in part order. Weights are kept under the lift id ('b'),
   // times in seconds under '<part>_t' ('b_t'). Older days log their lift list.
@@ -33,6 +33,7 @@ export function install(X) {
     for (const p of partsOf(w)) {
       if (p.lift) out.push({ key: p.lift.id, kind: 'w', label: `${p.L} · ${p.lift.n}`, sch: p.lift.sch, lift: p.lift, L: p.L });
       if (p.time) out.push({ key: p.L.toLowerCase() + '_t', kind: 't', label: `${p.L} · ${p.name || 'Part ' + p.L} time`, sch: '', lift: null, L: p.L });
+      if (p.reps) out.push({ key: p.L.toLowerCase() + '_r', kind: 'r', label: `${p.L} · ${p.name || 'Part ' + p.L} reps`, sch: 'total reps', lift: null, L: p.L });
     }
     return out;
   }
@@ -40,11 +41,13 @@ export function install(X) {
   // "8:45" or "1:02:30"; a plain number is minutes.
   const parseT = v => { v = String(v || '').trim(); if (!v) return 0; if (/^\d+(\.\d+)?$/.test(v)) return Math.round(+v * 60); const m = v.match(/^(?:(\d+):)?(\d{1,2}):(\d{2})$/); return m ? (+(m[1] || 0)) * 3600 + +m[2] * 60 + +m[3] : NaN; };
   const cell = (it, v) => (it.kind === 't' ? fmtT(v) : num(v) ? fmt(num(v)) : '');
+  // What a member logs, in words: "Back squat weight and time".
+  const logWords = p => [p.lift ? esc(p.lift.n) + ' weight' : '', p.time ? 'time' : '', p.reps ? 'total reps' : ''].filter(Boolean).join(' and ');
   // The board ranks by the first thing logged: fastest time, or heaviest weight.
   const rankKey = w => { const its = items(w), it = its.find(i => i.lift && i.lift.max) || its[0]; return it || null; };
   // Part D only shows on a board once somebody logged it.
   const boardItems = (w, logs) => items(w).filter(it => it.L !== 'D' || logs.some(x => num((x.entries || {})[it.key])));
-  X.parts = { isParts, partsOf, shownParts, liftLabel, items, fmtT, parseT, cell, rankKey, boardItems };
+  X.parts = { isParts, partsOf, shownParts, liftLabel, items, fmtT, parseT, cell, rankKey, boardItems, logWords };
 
   // A gym can be reached by its id or its short big screen name (gyms.slug).
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -157,13 +160,14 @@ export function install(X) {
     const ps = partsOf(w, true);
     const box = p => {
       const l = p.lift || {}, tt = l.rx && l.rx.length ? 'rx' : l.f ? 'f' : '';
-      return `<article class="wodPart" data-p="${p.L}"${p.L === 'D' && !p.text && !p.lift && !p.time ? ' hidden' : ''}>
+      return `<article class="wodPart" data-p="${p.L}"${p.L === 'D' && !p.text && !p.lift && !p.time && !p.reps ? ' hidden' : ''}>
         <div class="wodPH"><i>${p.L}</i><label class="vh" for="wp-${p.L}">Part ${p.L} name</label><input id="wp-${p.L}" data-name maxlength="40" value="${esc(p.name)}" placeholder="${PH[p.L]}">${p.L === 'D' ? '<button type="button" class="btn ghost sm" data-rmd>Remove</button>' : ''}</div>
         <label class="vh" for="wt-${p.L}">Part ${p.L} workout</label><textarea id="wt-${p.L}" data-text rows="7" maxlength="2000" placeholder="${p.L === 'A' ? 'Warmup, skill or mobility' : 'Sets, reps and movements'}">${esc(p.text)}</textarea>
         ${p.L === 'A' ? '<p class="hint">Part A is not logged.</p>' : `
         <div class="wodTog" role="group" aria-label="What members log for Part ${p.L}"><span>Members log</span>
           <label class="tog"><input type="checkbox" data-trk${p.lift ? ' checked' : ''}><span>Weight</span></label>
-          <label class="tog"><input type="checkbox" data-time${p.time ? ' checked' : ''}><span>Time</span></label></div>
+          <label class="tog"><input type="checkbox" data-time${p.time ? ' checked' : ''}><span>Time</span></label>
+          <label class="tog"><input type="checkbox" data-reps${p.reps ? ' checked' : ''}><span>Reps</span></label></div>
         <div class="wodTrk"${p.lift ? '' : ' hidden'}>
           <div class="field"><label for="wn-${p.L}">Movement</label><input id="wn-${p.L}" data-n maxlength="60" value="${esc(l.n || '')}" placeholder="Front squat"></div>
           <div class="field"><label for="ws-${p.L}">Scheme</label><input id="ws-${p.L}" data-sch maxlength="60" value="${esc(l.sch || '')}" placeholder="5 x 3, build"></div>
@@ -178,13 +182,13 @@ export function install(X) {
     };
     const dest = dsi ? '/week/' + day + (S.me.gym_id ? '?src=dsi' : '') : '/week/' + day;
     if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>${w ? 'Edit the' : 'Post the'} <span>workout</span></h2>
-        <p class="secSub">Part A is the warmup and is never logged. Parts B, C and D can each log a weight, a time, or both. Everyone is assumed to do all the reps.</p></div>
+        <p class="secSub">Part A is the warmup and is never logged. Parts B, C and D can each log a weight, a time, total reps, or any mix. Everyone is assumed to do all the reps.</p></div>
         <div class="row"><a class="btn ghost sm" href="/wod/${gid}?day=${addDays(day, -1)}">← Day before</a><input type="date" id="wd-day" value="${day}" aria-label="Pick a day" style="max-width:170px"><a class="btn ghost sm" href="/wod/${gid}?day=${addDays(day, 1)}">Next day →</a></div></div></section>
       <section class="sec"><form id="wodF" class="wodEd">
         <div class="field"><label for="wd-t">Title</label><input id="wd-t" maxlength="80" value="${esc((w && w.title) || '')}" placeholder="Front squat + Grace"></div>
         ${old ? '<p class="hint" style="color:var(--flat)">This day still has the old lift list. Saving switches it to Parts, so pick the weight each part logs.</p>' : ''}
         <div class="wodGrid">${ps.map(box).join('')}</div>
-        <button type="button" class="btn ghost sm" id="addD"${ps[3].text || ps[3].lift || ps[3].time ? ' hidden' : ''}>+ Add Part D</button>
+        <button type="button" class="btn ghost sm" id="addD"${ps[3].text || ps[3].lift || ps[3].time || ps[3].reps ? ' hidden' : ''}>+ Add Part D</button>
         <div class="row" style="margin-top:16px"><button class="btn" type="submit">${w ? 'Save changes' : 'Post the workout'}</button><a class="btn ghost" href="${dest}">See it on the week</a>${dsi ? '' : `<a class="btn ghost" href="/results/${gid}?day=${day}">Enter results</a><a class="btn ghost" href="/tv/${gid}" target="_blank">Big screen</a>`}<span class="hint" id="wd-msg">${nLogs ? `${nLogs} logged already. Their weights stay with each part letter.` : ''}</span></div>
       </form></section>`)) return;
     $('#wd-day').onchange = e => { if (e.target.value) go(`/wod/${gid}?day=${e.target.value}`); };
@@ -217,7 +221,7 @@ export function install(X) {
     });
     const dBox = $('.wodPart[data-p="D"]');
     $('#addD').onclick = e => { dBox.hidden = false; e.target.hidden = true; $('[data-text]', dBox).focus(); };
-    $('[data-rmd]', dBox).onclick = () => { dBox.hidden = true; $('#addD').hidden = false; $('[data-text]', dBox).value = ''; $('[data-name]', dBox).value = ''; $('[data-time]', dBox).checked = false; const t = $('[data-trk]', dBox); t.checked = false; t.dispatchEvent(new Event('change')); };
+    $('[data-rmd]', dBox).onclick = () => { dBox.hidden = true; $('#addD').hidden = false; $('[data-text]', dBox).value = ''; $('[data-name]', dBox).value = ''; $('[data-time]', dBox).checked = false; $('[data-reps]', dBox).checked = false; const t = $('[data-trk]', dBox); t.checked = false; t.dispatchEvent(new Event('change')); };
     $('#wodF').onsubmit = async e => {
       e.preventDefault();
       const msg = $('#wd-msg'), sections = [], lifts = [];
@@ -225,8 +229,8 @@ export function install(X) {
         if (a.hidden) continue;
         const L = a.dataset.p, text = $('[data-text]', a).value.trim(), name = $('[data-name]', a).value.trim(), l = build(a);
         if (l && !l.n) { msg.textContent = `Part ${L} logs a weight. Name the movement.`; $('[data-n]', a).focus(); return; }
-        const tm = !!($('[data-time]', a) || {}).checked;
-        if (text || l || tm) sections.push(tm ? { part: L, name: name || PH[L], text, time: true } : { part: L, name: name || PH[L], text });
+        const tm = !!($('[data-time]', a) || {}).checked, rp = !!($('[data-reps]', a) || {}).checked;
+        if (text || l || tm || rp) sections.push({ part: L, name: name || PH[L], text, ...(tm ? { time: true } : {}), ...(rp ? { reps: true } : {}) });
         if (l) lifts.push(l);
       }
       if (!sections.length) { msg.textContent = 'Write at least one part.'; return; }
@@ -249,10 +253,12 @@ export function install(X) {
     if (!w || w.gym_id !== gid) return paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>Enter <span>results</span></h2></div>${nav}</div>
       <div class="prEmpty"><b>${esc(g.name)} has no workout posted for this day</b><p>Results go on your own gym's workout. Post it first.</p><p><a class="btn" href="/wod/${gid}?day=${day}">Post the workout</a></p></div></section>`);
     const its = items(w), logOf = id => logs.find(l => l.profile_id === id);
-    const inp = (it, m, ent, r) => it.kind === 't'
+    const inp = (it, m, ent, r) => it.kind === 'r'
+      ? `<input class="wkIn" type="number" inputmode="numeric" step="1" min="0" max="99999" data-l="${esc(it.key)}" data-kind="r" value="${esc(ent[it.key] ?? '')}" placeholder="reps" aria-label="${esc(m.display_name + ' ' + it.label)}">`
+      : it.kind === 't'
       ? `<input class="wkIn wkTime" inputmode="numeric" maxlength="8" data-l="${esc(it.key)}" data-kind="t" value="${esc(fmtT(ent[it.key]))}" placeholder="m:ss" aria-label="${esc(m.display_name + ' ' + it.label)}">`
       : `<input class="wkIn" type="number" inputmode="decimal" step="any" min="0" max="1499" data-l="${esc(it.key)}" value="${esc(ent[it.key] ?? '')}" placeholder="${D.target(it.lift, r) || ''}" aria-label="${esc(m.display_name + ' ' + it.label)}">`;
-    if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>${esc(w.title)}</h2><p class="secSub">Type the weight each member used and their time where a part is timed (like 8:45). Blank means they did not do it. Targets show in grey.</p><p><a class="btn ghost sm" href="/wod/${gid}?day=${day}">Edit this workout</a></p></div>${nav}</div>
+    if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>${esc(w.title)}</h2><p class="secSub">Type the weight each member used, their time where a part is timed (like 8:45), and total reps where a part counts reps. Blank means they did not do it. Targets show in grey.</p><p><a class="btn ghost sm" href="/wod/${gid}?day=${day}">Edit this workout</a></p></div>${nav}</div>
       <form id="rsF"><div class="board"><div class="tablewrap"><table class="wkT rsT"><thead><tr><th>Member</th>${its.map(it => `<th class="r">${esc(it.label)}<div class="sub">${esc(it.sch || (it.kind === 't' ? 'm:ss' : ''))}</div></th>`).join('')}${w.score_label ? `<th class="r">${esc(w.score_label)}</th>` : ''}</tr></thead><tbody>
       ${members.map(m => { const lg = logOf(m.id), ent = (lg && lg.entries) || {}, r = rowOf(m); return `<tr data-pid="${m.id}"><td><b>${esc(m.display_name)}</b>${lg ? ' <span class="pill up">Logged</span>' : ''}</td>
         ${its.map(it => `<td class="r">${inp(it, m, ent, r)}</td>`).join('')}
@@ -269,7 +275,7 @@ export function install(X) {
         $$('[data-l]', tr).forEach(i => {
           const v = i.value.trim(), k = i.dataset.l;
           if (!v) { delete entries[k]; return; }
-          const x = i.dataset.kind === 't' ? parseT(v) : Math.max(0, Math.min(1499, Math.round(+v * 2) / 2 || 0));
+          const x = i.dataset.kind === 't' ? parseT(v) : i.dataset.kind === 'r' ? Math.max(0, Math.min(99999, Math.round(+v) || 0)) : Math.max(0, Math.min(1499, Math.round(+v * 2) / 2 || 0));
           if (i.dataset.kind === 't' && !(x > 0)) { bad = bad || `"${v}" is not a time. Use minutes and seconds, like 8:45.`; return; }
           entries[k] = x; any = true;
         });
@@ -342,7 +348,7 @@ export function install(X) {
       const head = (k, t) => `<header class="tvHead"><div class="tvGym"><img src="/assets/mark.svg" alt="DSI" class="tvLogo"><div><b>${esc(g.name)}</b><span>${esc(k)}</span></div></div><div class="tvTitle">${t}</div><div class="tvClock">${clock()}</div></header>`;
       // 1. Workout of the day
       out.push(`${head(fmtDW(today()), 'Workout of the <em>day</em>')}<div class="tvBody tvWodS">
-        ${w ? `<h1>${esc(w.title)}</h1><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${p.lift || p.time ? `<span class="tvLog">Log your ${[p.lift ? esc(p.lift.n) + ' weight' : '', p.time ? 'time' : ''].filter(Boolean).join(' and ')}</span>` : ''}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
+        ${w ? `<h1>${esc(w.title)}</h1><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
         : `<h1>Rest or not posted</h1><p class="tvEmpty">Coaches post the day at dandystrength.com/gym/${esc(g.id)}</p>`}</div>`);
       // 2. Today's targets (one screen per 12 members)
       const lifts = (w && w.lifts) || [];
