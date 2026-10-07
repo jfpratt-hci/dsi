@@ -374,6 +374,7 @@ export function install(X) {
       // 5 and 6. Men's and women's leaderboards for the major lifts
       for (const [sex, label] of [['male', "Men's"], ['female', "Women's"]]) {
         const rs = lb.filter(x => (x.r.sex || '') === sex);
+        if (sex === 'female' && !rs.length) continue; // no women's screen until the gym has a woman on the board
         const col = (t, key, unit) => { const top = [...rs].filter(x => num(x.r[key])).sort((a, b) => num(b.r[key]) - num(a.r[key])).slice(0, 8);
           return `<div class="tvCol"><h3>${t}</h3><ol>${top.map((x, i) => `<li class="${i === 0 ? 'top' : ''}"><span>${esc(x.m.display_name)}</span><b>${fmt(x.r[key])}${unit}</b></li>`).join('') || '<li class="none">Nobody yet</li>'}</ol></div>`; };
         out.push(`${head('Best lifts on the board', `${label} <em>leaderboard</em>`)}<div class="tvBody">${rs.length ? `<div class="tvCols">${col('DSI™', 'score', '')}${col('Total', 'total', '')}${D.LIFTS.map(l => col(l.n, l.k, '')).join('')}</div><div class="tvKey">Best lifts in pounds. DSI scores each lifter against people their age and size.</div>`

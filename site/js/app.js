@@ -238,12 +238,14 @@ function renderBoard() {
   const key = f.sort === 'dsi' ? 'score' : f.sort;
   rows = rows.filter(r => r[key]).sort((a, b) => b[key] - a[key] || b.score - a.score);
   const title = SORTS.find(s => s[0] === f.sort)[1];
+  // The women's division shows once a woman is on the board.
+  const hasWomen = S.board.some(r => r.division === 'women' || r.sex === 'female');
   const divName = { all: '', men: "Men's ", women: "Women's ", open: 'Open ' }[f.div];
   const chip = (grp, v, t) => `<button class="chip" data-${grp}="${v}" aria-pressed="${f[grp] === v}">${t}${grp === 'age' && v !== 'all' && !pro ? ' ' + PRO : ''}</button>`;
   el.innerHTML = `<div class="boardHead">
       <div class="bhTop"><h3 id="lbh">${esc(divName)}${esc(title)} <span>board</span></h3><p>${rows.length} ranked · 500 is the median for your age and size</p></div>
       <div class="tabs" role="tablist">${SORTS.map(s => `<button class="tab" role="tab" data-sort="${s[0]}" aria-selected="${f.sort === s[0]}">${s[1]}${s[0] !== 'dsi' && !pro ? ' ' + PRO : ''}</button>`).join('')}</div>
-      <div class="row"><div class="chips" aria-label="Division">${chip('div', 'all', 'All')}${chip('div', 'men', 'Men')}${chip('div', 'women', 'Women')}${chip('div', 'open', 'Open')}</div>
+      <div class="row"><div class="chips" aria-label="Division">${chip('div', 'all', 'All')}${chip('div', 'men', 'Men')}${hasWomen ? chip('div', 'women', 'Women') : ''}${chip('div', 'open', 'Open')}</div>
       <div class="chips" aria-label="Age">${chip('age', 'all', 'All ages')}${chip('age', 'u40', 'Under 40')}${chip('age', '40s', '40s')}${chip('age', '50p', '50+')}</div></div>
     </div>
     ${rows.length ? `<div class="tablewrap"><table class="lb"><thead><tr><th>#</th><th>Lifter</th><th class="r${f.sort === 'dsi' ? ' hl' : ''}">DSI™</th><th class="r${f.sort === 'total' ? ' hl' : ''}">Total</th>${D.LIFTS.map(l => `<th class="r c-${l.k}">${l.n}</th>`).join('')}</tr></thead><tbody>

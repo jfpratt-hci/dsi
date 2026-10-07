@@ -27,6 +27,9 @@ export default function Board() {
   }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  // The women's division shows once a woman is on the board.
+  const hasWomen = (rows ?? []).some(r => r.division === 'women' || (r as any).sex === 'female');
+  const divs = [['all', 'All'], ['men', 'Men'], ...(hasWomen ? [['women', 'Women']] : []), ['open', 'Open']];
   const list = useMemo(() => (rows ?? [])
     .filter(r => div === 'all' || r.division === div)
     .filter(r => age === 'all' || (age === 'u40' ? r.age && r.age < 40 : age === '40s' ? r.age >= 40 && r.age < 50 : r.age >= 50))
@@ -58,7 +61,7 @@ export default function Board() {
           {SORTS.map(([k, label]) => <Chip key={k} label={k === 'score' || isPro ? label : label + ' · Pro'} on={sort === k} onPress={() => (k === 'score' || isPro ? setSort(k) : router.push('/pro'))} />)}
         </ScrollView>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 6, alignItems: 'center' }}>
-          {[['all', 'All'], ['men', 'Men'], ['women', 'Women'], ['open', 'Open']].map(([k, label]) => <Chip key={k} label={label} on={div === k} onPress={() => setDiv(k)} />)}
+          {divs.map(([k, label]) => <Chip key={k} label={label} on={div === k} onPress={() => setDiv(k)} />)}
           <Chip label={age === 'all' ? 'Filters' : AGES.find(a => a[0] === age)![1]} on={age !== 'all'} onPress={() => setSheet(true)} />
         </View>
         <Modal visible={sheet} transparent animationType="slide" onRequestClose={() => setSheet(false)}>
@@ -67,7 +70,7 @@ export default function Board() {
             <Text style={{ color: C.ink, fontSize: 24, fontWeight: '900', textTransform: 'uppercase', marginBottom: 14 }}>Filters</Text>
             <Eyebrow style={{ marginBottom: 6 }}>Division</Eyebrow>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 14 }}>
-              {[['all', 'All'], ['men', 'Men'], ['women', 'Women'], ['open', 'Open']].map(([k, label]) => <Chip key={k} label={label} on={div === k} onPress={() => setDiv(k)} />)}
+              {divs.map(([k, label]) => <Chip key={k} label={label} on={div === k} onPress={() => setDiv(k)} />)}
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}><Eyebrow>Age</Eyebrow>{isPro ? null : <ProBadge />}</View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 18 }}>
