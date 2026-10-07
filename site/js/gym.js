@@ -216,7 +216,10 @@ export function install(X) {
       $$('.tvDots button').forEach(b => b.onclick = () => { lastTouch = Date.now(); goTo(+b.dataset.go); });
       deck.focus({ preventScroll: true });
     };
-    const goTo = i => { if (!deck) return; const n = deck.children.length; cur = (i + n) % n; deck.scrollTo({ top: cur * deck.clientHeight, behavior: matchMedia('(prefers-reduced-motion:reduce)').matches ? 'auto' : 'smooth' }); };
+    const goTo = i => { if (!deck) return; const n = deck.children.length; cur = (i + n) % n; deck.scrollTo({ top: cur * deck.clientHeight, behavior: matchMedia('(prefers-reduced-motion:reduce)').matches || document.hidden ? 'auto' : 'smooth' }); const want = cur; setTimeout(() => { if (deck && cur === want && Math.abs(deck.scrollTop - want * deck.clientHeight) > 2) deck.scrollTop = want * deck.clientHeight; }, 1500); };
+    // A smooth scroll can stall when the tab is hidden; settle on the nearest screen when it comes back.
+    const onVis = () => { if (tok !== S.tok) return document.removeEventListener('visibilitychange', onVis); if (!document.hidden && deck) deck.scrollTop = cur * deck.clientHeight; };
+    document.addEventListener('visibilitychange', onVis);
     const onKey = e => {
       if (tok !== S.tok) return document.removeEventListener('keydown', onKey);
       const k = { ArrowDown: 1, ArrowRight: 1, PageDown: 1, ' ': 1, ArrowUp: -1, ArrowLeft: -1, PageUp: -1 }[e.key];
