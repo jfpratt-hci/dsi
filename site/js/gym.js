@@ -388,22 +388,27 @@ export function install(X) {
       return out;
     };
 
-    let deck = null;
+    let deck = null, paused = false;
+    // Pause stops the auto scroll until it is pressed again; the screens still scroll by hand.
+    const pauseBtn = () => `<button type="button" class="tvPause" id="tvPause" aria-pressed="${paused}" aria-label="${paused ? 'Play the screens' : 'Pause the screens'}" title="${paused ? 'Play' : 'Pause'} (P)">${paused ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>'}</button>`;
+    const setPaused = v => { paused = v; const b = $('#tvPause'); if (b) b.outerHTML = pauseBtn(); bindPause(); if (!paused) lastTouch = 0; };
+    const bindPause = () => { const b = $('#tvPause'); if (b) b.onclick = () => setPaused(!paused); };
     const draw = () => {
       if (tok !== S.tok || !st) return;
       const list = screens();
       main.innerHTML = `<div class="tvDeck" id="tvDeck" tabindex="0">${list.map((h, i) => `<section class="tvS" data-i="${i}">${h}<footer class="tvFoot"><span class="tvUrl">dandystrength.com</span></footer></section>`).join('')}</div>
-        <nav class="tvDots" aria-label="Screens">${list.map((_, i) => `<button type="button" data-go="${i}" aria-label="Screen ${i + 1}"${i === cur ? ' aria-current="true"' : ''}></button>`).join('')}</nav>`;
+        <nav class="tvDots" aria-label="Screens">${list.map((_, i) => `<button type="button" data-go="${i}" aria-label="Screen ${i + 1}"${i === cur ? ' aria-current="true"' : ''}></button>`).join('')}${pauseBtn()}</nav>`;
       deck = $('#tvDeck');
       cur = Math.min(cur, list.length - 1);
       deck.scrollTop = cur * deck.clientHeight;
       deck.addEventListener('scroll', () => { if (moving) return; const i = Math.round(deck.scrollTop / deck.clientHeight); if (i !== cur) { cur = i; dots(); } }, { passive: true });
       ['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach(ev => deck.addEventListener(ev, () => { lastTouch = Date.now(); }, { passive: true }));
-      $$('.tvDots button').forEach(b => b.onclick = () => { lastTouch = Date.now(); goTo(+b.dataset.go); });
+      $$('.tvDots button[data-go]').forEach(b => b.onclick = () => { lastTouch = Date.now(); goTo(+b.dataset.go); });
+      bindPause();
       deck.focus({ preventScroll: true });
     };
     let moving = null;
-    const dots = () => $$('.tvDots button').forEach((b, k) => b.toggleAttribute('aria-current', k === cur));
+    const dots = () => $$('.tvDots button[data-go]').forEach((b, k) => b.toggleAttribute('aria-current', k === cur));
     const goTo = i => {
       if (!deck) return;
       const n = deck.children.length; cur = (i + n) % n; dots();
@@ -419,6 +424,7 @@ export function install(X) {
       if (tok !== S.tok) return document.removeEventListener('keydown', onKey);
       const k = { ArrowDown: 1, ArrowRight: 1, PageDown: 1, ' ': 1, ArrowUp: -1, ArrowLeft: -1, PageUp: -1 }[e.key];
       if (k) { e.preventDefault(); lastTouch = Date.now(); goTo(cur + k); }
+      if (e.key === 'p' || e.key === 'P') setPaused(!paused);
       if (e.key === 'f') document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(() => {});
     };
     document.addEventListener('keydown', onKey);
@@ -441,7 +447,7 @@ export function install(X) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'workouts' }, () => refresh())
       .subscribe();
     S.channels.push(ch);
-    tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); if (Date.now() - lastTouch > IDLE_MS) goTo(cur + 1); }, SLIDE_MS));
+    tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); if (!paused && Date.now() - lastTouch > IDLE_MS) goTo(cur + 1); }, SLIDE_MS));
     tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); if (today() !== lastDay) { lastDay = today(); cur = 0; } refresh(); }, 5 * 60 * 1000));
     tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); $$('.tvClock').forEach(c => { c.textContent = clock(); }); }, 20000));
   };

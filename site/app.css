@@ -590,3 +590,7 @@ main.wrap>.tvDots{padding:0;margin:0;left:auto}
 .tog span{display:inline-block;padding:7px 14px;border:1px solid var(--line);border-radius:999px;font:700 13px var(--sans);color:var(--muted)}
 .tog input:checked+span{background:var(--accent);border-color:var(--accent);color:#111}
 .tog input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.tvDots .tvPause{width:auto;height:auto;min-width:0;min-height:0;border:2px solid var(--muted);border-radius:50%;background:transparent;padding:.5vw;margin-top:.6vw;display:grid;place-items:center;color:var(--muted);cursor:pointer}
+.tvDots .tvPause svg{width:1.1vw;height:1.1vw;min-width:14px;min-height:14px;fill:currentColor}
+.tvDots .tvPause[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#111}
+.tvDots .tvPause:hover{border-color:var(--ink);color:var(--ink)}
