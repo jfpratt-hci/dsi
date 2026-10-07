@@ -4,7 +4,7 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { Btn, Card, Chip, Eyebrow, Loading, Mono, Muted, ProBadge, s, Screen, Title } from '@/components/ui';
 import { C, liftColor } from '@/constants/Colors';
-import { addDays, fmtD, loadBoard, monday, target, today, type BoardRow } from '@/lib/data';
+import { addDays, fmtD, loadBoard, monday, target, today, type BoardRow, pickWorkouts, workoutsQuery } from '@/lib/data';
 import { scheduleReminders } from '@/lib/notify';
 import { useSession } from '@/lib/session';
 import { sb } from '@/lib/supabase';
@@ -30,13 +30,13 @@ export default function Week() {
 
   const load = useCallback(async () => {
     const [{ data }, b] = await Promise.all([
-      sb.from('workouts').select('*').gte('day', start).lte('day', addDays(start, 6)).order('day'),
+      workoutsQuery(sb.from('workouts').select('*').gte('day', start).lte('day', addDays(start, 6)).order('day'), me?.gym_id),
       loadBoard(),
     ]);
-    setWks((data as Workout[]) ?? []);
+    setWks(pickWorkouts((data as Workout[]) ?? [], me?.gym_id));
     setBoard(b);
     setNames(Object.fromEntries(b.map(r => [r.profile_id, r.name])));
-  }, [start]);
+  }, [start, me?.gym_id]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const w = useMemo(() => wks?.find(x => x.day === day), [wks, day]);

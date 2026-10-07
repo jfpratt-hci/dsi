@@ -1,6 +1,7 @@
 import { sb } from './sb.js';
 import * as D from './dsi.js';
 import { install as installExtra } from './extra.js';
+import { install as installGym } from './gym.js';
 
 /* ---------- helpers ---------- */
 const $ = (s, el = document) => el.querySelector(s);
@@ -34,7 +35,7 @@ function toast(msg) {
 function must(res) { if (res.error) throw res.error; return res.data; }
 
 /* ---------- state ---------- */
-const S = { session: null, me: null, blocked: new Set(), board: [], people: new Map(), channels: [], bf: { sort: 'dsi', div: 'all', age: 'all' }, tok: 0 };
+const S = { session: null, me: null, myGyms: [], blocked: new Set(), board: [], people: new Map(), channels: [], bf: { sort: 'dsi', div: 'all', age: 'all' }, tok: 0 };
 const isStaff = () => S.me && ['admin', 'commissioner'].includes(S.me.role);
 const isPro = () => !!S.me && (S.me.tier === 'pro' || isStaff());
 const PRO = '<span class="pill acc">Pro</span>';
@@ -46,8 +47,9 @@ async function loadMe() {
   S.me = data || null;
   S.blocked = new Set();
   if (S.me) {
-    const { data: b } = await sb.from('blocks').select('blocked').eq('blocker', S.me.id);
+    const [{ data: b }, { data: gs }] = await Promise.all([sb.from('blocks').select('blocked').eq('blocker', S.me.id), sb.from('gym_staff').select('gym_id,role,gym:gyms(id,name)').eq('profile_id', S.me.id)]);
     S.blocked = new Set((b || []).map(x => x.blocked));
+    S.myGyms = (gs || []).filter(x => x.gym);
   }
 }
 async function loadBoard() {
@@ -115,7 +117,8 @@ async function route() {
   S.channels = [];
   if (S.me && !S.me.display_name && !['join', 'login', 'privacy', 'terms', 'support', 'rules'].includes(r)) { go('/join', true); return; }
   if (!VIEWS[r]) r = '';
-  updateChrome(['season', 'battles', 'gyms', 'benchmarks', 'recap', 'plates'].includes(r) ? 'compete' : r === 'pr' ? 'prs' : r === 'lift' ? 'week' : r === 'u' ? '' : r);
+  document.body.classList.toggle('tvMode', r === 'tv');
+  updateChrome(['season', 'battles', 'gyms', 'gym', 'results', 'benchmarks', 'recap', 'plates'].includes(r) ? 'compete' : r === 'pr' ? 'prs' : r === 'lift' ? 'week' : r === 'u' ? '' : r);
   const tok = ++S.tok;
   main.innerHTML = '<p class="empty">Loading…</p>';
   try {
@@ -375,8 +378,15 @@ VIEWS.log = async (_, tok) => {
 VIEWS.week = async (day, tok) => {
   const sel = /^\d{4}-\d{2}-\d{2}$/.test(day || '') ? day : today();
   const start = monday(sel), end = addDays(start, 6);
-  const [board, wres] = await Promise.all([loadBoard(), sb.from('workouts').select('*').gte('day', start).lte('day', end).order('day')]);
-  const wks = must(wres);
+  const myGym = S.me && S.me.gym_id;
+  let wq = sb.from('workouts').select('*').gte('day', start).lte('day', end).order('day');
+  wq = myGym ? wq.or(`gym_id.is.null,gym_id.eq.${myGym}`) : wq.is('gym_id', null);
+  const [board, wres, gres] = await Promise.all([loadBoard(), wq, myGym ? sb.from('gyms').select('id,name').eq('id', myGym).maybeSingle() : Promise.resolve({ data: null })]);
+  const allW = must(wres), gym = gres.data;
+  const hasGym = !!(myGym && allW.some(x => x.gym_id === myGym));
+  const src = !hasGym || new URLSearchParams(location.search).get('src') === 'dsi' ? 'dsi' : 'gym';
+  const qs = src === 'dsi' && hasGym ? '?src=dsi' : '';
+  const wks = allW.filter(x => src === 'gym' ? x.gym_id === myGym : !x.gym_id);
   const ids = wks.map(w => w.id);
   const logs = ids.length ? must(await sb.from('workout_logs').select('*').in('workout_id', ids)) : [];
   if (!S.people.size) await loadPeople();
@@ -387,7 +397,7 @@ VIEWS.week = async (day, tok) => {
   const days = [...Array(7)].map((_, i) => addDays(start, i));
   const dayBtns = days.map(d => {
     const has = wks.find(x => x.day === d), logged = S.me && has && logs.some(l => l.workout_id === has.id && l.profile_id === S.me.id);
-    return `<a class="wd${d === sel ? ' on' : ''}${d === tdy ? ' today' : ''}" href="/week/${d}" ${d === sel ? 'aria-current="date"' : ''}><span>${pd(d).toLocaleDateString('en-US', { weekday: 'short' })}</span><b>${pd(d).getDate()}</b>${logged ? '<i title="Logged">✓</i>' : ''}</a>`;
+    return `<a class="wd${d === sel ? ' on' : ''}${d === tdy ? ' today' : ''}" href="/week/${d}${qs}" ${d === sel ? 'aria-current="date"' : ''}><span>${pd(d).toLocaleDateString('en-US', { weekday: 'short' })}</span><b>${pd(d).getDate()}</b>${logged ? '<i title="Logged">✓</i>' : ''}</a>`;
   }).join('');
   let body = '';
   if (!w) body = `<div class="prEmpty"><b>No programming for ${esc(fmtDW(sel))}</b><p>${wks.length ? 'Pick another day above.' : 'This week has not been posted yet.'}</p></div>`;
@@ -395,7 +405,7 @@ VIEWS.week = async (day, tok) => {
     const prog = `<div class="wkProg"><div class="eyebrow">${esc(fmtDW(w.day))}${w.day === tdy ? ' · Today' : ''}${w.source ? ' · ' + esc(w.source) : ''}</div><h3>${esc(w.title)}</h3>
       ${w.rest_note ? `<p class="rest">${esc(w.rest_note)}</p>` : ''}
       ${(w.sections || []).map(s => `<div class="wkSec"><b>${esc(s.name)}</b><p>${esc(s.text)}</p></div>`).join('')}
-      <div class="row"><button class="btn ghost sm" data-thread="workout" data-ref="${w.id}" data-title="${esc(fmtD(w.day) + ' · ' + w.title)}">Day thread</button>${w.benchmark ? `<a class="chip" href="/benchmarks/${encodeURIComponent(w.benchmark)}">Benchmark: ${esc(w.benchmark)}</a>` : ''}</div>
+      <div class="row"><button class="btn ghost sm" data-thread="workout" data-ref="${w.id}" data-title="${esc(fmtD(w.day) + ' · ' + w.title)}">Day thread</button>${w.benchmark ? `<a class="chip" href="/benchmarks/${encodeURIComponent(w.benchmark)}">Benchmark: ${esc(w.benchmark)}</a>` : ''}${w.gym_id && S.myGyms.some(g => g.gym_id === w.gym_id) ? `<a class="btn sm" href="/results/${w.gym_id}?day=${w.day}">Enter results</a><a class="btn ghost sm" href="/tv/${w.gym_id}">Big screen</a>` : ''}</div>
       ${isStaff() ? `<form class="row" id="bmF"><label class="vh" for="bm-n">Benchmark name</label><input id="bm-n" maxlength="40" value="${esc(w.benchmark || '')}" placeholder="Name it as a benchmark, like Fran" style="max-width:260px"><button class="btn ghost sm">Save</button></form>` : ''}</div>`;
     let mine = '';
     if (!(w.lifts || []).length && !w.score_label) mine = `<div class="wkMine"><h3>Rest <span>day</span></h3><p class="hint">Nothing to log. Recover like it's your job.</p></div>`;
@@ -415,7 +425,8 @@ VIEWS.week = async (day, tok) => {
     body = `<div class="wkBody">${prog}${mine}</div>${dayBoard(w, logs.filter(l => l.workout_id === w.id))}`;
   }
   if (!paint(tok, `<section class="sec"><div class="wkNav"><div><div class="kicker">Week of ${esc(fmtD(start))}</div><h2>The <span>week</span></h2></div>
-    <div class="row"><a class="btn ghost sm" href="/week/${addDays(start, -7)}">← Last week</a>${start !== monday(tdy) ? `<a class="btn ghost sm" href="/week/${tdy}">Today</a>` : ''}<a class="btn ghost sm" href="/week/${addDays(start, 7)}">Next week →</a>${isStaff() ? '<a class="btn sm" href="/program">Import workouts</a>' : ''}</div></div>
+    <div class="row"><a class="btn ghost sm" href="/week/${addDays(start, -7)}${qs}">← Last week</a>${start !== monday(tdy) ? `<a class="btn ghost sm" href="/week/${tdy}${qs}">Today</a>` : ''}<a class="btn ghost sm" href="/week/${addDays(start, 7)}${qs}">Next week →</a>${isStaff() || S.myGyms.length ? '<a class="btn sm" href="/program">Post workouts</a>' : ''}</div></div>
+    ${hasGym ? `<div class="tabs" role="tablist" aria-label="Programming"><a class="tab" role="tab" href="/week/${sel}" aria-selected="${src === 'gym'}">${esc(gym ? gym.name : 'My gym')}</a><a class="tab" role="tab" href="/week/${sel}?src=dsi" aria-selected="${src === 'dsi'}">DSI week</a></div>` : ''}
     <nav class="wkDays" aria-label="Days">${dayBtns}</nav></section>
     <section class="sec">${body}</section>`)) return;
   bindActions(main, () => route());
@@ -1071,14 +1082,17 @@ const shrink = file => new Promise((res, rej) => {
 const liftRule = l => l.rx && l.rx.length ? `${l.rx[0]}${l.rx[1] && l.rx[1] !== l.rx[0] ? ' / ' + l.rx[1] : ''} lb Rx` : l.f ? `${Math.round(l.f * 100)}% of ${(BASES.find(b => b[0] === l.b) || [, l.b])[1].toLowerCase()}` : 'n/a';
 VIEWS.program = async (_, tok) => {
   if (!S.me) return needLogin(tok, 'import workouts');
-  if (!isStaff()) return paint(tok, '<section class="prEmpty"><b>Staff only</b><p>The Founder and Commissioners post the week.</p><p><a class="btn ghost sm" href="/week">Back to the week</a></p></section>');
+  if (!isStaff() && !S.myGyms.length) return paint(tok, '<section class="prEmpty"><b>Staff only</b><p>The Founder, Commissioners and gym coaches post workouts.</p><p><a class="btn ghost sm" href="/week">Back to the week</a></p></section>');
   let mode = 'url', shots = [], draft = null;
+  const want = new URLSearchParams(location.search).get('gym');
+  const targets = [...(isStaff() ? [['', 'The DSI week']] : []), ...S.myGyms.map(g => [g.gym_id, g.gym.name])];
   await loadBoard();
   if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">Commissioner tools</div><h2>Import <span>workouts</span></h2>
       <p class="secSub">Point it at your gym's programming page, drop in screenshots of the whiteboard or app, or paste the text. You check the draft, then post it to the week.</p></div><a class="btn ghost sm" href="/week">The week</a></div></section>
     <section class="sec"><div class="tabs" role="tablist">${[['url', 'Link'], ['shots', 'Screenshots'], ['text', 'Paste text']].map(([k, n], i) => `<button class="tab" role="tab" data-mode="${k}" aria-selected="${!i}">${n}</button>`).join('')}</div>
     <form class="formCard" id="pg" style="margin-top:16px">
       <div class="fields">
+        <div class="field w2"><label for="pg-to">Post to</label><select id="pg-to">${targets.map(([v, n]) => `<option value="${v}"${v === want ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
         <div class="field w4" data-pane="url"><label for="pg-url">Programming page</label><input id="pg-url" type="url" placeholder="https://yourgym.com/wod" inputmode="url"></div>
         <div class="field w4" data-pane="shots" hidden><label for="pg-img">Screenshots or photos (up to 10)</label><input id="pg-img" type="file" accept="image/*" multiple><div class="shotRow" id="pg-prev"></div></div>
         <div class="field w4" data-pane="text" hidden><label for="pg-txt">Workout text</label><textarea id="pg-txt" rows="8" maxlength="30000" placeholder="Monday&#10;A) Back squat 5x5&#10;B) 3 RFT: 10 cleans 135/95, 15 burpees"></textarea></div>
@@ -1115,7 +1129,10 @@ VIEWS.program = async (_, tok) => {
     const days = draft.days.map(d => ({ ...d, lifts: (d.lifts || []).map(l => { const x = { ...l }; if (x.rx && x.rx.length) { if (x.rx.length === 1) x.rx = [x.rx[0], x.rx[0]]; delete x.f; } else delete x.rx; return x; }) }));
     draft.days = days;
     const dates = days.map(d => d.day).filter(Boolean);
-    const existing = dates.length ? must(await sb.from('workouts').select('day,title').in('day', dates)) : [];
+    const gymTo = $('#pg-to').value || null;
+    let eq = sb.from('workouts').select('day,title').in('day', dates);
+    eq = gymTo ? eq.eq('gym_id', gymTo) : eq.is('gym_id', null);
+    const existing = dates.length ? must(await eq) : [];
     const had = Object.fromEntries(existing.map(x => [x.day, x.title]));
     const host = $('#pg-draft'); host.hidden = false;
     host.innerHTML = `<div class="secHead"><div><div class="kicker">Draft${draft.source ? ' · ' + esc(draft.source) : ''}</div><h2>Check and <span>post</span></h2>${draft.notes ? `<p class="secSub">${esc(draft.notes)}</p>` : ''}</div></div>
@@ -1136,17 +1153,17 @@ VIEWS.program = async (_, tok) => {
           sections: (d.sections || []).map((s, k) => ({ name: s.name, text: $(`[data-sec="${k}"]`, a).value.trim() })).filter(s => s.text),
           lifts: d.lifts, score_label: d.score_label || null, score_type: ['time', 'text'].includes(d.score_type) ? d.score_type : (d.score_label ? 'text' : null),
           rest_note: d.rest_note || null, pr_lift: ['bench', 'squat', 'deadlift', 'clean'].includes(d.pr_lift) ? d.pr_lift : null,
-          benchmark: $('[data-bench]', a).value.trim() || null };
+          benchmark: $('[data-bench]', a).value.trim() || null, gym_id: $('#pg-to').value || null };
       });
       const pm = $('#pg-pmsg');
       if (!rows.length) return (pm.textContent = 'Tick at least one day.');
       if (rows.some(r => !/^\d{4}-\d{2}-\d{2}$/.test(r.day))) return (pm.textContent = 'Every day needs a date.');
       if (new Set(rows.map(r => r.day)).size !== rows.length) return (pm.textContent = 'Two days share a date. Fix one.');
       pm.textContent = 'Posting…';
-      const { error } = await sb.from('workouts').upsert(rows, { onConflict: 'day' });
+      const { error } = await sb.from('workouts').upsert(rows, { onConflict: 'gym_id,day' });
       if (error) { pm.textContent = error.message; return; }
       toast(`Posted ${rows.length} day${rows.length === 1 ? '' : 's'}`);
-      go('/week/' + rows.map(r => r.day).sort()[0]);
+      go('/week/' + rows.map(r => r.day).sort()[0] + (rows[0].gym_id || !(S.me && S.me.gym_id) ? '' : '?src=dsi'));
     };
   }
 };
@@ -1256,8 +1273,10 @@ VIEWS.join = async (_, tok) => {
 };
 
 /* ---------- compete and grow pages (extra.js) ---------- */
-installExtra({ sb, D, S, VIEWS, $, $$, esc, num, fmt, today, pd, fmtD, addDays, monday, toast, must, paint, needLogin, go,
-  loadBoard, loadPeople, nameOf, boardRow, isPro, isStaff, PRO, bindActions, bindVideo, route, videoUrl });
+const CTX = { sb, D, S, VIEWS, $, $$, esc, num, fmt, today, pd, fmtD, addDays, monday, toast, must, paint, needLogin, go,
+  loadBoard, loadPeople, nameOf, boardRow, isPro, isStaff, PRO, bindActions, bindVideo, route, videoUrl };
+installExtra(CTX);
+installGym(CTX);
 
 /* ---------- boot ---------- */
 async function boot() {

@@ -22,7 +22,7 @@ Deno.serve(async req => {
   const { data: sec } = await sb.from('app_secrets').select('v').eq('k', 'push_hook').maybeSingle();
   if (!sec || req.headers.get('x-dsi-hook') !== sec.v) return json({ error: 'forbidden' }, 403);
   const ev = await req.json();
-  let who: string | null = null, title = '', body = '', data: Record<string, unknown> = {}, pref = 'notify_prs';
+  let gym: string | null = null, who: string | null = null, title = '', body = '', data: Record<string, unknown> = {}, pref = 'notify_prs';
 
   if (ev.type === 'pr') {
     const { data: e } = await sb.from('lift_entries').select('id,profile_id,lift,weight_lb,prev_best,is_pr').eq('id', ev.entry_id).maybeSingle();
@@ -33,17 +33,29 @@ Deno.serve(async req => {
     body = `${NAMES[e.lift] ?? e.lift} ${Number(e.weight_lb)} lb, up ${Number(e.weight_lb) - Number(e.prev_best)}. Protest it or top it.`;
     data = { url: '/prs' };
   } else if (ev.type === 'program') {
+    gym = ev.gym_id ?? null;
     const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-    const { count } = await sb.from('push_log').select('id', { count: 'exact', head: true }).eq('kind', 'program').gte('created_at', since);
+    const { count } = await sb.from('push_log').select('id', { count: 'exact', head: true }).eq('kind', 'program').eq('ref', gym ?? 'dsi').gte('created_at', since);
     if ((count ?? 0) > 0) return json({ skipped: 'already sent' });
     pref = 'notify_program';
-    title = 'New programming is up';
-    body = 'Your target weights for the week are ready. Go see what you are lifting.';
+    if (gym) {
+      const { data: g } = await sb.from('gyms').select('name').eq('id', gym).maybeSingle();
+      title = `${g?.name ?? 'Your gym'} posted the workout`;
+      body = 'Your target weights are ready. Go see what you are lifting.';
+    } else {
+      title = 'New programming is up';
+      body = 'Your target weights for the week are ready. Go see what you are lifting.';
+    }
     data = { url: '/week' };
   } else return json({ error: 'unknown type' }, 400);
 
   const { data: rows } = await sb.from('push_tokens').select('token, profile_id, profiles!inner(' + pref + ')').eq('profiles.' + pref, true);
   let targets = (rows ?? []).filter((r: any) => r.profile_id !== who);
+  if (ev.type === 'program') {
+    // A gym's workout goes only to that gym's members.
+    const { data: members } = gym ? await sb.from('profiles').select('id').eq('gym_id', gym) : { data: null };
+    if (gym) { const ids = new Set((members ?? []).map((m: any) => m.id)); targets = targets.filter((r: any) => ids.has(r.profile_id)); }
+  }
   if (who) {
     const { data: bl } = await sb.from('blocks').select('blocker,blocked').or(`blocker.eq.${who},blocked.eq.${who}`);
     const hide = new Set((bl ?? []).map((b: any) => (b.blocker === who ? b.blocked : b.blocker)));
@@ -51,6 +63,6 @@ Deno.serve(async req => {
   }
   const dead = await send(targets.map((r: any) => ({ to: r.token, title, body, data })));
   if (dead.length) await sb.from('push_tokens').delete().in('token', dead);
-  await sb.from('push_log').insert({ kind: ev.type, ref: String(ev.entry_id ?? ev.workout_id ?? ''), sent: targets.length });
+  await sb.from('push_log').insert({ kind: ev.type, ref: ev.type === 'program' ? (gym ?? 'dsi') : String(ev.entry_id ?? ''), sent: targets.length });
   return json({ sent: targets.length, removed: dead.length });
 });

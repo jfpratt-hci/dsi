@@ -8,7 +8,7 @@ import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { Platform } from 'react-native';
 
-import { addDays, today } from './data';
+import { addDays, pickWorkouts, today, workoutsQuery } from './data';
 import type { Profile } from './session';
 import { sb } from './supabase';
 
@@ -61,7 +61,8 @@ export async function scheduleReminders(me: Profile) {
   if (!me.notify_reminders || (await permission()) !== 'granted') return;
 
   const start = today(), end = addDays(start, 7);
-  const { data: wks } = await sb.from('workouts').select('id,day,title,lifts,score_label').gte('day', start).lt('day', end);
+  const { data: raw } = await workoutsQuery(sb.from('workouts').select('id,day,title,lifts,score_label,gym_id').gte('day', start).lt('day', end), me.gym_id);
+  const wks: any[] = pickWorkouts((raw ?? []) as any[], me.gym_id);
   const ids = (wks ?? []).map(w => w.id);
   const { data: logs } = ids.length ? await sb.from('workout_logs').select('workout_id').eq('profile_id', me.id).in('workout_id', ids) : { data: [] as any[] };
   const done = new Set((logs ?? []).map((l: any) => l.workout_id));

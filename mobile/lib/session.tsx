@@ -19,6 +19,7 @@ export type Profile = {
   notify_program: boolean;
   pro_until: string | null;
   pro_source: string | null;
+  gym_id?: string | null;
 };
 
 type Ctx = {

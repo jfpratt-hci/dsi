@@ -79,3 +79,14 @@ export async function block(blocker: string, blocked: string) {
 export async function unblock(blocker: string, blocked: string) {
   return sb.from('blocks').delete().eq('blocker', blocker).eq('blocked', blocked);
 }
+
+
+// A member of a gym that posts its own programming sees the gym's workout on days it has one, the DSI week otherwise.
+export function workoutsQuery(q: any, gymId?: string | null) {
+  return gymId ? q.or(`gym_id.is.null,gym_id.eq.${gymId}`) : q.is('gym_id', null);
+}
+export function pickWorkouts<T extends { day: string; gym_id?: string | null }>(rows: T[], gymId?: string | null): T[] {
+  const byDay = new Map<string, T>();
+  for (const r of rows) { const cur = byDay.get(r.day); if (!cur || (gymId && r.gym_id === gymId)) byDay.set(r.day, r); }
+  return [...byDay.values()].sort((a, b) => a.day.localeCompare(b.day));
+}

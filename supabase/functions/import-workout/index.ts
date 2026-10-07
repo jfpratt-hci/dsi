@@ -1,5 +1,5 @@
 // Import workouts from a gym web page or screenshots and return DSI week drafts.
-// Staff only. Nothing is saved here: the page shows the draft and the admin saves it.
+// Staff and gym coaches only. Nothing is saved here: the page shows the draft and the admin saves it.
 // Needs the secret ANTHROPIC_API_KEY (Supabase dashboard > Edge Functions > Secrets).
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -70,8 +70,10 @@ Deno.serve(async req => {
     const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: auth } } });
     const { data: u } = await sb.auth.getUser();
     if (!u?.user) return json({ error: 'Sign in first.' }, 401);
-    const { data: me } = await sb.from('profiles').select('role').eq('user_id', u.user.id).maybeSingle();
-    if (!me || !['admin', 'commissioner'].includes(me.role)) return json({ error: 'Only the Founder and Commissioners can import workouts.' }, 403);
+    const { data: me } = await sb.from('profiles').select('id,role').eq('user_id', u.user.id).maybeSingle();
+    let ok = !!me && ['admin', 'commissioner'].includes(me.role);
+    if (me && !ok) { const { count } = await sb.from('gym_staff').select('gym_id', { count: 'exact', head: true }).eq('profile_id', me.id); ok = (count ?? 0) > 0; }
+    if (!ok) return json({ error: 'Only the Founder, Commissioners and gym coaches can import workouts.' }, 403);
 
     const key = Deno.env.get('ANTHROPIC_API_KEY');
     if (!key) return json({ error: 'The import reader is not switched on yet. Add the ANTHROPIC_API_KEY secret in Supabase.' }, 503);

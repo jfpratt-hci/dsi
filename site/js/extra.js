@@ -56,6 +56,7 @@ export function install(X) {
     try { await navigator.clipboard.writeText(text + ' ' + url); toast('Invite link copied. Paste it to your crew.'); } catch { prompt('Copy this invite link', url); }
   }
   X.inviteCrew = inviteCrew;
+  X.compete = { gainIn, quarter, allEntries, dsiAt };
   document.addEventListener('click', e => { if (e.target.closest('[data-invite]')) { e.preventDefault(); inviteCrew(); } });
 
   /* ---------- compete hub ---------- */
@@ -160,7 +161,7 @@ export function install(X) {
     if (id) {
       const g = gyms.find(x => x.id === id); if (!g) throw new Error('No gym here.');
       const m = members(id);
-      paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.city || 'Gym')}</div><h2>${esc(g.name)}</h2><p class="secSub">${m.length} lifter${m.length === 1 ? '' : 's'} on the board.</p></div><a class="btn ghost sm" href="/gyms">Gym league</a></div>
+      paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.city || 'Gym')}</div><h2>${esc(g.name)}</h2><p class="secSub">${m.length} lifter${m.length === 1 ? '' : 's'} on the board.</p></div><div class="row"><a class="btn sm" href="/tv/${g.id}">Big screen</a><a class="btn ghost sm" href="/gym/${g.id}">${(S.myGyms || []).some(x => x.gym_id === g.id) || isStaff() ? 'Run this gym' : 'Own or coach here?'}</a><a class="btn ghost sm" href="/gyms">Gym league</a></div></div>
         <div class="board"><div class="tablewrap"><table class="lb"><thead><tr><th>#</th><th>Lifter</th><th class="r hl">DSI™</th><th class="r">Total</th></tr></thead><tbody>
         ${m.map((r, i) => `<tr class="${S.me && S.me.id === r.profile_id ? 'me' : ''}"><td class="pos">${i + 1}</td><td><div class="who">${who(r.profile_id)}</div></td><td class="r n big">${r.score}</td><td class="r n">${fmt(r.total)}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">Nobody has claimed this gym yet.</td></tr>'}
         </tbody></table></div></div></section>`);
