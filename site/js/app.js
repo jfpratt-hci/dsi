@@ -2,6 +2,7 @@ import { sb } from './sb.js';
 import * as D from './dsi.js';
 import { install as installExtra } from './extra.js';
 import { install as installGym } from './gym.js';
+import { install as installAdmin } from './admin.js';
 
 /* ---------- helpers ---------- */
 const $ = (s, el = document) => el.querySelector(s);
@@ -690,7 +691,7 @@ VIEWS.me = async (_, tok) => {
       <div class="row"><label class="vh" for="g-add">Add a goal for another lift</label><select id="g-add" style="max-width:280px"><option value="">Add a goal for another lift…</option>${D.ALL_LIFTS.filter(([id]) => !goalIds.includes(id)).map(([id, n]) => `<option value="${id}">${esc(n)}</option>`).join('')}</select><button class="btn ghost sm" type="button" id="g-addb">Add</button></div>
       <div class="row"><button class="btn" type="submit">Save goals</button><span class="hint">Clear a box to remove that goal.</span></div></form></section>
     <section class="sec"><div><div class="kicker">Community</div><h2>Rules and <span>safety</span></h2></div>
-      <div class="tools">${tile('/rules', 'Community rules', m.terms_accepted_at ? 'You agreed on ' + fmtD(m.terms_accepted_at) + '.' : 'Agree before posting in chat.')}${tile('/blocked', 'Blocked lifters', S.blocked.size ? S.blocked.size + ' blocked' : 'Nobody blocked.')}${isStaff() ? tile('/reports', 'Reports', 'Review reports within 24 hours.') + tile('/program', 'Import workouts', 'Post the week from a gym link or screenshots.') : ''}${tile('/protests', 'Protests', 'The Commissioner\'s court.')}</div></section>
+      <div class="tools">${tile('/rules', 'Community rules', m.terms_accepted_at ? 'You agreed on ' + fmtD(m.terms_accepted_at) + '.' : 'Agree before posting in chat.')}${tile('/blocked', 'Blocked lifters', S.blocked.size ? S.blocked.size + ' blocked' : 'Nobody blocked.')}${S.me.role === 'admin' ? tile('/admin', 'Management dashboard', 'Members, gyms and requests.') : ''}${isStaff() ? tile('/reports', 'Reports', 'Review reports within 24 hours.') + tile('/program', 'Import workouts', 'Post the week from a gym link or screenshots.') : ''}${tile('/protests', 'Protests', 'The Commissioner\'s court.')}</div></section>
     <section class="sec"><div><div class="kicker">Account</div><h2>Your <span>account</span></h2></div>
       <div class="row"><span class="pill acc" style="margin:0">${pro ? 'DSI Pro' : 'Member'}</span><a class="btn ghost sm" href="/pro">Membership</a><button class="btn ghost sm" id="so">Sign out</button><button class="btn ghost sm dangerText" id="delAcct">Delete account</button></div>
       <p class="hint">Deleting removes your profile, every lift, goal, log, message and video, and your login. It cannot be undone.</p></section>`}`)) return;
@@ -1291,6 +1292,7 @@ const CTX = { sb, D, S, VIEWS, $, $$, esc, num, fmt, today, pd, fmtD, addDays, m
   loadBoard, loadPeople, nameOf, boardRow, isPro, isStaff, PRO, bindActions, bindVideo, route, videoUrl };
 installExtra(CTX);
 installGym(CTX);
+installAdmin(CTX);
 
 /* ---------- boot ---------- */
 async function boot() {

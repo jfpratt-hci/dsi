@@ -569,3 +569,17 @@ main.wrap>.tvDots{padding:0;margin:0;left:auto}
 .wodTrk .hint{margin:0;color:var(--accent);font-weight:600}
 @media (max-width:1000px){.wodGrid,.wodGrid:has(.wodPart[data-p="D"]:not([hidden])){grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:640px){.wodGrid,.wodGrid:has(.wodPart[data-p="D"]:not([hidden])){grid-template-columns:1fr}}
+
+/* management dashboard */
+.adStats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:20px}
+.adStat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:grid;gap:2px}
+.adStat span{font:600 11px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.adStat b{font:800 30px var(--disp);color:var(--ink)}
+.adStat small{color:var(--muted);font-size:12px}
+.adSearch{margin-bottom:12px}
+.adT td{vertical-align:middle}
+.adEdit>td{background:var(--bg);padding:16px}
+.adForm{display:grid;gap:12px}
+.adStaff{display:grid;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
+@media (max-width:1000px){.adStats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.adStats{grid-template-columns:repeat(2,minmax(0,1fr))}}
