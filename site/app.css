@@ -545,7 +545,7 @@ main.wrap>.tvDeck,.tvDeck{position:fixed;inset:0;margin:0;padding:0;overflow-y:a
 .tvPRs li.none{grid-template-columns:1fr;color:var(--muted)}
 .tvDots{position:fixed;right:1vw;top:50%;transform:translateY(-50%);display:grid;gap:.7vw;z-index:30}
 .tvDots button{width:.9vw;height:.9vw;min-width:10px;min-height:10px;border-radius:50%;border:2px solid var(--muted);background:transparent;padding:0;cursor:pointer}
-.tvDots button[aria-current="true"]{background:var(--accent);border-color:var(--accent)}
+.tvDots button[aria-current]{background:var(--accent);border-color:var(--accent)}
 .tvEmpty{font:500 1.8vw var(--sans)}
 main.wrap>.tvDots{padding:0;margin:0;left:auto}
 .tvS .tvBt{font-size:1.5vw;padding:.5vw 0}
