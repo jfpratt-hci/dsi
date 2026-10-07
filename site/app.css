@@ -648,3 +648,8 @@ main.wrap>.tvDots{padding:0;margin:0;left:auto}
 .sigImg{background:#fff;border-radius:6px;max-width:100%;width:420px}
 @media (max-width:1000px){.scWeek{grid-template-columns:repeat(2,minmax(0,1fr))}.mdGrid,.docGrid,.stGrid,.myGrid{grid-template-columns:1fr}.clRow{grid-template-columns:90px minmax(0,1fr);}.clS,.clA{grid-column:2}.clA{justify-content:flex-start}}
 @media print{header.bar,footer,nav,.btn{display:none!important}.docText{max-height:none;border:0;color:#000;background:#fff}}
+/* Workout of the day: the part boxes stretch to fill the screen, all the same height */
+.tvWodS .tvSecsBig{flex:1;min-height:0;align-items:stretch;grid-auto-rows:minmax(0,1fr)}
+.tvWodS .tvSecsBig>div{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.tvWodS .tvSecsBig p{flex:1;min-height:0}
+.tvWodS .tvLog{margin-top:auto;padding-top:.9vw}
