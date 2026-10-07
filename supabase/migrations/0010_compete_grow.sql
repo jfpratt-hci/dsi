@@ -82,3 +82,10 @@ begin
   end if;
   return rid;
 end $$;
+
+-- Trigger functions do not need to be callable through the API.
+revoke execute on function public.pro_only() from public, anon, authenticated;
+revoke execute on function public.push_event() from public, anon, authenticated;
+revoke execute on function public.thread_post_guard() from public, anon, authenticated;
+revoke execute on function public.create_group(text, boolean, boolean) from public, anon;
+grant execute on function public.create_group(text, boolean, boolean) to authenticated;
