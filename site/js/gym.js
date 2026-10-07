@@ -102,6 +102,7 @@ export function install(X) {
     const tvUrl = location.origin + '/tv/' + (g.slug || gid);
     if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.city || 'Gym')} · ${members.length} lifters</div><h2>${esc(g.name)}</h2><p class="secSub">Your gym's page. Post the day, enter results, and run the big screen.</p></div><a class="btn ghost sm" href="/gyms/${gid}">Gym board</a></div>
       <div class="tools">
+        <a class="tool" href="/club/${gid}"><b>Gym office</b><span>Check in, class schedule, members, billing, waivers and contracts, coach staffing and pay.</span></a>
         <a class="tool" href="/wod/${gid}"><b>Edit workouts</b><span>Type or fix the day: Part A, B, C and sometimes D. Pick the weight members log for each part.</span></a>
         <a class="tool" href="/program?gym=${gid}"><b>Import a week</b><span>From your programming page, Kilo, a whiteboard photo or pasted text. Then fix anything in Edit workouts.</span></a>
         <a class="tool" href="/results/${gid}"><b>Enter results</b><span>Type in everyone's weights and scores from the floor. They go straight to the day board.</span></a>
