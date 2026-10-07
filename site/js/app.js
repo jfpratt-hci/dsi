@@ -1,5 +1,6 @@
 import { sb } from './sb.js';
 import * as D from './dsi.js';
+import { install as installExtra } from './extra.js';
 
 /* ---------- helpers ---------- */
 const $ = (s, el = document) => el.querySelector(s);
@@ -50,10 +51,12 @@ async function loadMe() {
   }
 }
 async function loadBoard() {
-  const rows = must(await sb.from('board').select('*'));
+  const [rows, profs] = await Promise.all([sb.from('board').select('*').then(must), sb.from('profiles').select('id,tier,role,gym_id').then(must)]);
+  const pmap = new Map(profs.map(p => [p.id, p]));
   S.board = rows.map(r => {
+    const pp = pmap.get(r.profile_id) || {};
     const x = { ...r, bw: num(r.bw), age: num(r.age), bench: num(r.bench), squat: num(r.squat), dead: num(r.dead), clean: num(r.clean) };
-    x.score = D.score(x); x.total = D.total(x); x.p = D.pcts(x); x.g = D.gains(x);
+    x.score = D.score(x); x.total = D.total(x); x.p = D.pcts(x); x.g = D.gains(x); x.pro = pp.tier === 'pro' || ['admin', 'commissioner'].includes(pp.role); x.gym_id = pp.gym_id || null;
     return x;
   });
   return S.board;
@@ -112,7 +115,7 @@ async function route() {
   S.channels = [];
   if (S.me && !S.me.display_name && !['join', 'login', 'privacy', 'terms', 'support', 'rules'].includes(r)) { go('/join', true); return; }
   if (!VIEWS[r]) r = '';
-  updateChrome(r === 'u' ? '' : r);
+  updateChrome(['season', 'battles', 'gyms', 'benchmarks', 'recap', 'plates'].includes(r) ? 'compete' : r === 'pr' ? 'prs' : r === 'lift' ? 'week' : r === 'u' ? '' : r);
   const tok = ++S.tok;
   main.innerHTML = '<p class="empty">Loading…</p>';
   try {
@@ -217,7 +220,7 @@ function prCard(p) {
     <a class="prName" href="/u/${p.profile_id}">${esc(p.name)}</a>
     <div class="prLift">${esc(l.n)} <b>${fmt(p.weight_lb)} lb</b>${p.status === 'protested' ? '<span class="pill flat">Under protest</span>' : ''}</div>
     ${gain ? `<div class="prGain">+${fmt(gain)} lb</div><div class="sub">was ${fmt(p.prev_best)}</div>` : ''}
-    <div class="prAct"><button class="btn ghost sm" data-thread="pr" data-ref="${p.id}" data-title="${esc(p.name + ' ' + l.n + ' ' + num(p.weight_lb))}">Talk</button>${!mine && p.status === 'ok' ? `<button class="btn ghost sm" data-protest="lift_entry" data-ref="${p.id}" data-title="${esc(p.name + ' ' + l.n + ' ' + num(p.weight_lb) + ' lb')}">Protest</button>` : ''}</div>
+    <div class="prAct"><a class="btn ghost sm" href="/pr/${p.id}">Open</a><button class="btn ghost sm" data-thread="pr" data-ref="${p.id}" data-title="${esc(p.name + ' ' + l.n + ' ' + num(p.weight_lb))}">Talk</button>${!mine && p.status === 'ok' ? `<button class="btn ghost sm" data-protest="lift_entry" data-ref="${p.id}" data-title="${esc(p.name + ' ' + l.n + ' ' + num(p.weight_lb) + ' lb')}">Protest</button>` : ''}</div>
   </article>`;
 }
 
@@ -243,7 +246,7 @@ function renderBoard() {
     ${rows.map((r, i) => {
       const club = D.clubOf(r.total), up = v => v > 0 ? `<span class="upArrow" title="Up ${fmt(v)} this week">▲${fmt(v)}</span>` : '';
       return `<tr class="${S.me && S.me.id === r.profile_id ? 'me' : ''}"><td class="pos">${i + 1}</td>
-      <td><div class="who"><a href="/u/${r.profile_id}">${esc(r.name)}</a>${r.roast_opt_in ? '<i class="fire" title="Opted in to roasts">🔥</i>' : ''}${r.has_protest ? '<span class="pill flat">Protest</span>' : ''}</div><div class="sub">${r.age ? 'Age ' + r.age + ' · ' : ''}${r.bw ? r.bw + ' lb · ' : ''}${esc(r.division)}</div></td>
+      <td><div class="who"><a href="/u/${r.profile_id}">${esc(r.name)}</a>${r.pro ? '<span class="pill acc proTag" title="DSI Pro">Pro</span>' : ''}${r.roast_opt_in ? '<i class="fire" title="Opted in to roasts">🔥</i>' : ''}${r.has_protest ? '<span class="pill flat">Protest</span>' : ''}</div><div class="sub">${r.age ? 'Age ' + r.age + ' · ' : ''}${r.bw ? r.bw + ' lb · ' : ''}${esc(r.division)}</div></td>
       <td class="r n big">${r.score}${up(r.g.score)}</td><td class="r n">${fmt(r.total)}${up(r.g.total)}${club ? `<span class="club">${fmt(club)}</span>` : ''}</td>
       ${D.LIFTS.map(l => r[l.k] ? `<td class="r n">${fmt(r[l.k])}${up(r.g.lift[l.k])}<div class="sub">${isNew(r[l.k + '_date']) ? `<span class="prDateNew">PR ${fmtD(r[l.k + '_date'])}</span>` : D.fmtPct(r.p[l.k]) + ' pct'}</div></td>` : '<td class="r sub">n/a</td>').join('')}
       </tr>`;
@@ -294,7 +297,7 @@ VIEWS.u = async (id, tok) => {
   must(hist).filter(e => e.status !== 'struck').forEach(e => { bestOf[e.lift] = Math.max(bestOf[e.lift] || 0, num(e.weight_lb)); });
   const otherBests = Object.entries(bestOf).filter(([id]) => !D.LIFT_BY_DB[id]).map(([lift, w]) => ({ lift, weight_lb: w, performed_on: must(hist).find(e => e.lift === lift && num(e.weight_lb) === w).performed_on }));
   const mine = S.me && S.me.id === id, club = D.clubOf(r.total);
-  const role = p.role === 'commissioner' ? '<span class="pill acc">Commissioner</span>' : p.role === 'admin' ? '<span class="pill acc">Founder</span>' : '';
+  const role = p.role === 'commissioner' ? '<span class="pill acc">Commissioner</span>' : p.role === 'admin' ? '<span class="pill acc">Founder</span>' : p.tier === 'pro' ? '<span class="pill acc">DSI Pro</span>' : '';
   if (!paint(tok, `<article class="card">
     <div class="cardHead"><div><div class="eyebrow">${esc(p.division)} division</div><div class="nm">${esc(p.display_name)}${p.roast_opt_in ? ' <span title="Opted in to roasts">🔥</span>' : ''}</div>
       <div class="meta">${r.age ? 'Age ' + r.age + ' · ' : ''}${r.bw ? r.bw + ' lb · ' : ''}${fmt(r.total)} lb total${club ? ' · ' + fmt(club) + ' club' : ''} ${role}</div></div>
@@ -354,6 +357,7 @@ VIEWS.log = async (_, tok) => {
     b.disabled = false;
     if (error) { msg.textContent = error.message; return; }
     const name = D.liftName(data.lift);
+    if (data.is_pr && data.prev_best) { go('/pr/' + data.id + '?celebrate=1'); return; }
     if (data.is_pr) {
       msg.innerHTML = `<b style="color:var(--accent)">New ${esc(name)} PR: ${data.prev_best ? fmt(data.prev_best) + ' → ' : ''}${fmt(data.weight_lb)} lb.</b> It's on the <a href="/prs">PR wall</a>.`;
       toast(`New ${name} PR!`);
@@ -391,7 +395,8 @@ VIEWS.week = async (day, tok) => {
     const prog = `<div class="wkProg"><div class="eyebrow">${esc(fmtDW(w.day))}${w.day === tdy ? ' · Today' : ''}${w.source ? ' · ' + esc(w.source) : ''}</div><h3>${esc(w.title)}</h3>
       ${w.rest_note ? `<p class="rest">${esc(w.rest_note)}</p>` : ''}
       ${(w.sections || []).map(s => `<div class="wkSec"><b>${esc(s.name)}</b><p>${esc(s.text)}</p></div>`).join('')}
-      <div class="row"><button class="btn ghost sm" data-thread="workout" data-ref="${w.id}" data-title="${esc(fmtD(w.day) + ' · ' + w.title)}">Day thread</button></div></div>`;
+      <div class="row"><button class="btn ghost sm" data-thread="workout" data-ref="${w.id}" data-title="${esc(fmtD(w.day) + ' · ' + w.title)}">Day thread</button>${w.benchmark ? `<a class="chip" href="/benchmarks/${encodeURIComponent(w.benchmark)}">Benchmark: ${esc(w.benchmark)}</a>` : ''}</div>
+      ${isStaff() ? `<form class="row" id="bmF"><label class="vh" for="bm-n">Benchmark name</label><input id="bm-n" maxlength="40" value="${esc(w.benchmark || '')}" placeholder="Name it as a benchmark, like Fran" style="max-width:260px"><button class="btn ghost sm">Save</button></form>` : ''}</div>`;
     let mine = '';
     if (!(w.lifts || []).length && !w.score_label) mine = `<div class="wkMine"><h3>Rest <span>day</span></h3><p class="hint">Nothing to log. Recover like it's your job.</p></div>`;
     else if (!S.me) mine = `<div class="wkMine"><h3>Your <span>numbers</span></h3><p class="hint">Sign in and every weight here is built from your own PRs. Then log what you actually did.</p><a class="btn" href="/login">Sign in</a></div>`;
@@ -402,7 +407,7 @@ VIEWS.week = async (day, tok) => {
       const ent = (myLog && myLog.entries) || {};
       mine = `<form class="wkMine" id="wkF"><h3>${esc(S.me.display_name)}'s <span>numbers</span></h3>
         <div class="tablewrap"><table class="wkT"><thead><tr><th>Lift</th><th>Scheme</th><th class="r">Target</th><th class="r">Actual</th></tr></thead><tbody>
-        ${(w.lifts || []).map(l => { const t = D.target(l, meRow); return `<tr><td><b>${esc(l.n)}</b><div class="sub">${esc(l.why)}</div></td><td class="n">${esc(l.sch)}</td><td class="r tgt">${t ? t + ' lb' : 'n/a'}</td><td class="r"><input class="wkIn" type="number" inputmode="numeric" step="any" min="0" max="1499" data-id="${esc(l.id)}" value="${esc(ent[l.id] ?? '')}" placeholder="${t || 'lb'}" aria-label="${esc(l.n)} actual weight"></td></tr>`; }).join('')}
+        ${(w.lifts || []).map(l => { const t = D.target(l, meRow); return `<tr><td><b>${esc(l.n)}</b><div class="sub">${esc(l.why)}</div></td><td class="n">${esc(l.sch)}</td><td class="r tgt">${t ? t + ' lb' : 'n/a'}</td><td class="r"><input class="wkIn" type="number" inputmode="numeric" step="any" min="0" max="1499" data-id="${esc(l.id)}" value="${esc(ent[l.id] ?? '')}" placeholder="${t || 'lb'}" aria-label="${esc(l.n)} actual weight"><a class="setsLink" href="/lift/${w.id}/${encodeURIComponent(l.id)}">Sets${(myLog && myLog.sets && myLog.sets[l.id] && myLog.sets[l.id].length) ? ' · ' + myLog.sets[l.id].length : ''}</a></td></tr>`; }).join('')}
         ${w.score_label ? `<tr><td><b>${esc(w.score_label)}</b><div class="sub">${w.score_type === 'time' ? 'mm:ss' : 'Your score'}</div></td><td></td><td></td><td class="r"><input class="wkIn wkScore" type="text" maxlength="40" id="wkScore" value="${esc(myLog?.score || '')}" placeholder="${w.score_type === 'time' ? '12:34' : 'score'}" aria-label="${esc(w.score_label)}"></td></tr>` : ''}
         </tbody></table></div>
         <div class="row"><button class="btn" type="submit">${myLog ? 'Update log' : 'Log it'}</button><span class="hint" id="wkMsg">${myLog ? 'Logged. Update any time.' : 'Hit the targets, then log what you actually did.'}</span></div></form>`;
@@ -414,6 +419,14 @@ VIEWS.week = async (day, tok) => {
     <nav class="wkDays" aria-label="Days">${dayBtns}</nav></section>
     <section class="sec">${body}</section>`)) return;
   bindActions(main, () => route());
+  const bm = $('#bmF');
+  if (bm) bm.onsubmit = async e => {
+    e.preventDefault();
+    const v = $('#bm-n').value.trim();
+    const { error } = await sb.from('workouts').update({ benchmark: v || null }).eq('id', w.id);
+    if (error) return toast(error.message);
+    toast(v ? 'Saved as the ' + v + ' benchmark' : 'Benchmark removed'); route();
+  };
   const f = $('#wkF');
   if (f) f.onsubmit = async e => {
     e.preventDefault();
@@ -431,7 +444,8 @@ VIEWS.week = async (day, tok) => {
       const L = D.LIFT_BY_DB[w.pr_lift], best = L && meRow ? meRow[L.k] : 0;
       if (maxItem && entries[maxItem.id] > best) {
         const { data } = await sb.from('lift_entries').insert({ profile_id: S.me.id, lift: w.pr_lift, weight_lb: entries[maxItem.id], performed_on: w.day, source: 'workout' }).select().single();
-        if (data && data.is_pr) prMsg = `New ${D.liftName(w.pr_lift)} PR: ${best ? fmt(best) + ' → ' : ''}${fmt(data.weight_lb)} lb!`;
+        if (data && data.is_pr && data.prev_best) { go('/pr/' + data.id + '?celebrate=1'); return; }
+        if (data && data.is_pr) prMsg = `New ${D.liftName(w.pr_lift)} PR: ${fmt(data.weight_lb)} lb!`;
       }
     }
     toast(prMsg || 'Logged');
@@ -474,7 +488,7 @@ VIEWS.chat = async (roomId, tok) => {
   const locked = groups.filter(g => !groupRooms.some(r => r.group_id === g.id));
   const joinable = locked.filter(g => g.is_open && !myGroups.has(g.id) && g.kind === 'custom');
   const pro = locked.filter(g => g.min_tier !== 'free');
-  const back = room && { pr: ['/prs', 'PR wall'], workout: ['/week', 'The week'], protest: ['/protests', 'Protests'] }[room.kind];
+  const back = room && { pr: ['/prs', 'PR wall'], workout: ['/week', 'The week'], protest: ['/protests', 'Protests'], battle: ['/battles/' + room.ref_id, 'The battle'] }[room.kind];
   const sideRoom = r => `<a class="room" href="/chat/${r.id}" ${room && r.id === room.id ? 'aria-current="page"' : ''}><b>${esc(r.title)}</b><span class="sub">${r.kind === 'group' ? esc((gById.get(r.group_id) || {}).kind || '') : esc(r.kind)}</span></a>`;
   if (!paint(tok, `<section class="sec"><div><div class="kicker">Talk it out</div><h2>The <span>chat</span></h2></div>
   <div class="chatWrap"><aside class="rooms" aria-label="Rooms">
@@ -627,7 +641,17 @@ VIEWS.me = async (_, tok) => {
       ${row ? `<div class="kpi"><div><b>${row.score}</b><span>DSI™</span></div><div><b>${fmt(row.total)}</b><span>Total</span></div></div>` : ''}</div>
       ${v ? `<p class="lede"><b style="color:var(--accent)">${esc(v[1])}.</b> ${esc(m.roast_opt_in ? v[2] : v[3])}</p>` : ''}</section>
     ${first ? '' : `<section class="sec band"><div class="secHead"><div><div class="kicker">DSI Pro</div><h2>Train with a <span>plan</span></h2></div>${pro ? '<span class="pill up" style="margin:0">Pro active</span>' : '<a class="btn sm" href="/pro">See Pro</a>'}</div>
-      <div class="tools">${tile('/progress', 'Progress charts', 'Every lift over time with your goal line.', 1)}${tile('/plans', 'Goal plans', 'A week by week path to your number.', 1)}${tile('/coach', 'Coach', 'Your weak link and what to train next.', 1)}${tile('/import', 'Import history', 'Paste years of lifts from a spreadsheet.', 1)}</div></section>`}
+      <div class="tools">${tile('/progress', 'Progress charts', 'Every lift over time with your goal line.', 1)}${tile('/plans', 'Goal plans', 'A week by week path to your number.', 1)}${tile('/coach', 'Coach', 'Your weak link and what to train next.', 1)}${tile('/import', 'Import history', 'Paste years of lifts from a spreadsheet.', 1)}${tile('/recap/' + new Date().getFullYear(), 'Year recap', 'Your year in PRs and pounds, ready to share.', 1)}${tile('/battles', 'Weekly battles', 'Call out a lifter for a week.', 1)}</div></section>
+    <section class="sec"><div class="secHead"><div><div class="kicker">Compete and grow</div><h2>More to <span>do</span></h2></div><button class="btn sm" data-invite>Invite your crew</button></div>
+      <div class="tools">${tile('/gyms', 'Your gym', m.gym_id ? 'See your gym in the league.' : 'Pick your gym and put it on the league.')}${tile('/season', 'This season', 'Most DSI points gained this quarter.', 1)}${tile('/benchmarks', 'Benchmarks', 'Named workouts and every score.')}${tile('/plates', 'Plate calculator', 'Plates per side and warmups.')}</div></section>
+    <section class="sec"><div><div class="kicker">Reminders</div><h2>Your <span>reminders</span></h2><p class="secSub">These go to your phone through the DSI app. Turn notifications on in the app once and these settings follow you.</p></div>
+      <form class="formCard" id="nf"><div class="fields">
+        <div class="field w2"><span class="lbl">Send me</span>
+          <label class="check"><input type="checkbox" id="nf-r"${m.notify_reminders !== false ? ' checked' : ''}><span>Workout reminders on days with programming, until I log</span></label>
+          <label class="check"><input type="checkbox" id="nf-p"${m.notify_prs !== false ? ' checked' : ''}><span>New PRs from anyone on the board</span></label>
+          <label class="check"><input type="checkbox" id="nf-g"${m.notify_program !== false ? ' checked' : ''}><span>New programming when the week goes up</span></label></div>
+        <div class="field"><label for="nf-h">Remind me at</label><select id="nf-h">${[5, 6, 7, 12, 16, 17, 18, 19, 20, 21].map(h => `<option value="${h}"${(m.reminder_hour ?? 18) === h ? ' selected' : ''}>${h % 12 || 12}${h < 12 ? 'am' : 'pm'}</option>`).join('')}</select></div></div>
+        <div class="row"><button class="btn" type="submit">Save</button><span class="hint" id="nf-msg"></span></div></form></section>`}
     <section class="sec"><div><div class="kicker">Profile</div><h2>${first ? 'The <span>basics</span>' : 'Edit <span>profile</span>'}</h2></div>
     <form class="formCard" id="pf">
       <div class="fields">
@@ -654,6 +678,14 @@ VIEWS.me = async (_, tok) => {
     <section class="sec"><div><div class="kicker">Account</div><h2>Your <span>account</span></h2></div>
       <div class="row"><span class="pill acc" style="margin:0">${pro ? 'DSI Pro' : 'Member'}</span><a class="btn ghost sm" href="/pro">Membership</a><button class="btn ghost sm" id="so">Sign out</button><button class="btn ghost sm dangerText" id="delAcct">Delete account</button></div>
       <p class="hint">Deleting removes your profile, every lift, goal, log, message and video, and your login. It cannot be undone.</p></section>`}`)) return;
+  const nf = $('#nf');
+  if (nf) nf.onsubmit = async e => {
+    e.preventDefault();
+    const msg = $('#nf-msg'); msg.textContent = 'Saving…';
+    const { data, error } = await sb.from('profiles').update({ notify_reminders: $('#nf-r').checked, notify_prs: $('#nf-p').checked, notify_program: $('#nf-g').checked, reminder_hour: +$('#nf-h').value }).eq('id', m.id).select().single();
+    if (error) { msg.textContent = error.message; return; }
+    S.me = data; msg.textContent = 'Saved. Your phone picks this up next time the app opens.';
+  };
   $('#pf').onsubmit = async e => {
     e.preventDefault();
     const msg = $('#pf-msg'), b = e.target.querySelector('button'); b.disabled = true; msg.textContent = 'Saving…';
@@ -1089,7 +1121,7 @@ VIEWS.program = async (_, tok) => {
     host.innerHTML = `<div class="secHead"><div><div class="kicker">Draft${draft.source ? ' · ' + esc(draft.source) : ''}</div><h2>Check and <span>post</span></h2>${draft.notes ? `<p class="secSub">${esc(draft.notes)}</p>` : ''}</div></div>
       <div class="plist">${days.map((d, i) => `<article class="pcase impDay" style="--c:var(--accent)" data-i="${i}">
         <div class="impHead"><label class="check"><input type="checkbox" data-inc checked><span class="sub">Post</span></label>
-          <input type="date" data-day value="${esc(d.day || '')}" aria-label="Date"><input data-title maxlength="80" value="${esc(d.title || '')}" aria-label="Title"></div>
+          <input type="date" data-day value="${esc(d.day || '')}" aria-label="Date"><input data-title maxlength="80" value="${esc(d.title || '')}" aria-label="Title"><input data-bench maxlength="40" value="${esc(d.benchmark || '')}" placeholder="Benchmark name (optional)" aria-label="Benchmark name"></div>
         ${had[d.day] ? `<p class="hint" style="color:var(--flat)">Replaces "${esc(had[d.day])}" on ${esc(fmtD(d.day))}.</p>` : ''}
         ${d.rest_note ? `<p class="rest">${esc(d.rest_note)}</p>` : ''}
         ${(d.sections || []).map((s, k) => `<div class="field"><label>${esc(s.name)}</label><textarea rows="${Math.min(6, Math.max(2, Math.ceil(s.text.length / 90)))}" data-sec="${k}">${esc(s.text)}</textarea></div>`).join('')}
@@ -1103,7 +1135,8 @@ VIEWS.program = async (_, tok) => {
         return { day: $('[data-day]', a).value, title: $('[data-title]', a).value.trim() || d.title, source: draft.source || null,
           sections: (d.sections || []).map((s, k) => ({ name: s.name, text: $(`[data-sec="${k}"]`, a).value.trim() })).filter(s => s.text),
           lifts: d.lifts, score_label: d.score_label || null, score_type: ['time', 'text'].includes(d.score_type) ? d.score_type : (d.score_label ? 'text' : null),
-          rest_note: d.rest_note || null, pr_lift: ['bench', 'squat', 'deadlift', 'clean'].includes(d.pr_lift) ? d.pr_lift : null };
+          rest_note: d.rest_note || null, pr_lift: ['bench', 'squat', 'deadlift', 'clean'].includes(d.pr_lift) ? d.pr_lift : null,
+          benchmark: $('[data-bench]', a).value.trim() || null };
       });
       const pm = $('#pg-pmsg');
       if (!rows.length) return (pm.textContent = 'Tick at least one day.');
@@ -1221,6 +1254,10 @@ VIEWS.join = async (_, tok) => {
     if (error) m.textContent = 'That code did not work. Check it or send a new one.';
   };
 };
+
+/* ---------- compete and grow pages (extra.js) ---------- */
+installExtra({ sb, D, S, VIEWS, $, $$, esc, num, fmt, today, pd, fmtD, addDays, monday, toast, must, paint, needLogin, go,
+  loadBoard, loadPeople, nameOf, boardRow, isPro, isStaff, PRO, bindActions, bindVideo, route, videoUrl });
 
 /* ---------- boot ---------- */
 async function boot() {

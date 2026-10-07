@@ -20,6 +20,7 @@ function scheme(sch: string): { n: number; r: number } {
   if (m) return { n: Math.min(10, Number(m[1])), r: Number(m[2]) };
   const reps = /(\d+)\s*reps?/i.exec(sch || '');
   if (reps) return { n: 1, r: Number(reps[1]) };
+  if (/single|1\s*rm|max/i.test(sch || '')) return { n: 1, r: 1 };
   return { n: 3, r: 5 };
 }
 
