@@ -18,13 +18,33 @@ export function install(X) {
   const isParts = w => !!w && ((w.sections || []).some(s => s.part) || (w.lifts || []).some(l => l.part));
   function partsOf(w, withD) {
     const secs = (w && w.sections) || [], lifts = (w && w.lifts) || [], np = isParts(w);
-    return LET.map((L, i) => { const s = (np ? secs.find(x => x.part === L) : secs[i]) || {}; return { L, name: s.name || '', text: s.text || '', lift: lifts.find(l => l.part === L) || null }; })
-      .filter(p => p.L !== 'D' || withD || p.text || p.lift);
+    return LET.map((L, i) => { const s = (np ? secs.find(x => x.part === L) : secs[i]) || {}; return { L, name: s.name || '', text: s.text || '', time: !!s.time, lift: lifts.find(l => l.part === L) || null }; })
+      .filter(p => p.L !== 'D' || withD || p.text || p.lift || p.time);
   }
   // What a screen shows: the parts with something in them. Older days keep every section they had.
-  const shownParts = w => isParts(w) ? partsOf(w).filter(p => p.text || p.lift) : ((w && w.sections) || []).map((s, i) => ({ L: String.fromCharCode(65 + i), name: s.name, text: s.text, lift: null }));
+  const shownParts = w => isParts(w) ? partsOf(w).filter(p => p.text || p.lift || p.time) : ((w && w.sections) || []).map((s, i) => ({ L: String.fromCharCode(65 + i), name: s.name, text: s.text, lift: null, time: false }));
   const liftLabel = l => l.part ? `${l.part} · ${l.n}` : l.n;
-  X.parts = { isParts, partsOf, shownParts, liftLabel };
+  // Everything a member logs for a day, in part order. Weights are kept under the lift id ('b'),
+  // times in seconds under '<part>_t' ('b_t'). Older days log their lift list.
+  function items(w) {
+    if (!w) return [];
+    if (!isParts(w)) return (w.lifts || []).map(l => ({ key: l.id, kind: 'w', label: l.n, sch: l.sch, lift: l, L: '' }));
+    const out = [];
+    for (const p of partsOf(w)) {
+      if (p.lift) out.push({ key: p.lift.id, kind: 'w', label: `${p.L} · ${p.lift.n}`, sch: p.lift.sch, lift: p.lift, L: p.L });
+      if (p.time) out.push({ key: p.L.toLowerCase() + '_t', kind: 't', label: `${p.L} · ${p.name || 'Part ' + p.L} time`, sch: '', lift: null, L: p.L });
+    }
+    return out;
+  }
+  const fmtT = s => { s = Math.round(num(s)); if (!s) return ''; const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, '0'); return h ? `${h}:${String(m).padStart(2, '0')}:${x}` : `${m}:${x}`; };
+  // "8:45" or "1:02:30"; a plain number is minutes.
+  const parseT = v => { v = String(v || '').trim(); if (!v) return 0; if (/^\d+(\.\d+)?$/.test(v)) return Math.round(+v * 60); const m = v.match(/^(?:(\d+):)?(\d{1,2}):(\d{2})$/); return m ? (+(m[1] || 0)) * 3600 + +m[2] * 60 + +m[3] : NaN; };
+  const cell = (it, v) => (it.kind === 't' ? fmtT(v) : num(v) ? fmt(num(v)) : '');
+  // The board ranks by the first thing logged: fastest time, or heaviest weight.
+  const rankKey = w => { const its = items(w), it = its.find(i => i.lift && i.lift.max) || its[0]; return it || null; };
+  // Part D only shows on a board once somebody logged it.
+  const boardItems = (w, logs) => items(w).filter(it => it.L !== 'D' || logs.some(x => num((x.entries || {})[it.key])));
+  X.parts = { isParts, partsOf, shownParts, liftLabel, items, fmtT, parseT, cell, rankKey, boardItems };
 
   // A gym can be reached by its id or its short big screen name (gyms.slug).
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -39,7 +59,7 @@ export function install(X) {
   async function gymData(gid, day) {
     const [g, members, staff, board, ws] = await Promise.all([
       sb.from('gyms').select('*').eq('id', gid).maybeSingle().then(must),
-      sb.from('profiles').select('id,display_name,bodyweight,birth_year,tier,role').eq('gym_id', gid).not('display_name', 'is', null).then(must),
+      sb.from('profiles').select('id,display_name,bodyweight,birth_year,sex,tier,role').eq('gym_id', gid).not('display_name', 'is', null).then(must),
       sb.from('gym_staff').select('profile_id,role').eq('gym_id', gid).then(must),
       loadBoard(),
       sb.from('workouts').select('*').eq('day', day).or(`gym_id.is.null,gym_id.eq.${gid}`).then(must),
@@ -47,7 +67,7 @@ export function install(X) {
     if (!g) throw new Error('No gym here.');
     const w = ws.find(x => x.gym_id === gid) || ws.find(x => !x.gym_id) || null;
     const logs = w ? must(await sb.from('workout_logs').select('*').eq('workout_id', w.id)) : [];
-    const rowOf = m => S.board.find(r => r.profile_id === m.id) || { profile_id: m.id, name: m.display_name, bw: num(m.bodyweight) || 185, age: m.birth_year ? new Date().getFullYear() - m.birth_year : 30, bench: 0, squat: 0, dead: 0, clean: 0, score: 0, total: 0 };
+    const rowOf = m => S.board.find(r => r.profile_id === m.id) || { profile_id: m.id, name: m.display_name, sex: m.sex, bw: num(m.bodyweight) || 185, age: m.birth_year ? new Date().getFullYear() - m.birth_year : 30, bench: 0, squat: 0, dead: 0, clean: 0, score: 0, total: 0 };
     return { g, members: members.sort((a, b) => a.display_name.localeCompare(b.display_name)), staff, w, logs, rowOf };
   }
 
@@ -133,36 +153,38 @@ export function install(X) {
     const w = ws[0] || null;
     const nLogs = w ? ((await sb.from('workout_logs').select('id', { count: 'exact', head: true }).eq('workout_id', w.id)).count || 0) : 0;
     const old = w && !isParts(w) && (w.lifts || []).length;
-    const me = X.boardRow(S.me.id) || {};
+    const me = X.boardRow(S.me.id) || { sex: S.me.sex };
     const ps = partsOf(w, true);
     const box = p => {
       const l = p.lift || {}, tt = l.rx && l.rx.length ? 'rx' : l.f ? 'f' : '';
-      return `<article class="wodPart" data-p="${p.L}"${p.L === 'D' && !p.text && !p.lift ? ' hidden' : ''}>
+      return `<article class="wodPart" data-p="${p.L}"${p.L === 'D' && !p.text && !p.lift && !p.time ? ' hidden' : ''}>
         <div class="wodPH"><i>${p.L}</i><label class="vh" for="wp-${p.L}">Part ${p.L} name</label><input id="wp-${p.L}" data-name maxlength="40" value="${esc(p.name)}" placeholder="${PH[p.L]}">${p.L === 'D' ? '<button type="button" class="btn ghost sm" data-rmd>Remove</button>' : ''}</div>
         <label class="vh" for="wt-${p.L}">Part ${p.L} workout</label><textarea id="wt-${p.L}" data-text rows="7" maxlength="2000" placeholder="${p.L === 'A' ? 'Warmup, skill or mobility' : 'Sets, reps and movements'}">${esc(p.text)}</textarea>
         ${p.L === 'A' ? '<p class="hint">Part A is not logged.</p>' : `
-        <label class="check"><input type="checkbox" data-trk${p.lift ? ' checked' : ''}><span>Members log a weight for Part ${p.L}</span></label>
+        <div class="wodTog" role="group" aria-label="What members log for Part ${p.L}"><span>Members log</span>
+          <label class="tog"><input type="checkbox" data-trk${p.lift ? ' checked' : ''}><span>Weight</span></label>
+          <label class="tog"><input type="checkbox" data-time${p.time ? ' checked' : ''}><span>Time</span></label></div>
         <div class="wodTrk"${p.lift ? '' : ' hidden'}>
           <div class="field"><label for="wn-${p.L}">Movement</label><input id="wn-${p.L}" data-n maxlength="60" value="${esc(l.n || '')}" placeholder="Front squat"></div>
           <div class="field"><label for="ws-${p.L}">Scheme</label><input id="ws-${p.L}" data-sch maxlength="60" value="${esc(l.sch || '')}" placeholder="5 x 3, build"></div>
           <div class="field"><label for="wtt-${p.L}">Target weight</label><select id="wtt-${p.L}" data-tt><option value=""${tt === '' ? ' selected' : ''}>No target</option><option value="f"${tt === 'f' ? ' selected' : ''}>Percent of a lift</option><option value="rx"${tt === 'rx' ? ' selected' : ''}>Rx weight</option></select></div>
           <div class="field" data-for="f rx"><label for="wb-${p.L}">Based on their</label><select id="wb-${p.L}" data-b>${BASE_OPTS.map(([k, n]) => `<option value="${k}"${(l.b || 'squat') === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
           <div class="field" data-for="f"><label for="wf-${p.L}">Percent</label><input id="wf-${p.L}" data-f type="number" inputmode="numeric" min="1" max="150" value="${l.f ? Math.round(l.f * 100) : ''}" placeholder="75"></div>
-          <div class="field" data-for="rx"><label for="wr0-${p.L}">Rx lb</label><input id="wr0-${p.L}" data-rx0 type="number" inputmode="numeric" min="1" max="1499" value="${l.rx ? l.rx[0] : ''}" placeholder="135"></div>
-          <div class="field" data-for="rx"><label for="wr1-${p.L}">Rx+ lb</label><input id="wr1-${p.L}" data-rx1 type="number" inputmode="numeric" min="1" max="1499" value="${l.rx && l.rx[1] !== l.rx[0] ? l.rx[1] : ''}" placeholder="optional"></div>
+          ${[['rx0', 'Rx men', l.rx && l.rx[0], '95'], ['rxw0', 'Rx women', l.rxw && l.rxw[0], '65'], ['rx1', 'Rx+ men', l.rx && l.rx[1] !== l.rx[0] && l.rx[1], 'optional'], ['rxw1', 'Rx+ women', l.rxw && l.rxw[1] !== l.rxw[0] && l.rxw[1], 'optional']]
+            .map(([k, t, v, ph]) => `<div class="field" data-for="rx"><label for="w${k}-${p.L}">${t} lb</label><input id="w${k}-${p.L}" data-${k} type="number" inputmode="numeric" min="1" max="1499" value="${v || ''}" placeholder="${ph}"></div>`).join('')}
           <p class="hint" data-prev></p>
         </div>`}
       </article>`;
     };
     const dest = dsi ? '/week/' + day + (S.me.gym_id ? '?src=dsi' : '') : '/week/' + day;
     if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>${w ? 'Edit the' : 'Post the'} <span>workout</span></h2>
-        <p class="secSub">Part A is the warmup and is never logged. Parts B, C and D can each log one weight. Everyone is assumed to do all the reps.</p></div>
+        <p class="secSub">Part A is the warmup and is never logged. Parts B, C and D can each log a weight, a time, or both. Everyone is assumed to do all the reps.</p></div>
         <div class="row"><a class="btn ghost sm" href="/wod/${gid}?day=${addDays(day, -1)}">← Day before</a><input type="date" id="wd-day" value="${day}" aria-label="Pick a day" style="max-width:170px"><a class="btn ghost sm" href="/wod/${gid}?day=${addDays(day, 1)}">Next day →</a></div></div></section>
       <section class="sec"><form id="wodF" class="wodEd">
         <div class="field"><label for="wd-t">Title</label><input id="wd-t" maxlength="80" value="${esc((w && w.title) || '')}" placeholder="Front squat + Grace"></div>
         ${old ? '<p class="hint" style="color:var(--flat)">This day still has the old lift list. Saving switches it to Parts, so pick the weight each part logs.</p>' : ''}
         <div class="wodGrid">${ps.map(box).join('')}</div>
-        <button type="button" class="btn ghost sm" id="addD"${ps[3].text || ps[3].lift ? ' hidden' : ''}>+ Add Part D</button>
+        <button type="button" class="btn ghost sm" id="addD"${ps[3].text || ps[3].lift || ps[3].time ? ' hidden' : ''}>+ Add Part D</button>
         <div class="row" style="margin-top:16px"><button class="btn" type="submit">${w ? 'Save changes' : 'Post the workout'}</button><a class="btn ghost" href="${dest}">See it on the week</a>${dsi ? '' : `<a class="btn ghost" href="/results/${gid}?day=${day}">Enter results</a><a class="btn ghost" href="/tv/${gid}" target="_blank">Big screen</a>`}<span class="hint" id="wd-msg">${nLogs ? `${nLogs} logged already. Their weights stay with each part letter.` : ''}</span></div>
       </form></section>`)) return;
     $('#wd-day').onchange = e => { if (e.target.value) go(`/wod/${gid}?day=${e.target.value}`); };
@@ -174,7 +196,15 @@ export function install(X) {
       const l = { id: L.toLowerCase(), part: L, n, sch: $('[data-sch]', a).value.trim() };
       const bn = (BASE_OPTS.find(x => x[0] === b) || [, ''])[1].toLowerCase();
       if (tt === 'f') { const f = +$('[data-f]', a).value; if (f > 0) { l.b = b; l.f = Math.round(f) / 100; l.why = `${Math.round(f)}% of your ${bn}`; } }
-      if (tt === 'rx') { const r0 = +$('[data-rx0]', a).value, r1 = +$('[data-rx1]', a).value; if (r0 > 0) { l.b = b; l.rx = [r0, r1 > r0 ? r1 : r0]; l.why = `${r0} Rx${r1 > r0 ? `, ${r1} Rx+ once your ${bn} is strong enough` : ''}`; } }
+      if (tt === 'rx') {
+        const r0 = +$('[data-rx0]', a).value, r1 = +$('[data-rx1]', a).value, w0 = +$('[data-rxw0]', a).value, w1 = +$('[data-rxw1]', a).value;
+        if (r0 > 0) {
+          l.b = b; l.rx = [r0, r1 > r0 ? r1 : r0];
+          if (w0 > 0) l.rxw = [w0, w1 > w0 ? w1 : w0];
+          const pair = (m, w) => (w ? `${m}/${w}` : `${m}`);
+          l.why = `${pair(r0, w0 || 0)} Rx${r1 > r0 ? `, ${pair(r1, w1 > w0 ? w1 : 0)} Rx+ once your ${bn} is strong enough` : ''}`;
+        }
+      }
       if (!l.why) l.why = 'Log the weight you used';
       if (prev.max) l.max = true;
       return l;
@@ -187,7 +217,7 @@ export function install(X) {
     });
     const dBox = $('.wodPart[data-p="D"]');
     $('#addD').onclick = e => { dBox.hidden = false; e.target.hidden = true; $('[data-text]', dBox).focus(); };
-    $('[data-rmd]', dBox).onclick = () => { dBox.hidden = true; $('#addD').hidden = false; $('[data-text]', dBox).value = ''; $('[data-name]', dBox).value = ''; const t = $('[data-trk]', dBox); t.checked = false; t.dispatchEvent(new Event('change')); };
+    $('[data-rmd]', dBox).onclick = () => { dBox.hidden = true; $('#addD').hidden = false; $('[data-text]', dBox).value = ''; $('[data-name]', dBox).value = ''; $('[data-time]', dBox).checked = false; const t = $('[data-trk]', dBox); t.checked = false; t.dispatchEvent(new Event('change')); };
     $('#wodF').onsubmit = async e => {
       e.preventDefault();
       const msg = $('#wd-msg'), sections = [], lifts = [];
@@ -195,7 +225,8 @@ export function install(X) {
         if (a.hidden) continue;
         const L = a.dataset.p, text = $('[data-text]', a).value.trim(), name = $('[data-name]', a).value.trim(), l = build(a);
         if (l && !l.n) { msg.textContent = `Part ${L} logs a weight. Name the movement.`; $('[data-n]', a).focus(); return; }
-        if (text || l) sections.push({ part: L, name: name || PH[L], text });
+        const tm = !!($('[data-time]', a) || {}).checked;
+        if (text || l || tm) sections.push(tm ? { part: L, name: name || PH[L], text, time: true } : { part: L, name: name || PH[L], text });
         if (l) lifts.push(l);
       }
       if (!sections.length) { msg.textContent = 'Write at least one part.'; return; }
@@ -217,24 +248,36 @@ export function install(X) {
     const nav = `<div class="row"><a class="btn ghost sm" href="/results/${gid}?day=${addDays(day, -1)}">← Day before</a>${day !== today() ? `<a class="btn ghost sm" href="/results/${gid}">Today</a>` : ''}<a class="btn ghost sm" href="/results/${gid}?day=${addDays(day, 1)}">Next day →</a></div>`;
     if (!w || w.gym_id !== gid) return paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>Enter <span>results</span></h2></div>${nav}</div>
       <div class="prEmpty"><b>${esc(g.name)} has no workout posted for this day</b><p>Results go on your own gym's workout. Post it first.</p><p><a class="btn" href="/wod/${gid}?day=${day}">Post the workout</a></p></div></section>`);
-    const lifts = w.lifts || [], logOf = id => logs.find(l => l.profile_id === id);
-    if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>${esc(w.title)}</h2><p class="secSub">Type the weight each member used. Blank means they did not do it. Targets show in grey.</p><p><a class="btn ghost sm" href="/wod/${gid}?day=${day}">Edit this workout</a></p></div>${nav}</div>
-      <form id="rsF"><div class="board"><div class="tablewrap"><table class="wkT rsT"><thead><tr><th>Member</th>${lifts.map(l => `<th class="r">${esc(liftLabel(l))}<div class="sub">${esc(l.sch)}</div></th>`).join('')}${w.score_label ? `<th class="r">${esc(w.score_label)}</th>` : ''}</tr></thead><tbody>
+    const its = items(w), logOf = id => logs.find(l => l.profile_id === id);
+    const inp = (it, m, ent, r) => it.kind === 't'
+      ? `<input class="wkIn wkTime" inputmode="numeric" maxlength="8" data-l="${esc(it.key)}" data-kind="t" value="${esc(fmtT(ent[it.key]))}" placeholder="m:ss" aria-label="${esc(m.display_name + ' ' + it.label)}">`
+      : `<input class="wkIn" type="number" inputmode="decimal" step="any" min="0" max="1499" data-l="${esc(it.key)}" value="${esc(ent[it.key] ?? '')}" placeholder="${D.target(it.lift, r) || ''}" aria-label="${esc(m.display_name + ' ' + it.label)}">`;
+    if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>${esc(w.title)}</h2><p class="secSub">Type the weight each member used and their time where a part is timed (like 8:45). Blank means they did not do it. Targets show in grey.</p><p><a class="btn ghost sm" href="/wod/${gid}?day=${day}">Edit this workout</a></p></div>${nav}</div>
+      <form id="rsF"><div class="board"><div class="tablewrap"><table class="wkT rsT"><thead><tr><th>Member</th>${its.map(it => `<th class="r">${esc(it.label)}<div class="sub">${esc(it.sch || (it.kind === 't' ? 'm:ss' : ''))}</div></th>`).join('')}${w.score_label ? `<th class="r">${esc(w.score_label)}</th>` : ''}</tr></thead><tbody>
       ${members.map(m => { const lg = logOf(m.id), ent = (lg && lg.entries) || {}, r = rowOf(m); return `<tr data-pid="${m.id}"><td><b>${esc(m.display_name)}</b>${lg ? ' <span class="pill up">Logged</span>' : ''}</td>
-        ${lifts.map(l => { const t = D.target(l, r); return `<td class="r"><input class="wkIn" type="number" inputmode="decimal" step="any" min="0" max="1499" data-l="${esc(l.id)}" value="${esc(ent[l.id] ?? '')}" placeholder="${t || ''}" aria-label="${esc(m.display_name + ' ' + l.n)}"></td>`; }).join('')}
-        ${w.score_label ? `<td class="r"><input class="wkIn wkScore" maxlength="40" data-score value="${esc((lg && lg.score) || '')}" placeholder="${w.score_type === 'time' ? '12:34' : ''}" aria-label="${esc(m.display_name + ' ' + w.score_label)}"></td>` : ''}</tr>`; }).join('') || `<tr><td class="empty" colspan="${lifts.length + 2}">No members yet. Members pick ${esc(g.name)} on the Gym league page.</td></tr>`}
+        ${its.map(it => `<td class="r">${inp(it, m, ent, r)}</td>`).join('')}
+        ${w.score_label ? `<td class="r"><input class="wkIn wkScore" maxlength="40" data-score value="${esc((lg && lg.score) || '')}" placeholder="${w.score_type === 'time' ? '12:34' : ''}" aria-label="${esc(m.display_name + ' ' + w.score_label)}"></td>` : ''}</tr>`; }).join('') || `<tr><td class="empty" colspan="${its.length + 2}">No members yet. Members pick ${esc(g.name)} on the Gym league page.</td></tr>`}
       </tbody></table></div></div>
-      <div class="row" style="margin-top:14px"><button class="btn" type="submit">Save results</button><a class="btn ghost" href="/tv/${gid}" target="_blank">Big screen</a><span class="hint" id="rs-msg"></span></div></form></section>`)) return;
+      <div class="row" style="margin-top:14px"><button class="btn" type="submit">Save results</button><a class="btn ghost" href="/tv/${g.slug || gid}" target="_blank">Big screen</a><span class="hint" id="rs-msg"></span></div></form></section>`)) return;
     $('#rsF').onsubmit = async e => {
       e.preventDefault();
       const msg = $('#rs-msg'), rows = [];
+      let bad = '';
       $$('tr[data-pid]').forEach(tr => {
-        const entries = {}; $$('[data-l]', tr).forEach(i => { const v = i.value.trim(); if (v) entries[i.dataset.l] = Math.max(0, Math.min(1499, Math.round(+v * 2) / 2 || 0)); });
+        const had = logOf(tr.dataset.pid), entries = { ...((had && had.entries) || {}) };
+        let any = false;
+        $$('[data-l]', tr).forEach(i => {
+          const v = i.value.trim(), k = i.dataset.l;
+          if (!v) { delete entries[k]; return; }
+          const x = i.dataset.kind === 't' ? parseT(v) : Math.max(0, Math.min(1499, Math.round(+v * 2) / 2 || 0));
+          if (i.dataset.kind === 't' && !(x > 0)) { bad = bad || `"${v}" is not a time. Use minutes and seconds, like 8:45.`; return; }
+          entries[k] = x; any = true;
+        });
         const sc = $('[data-score]', tr), score = sc ? sc.value.trim().slice(0, 40) : '';
-        const had = logOf(tr.dataset.pid);
-        if (!Object.keys(entries).length && !score && !had) return;
-        rows.push({ workout_id: w.id, profile_id: tr.dataset.pid, entries: { ...((had && had.entries) || {}), ...entries }, score: score || null, sets: (had && had.sets) || {} });
+        if (!any && !score && !had) return;
+        rows.push({ workout_id: w.id, profile_id: tr.dataset.pid, entries, score: score || null, sets: (had && had.sets) || {} });
       });
+      if (bad) { msg.textContent = bad; return; }
       if (!rows.length) { msg.textContent = 'Nothing to save yet.'; return; }
       msg.textContent = 'Saving…';
       const { error } = await sb.from('workout_logs').upsert(rows, { onConflict: 'workout_id,profile_id' });
@@ -250,9 +293,16 @@ export function install(X) {
   const clearTv = () => { tvTimers.forEach(t => clearInterval(t)); tvTimers = []; };
   const SLIDE_MS = 15000, IDLE_MS = 60000, PER_TARGETS = 12;
   const secsOf = s => { const m = String(s || '').match(/^(\d+):(\d{1,2})$/); return m ? +m[1] * 60 + +m[2] : null; };
+  // Parts days rank by the first thing logged (fastest time or heaviest weight); older days keep their score rules.
   function ranked(w, logs) {
+    const live = logs.filter(l => l.status !== 'struck');
+    if (isParts(w)) {
+      const it = rankKey(w); if (!it) return live;
+      const v = l => num((l.entries || {})[it.key]);
+      return live.sort((a, b) => (it.kind === 't' ? (v(a) || 1e9) - (v(b) || 1e9) : v(b) - v(a)));
+    }
     const lifts = (w && w.lifts) || [], key = (lifts.find(l => l.max) || lifts[0] || {}).id, isT = w && w.score_type === 'time';
-    return logs.filter(l => l.status !== 'struck').sort((a, b) => {
+    return live.sort((a, b) => {
       if (isT) { const x = secsOf(a.score), y = secsOf(b.score); if (x != null || y != null) return (x ?? 1e9) - (y ?? 1e9); }
       const sa = parseFloat(String(a.score || '').replace(/[^0-9.]/g, '')), sb2 = parseFloat(String(b.score || '').replace(/[^0-9.]/g, ''));
       if (!isNaN(sa) || !isNaN(sb2)) return (isNaN(sb2) ? -1 : sb2) - (isNaN(sa) ? -1 : sa);
@@ -292,7 +342,7 @@ export function install(X) {
       const head = (k, t) => `<header class="tvHead"><div class="tvGym"><img src="/assets/mark.svg" alt="DSI" class="tvLogo"><div><b>${esc(g.name)}</b><span>${esc(k)}</span></div></div><div class="tvTitle">${t}</div><div class="tvClock">${clock()}</div></header>`;
       // 1. Workout of the day
       out.push(`${head(fmtDW(today()), 'Workout of the <em>day</em>')}<div class="tvBody tvWodS">
-        ${w ? `<h1>${esc(w.title)}</h1><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${p.lift ? `<span class="tvLog">Log your ${esc(p.lift.n)} weight</span>` : ''}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
+        ${w ? `<h1>${esc(w.title)}</h1><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${p.lift || p.time ? `<span class="tvLog">Log your ${[p.lift ? esc(p.lift.n) + ' weight' : '', p.time ? 'time' : ''].filter(Boolean).join(' and ')}</span>` : ''}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
         : `<h1>Rest or not posted</h1><p class="tvEmpty">Coaches post the day at dandystrength.com/gym/${esc(g.id)}</p>`}</div>`);
       // 2. Today's targets (one screen per 12 members)
       const lifts = (w && w.lifts) || [];
@@ -307,9 +357,9 @@ export function install(X) {
         }
       }
       // 3. Live day board
-      const board = (wk, lg, n) => { const ls = ((wk && wk.lifts) || []).filter(l => l.part !== 'D' || lg.some(x => num((x.entries || {})[l.id]))), show = ls.slice(0, 3), rk = ranked(wk, lg).slice(0, n);
-        return rk.length ? `<table class="tvT tvBig tvRank"><thead><tr><th>#</th><th>Lifter</th>${show.map(l => `<th>${esc(liftLabel(l))}</th>`).join('')}${wk && wk.score_label ? `<th>${esc(wk.score_label)}</th>` : ''}</tr></thead><tbody>
-          ${rk.map((l, i) => `<tr class="${i === 0 ? 'top' : ''}"><td>${i + 1}</td><td>${esc(nameOf(l.profile_id))}</td>${show.map(x => `<td>${num((l.entries || {})[x.id]) || '·'}</td>`).join('')}${wk && wk.score_label ? `<td class="sc">${esc(l.score || '·')}</td>` : ''}</tr>`).join('')}</tbody></table>`
+      const board = (wk, lg, n) => { const show = boardItems(wk, lg).slice(0, 4), rk = ranked(wk, lg).slice(0, n);
+        return rk.length ? `<table class="tvT tvBig tvRank"><thead><tr><th>#</th><th>Lifter</th>${show.map(it => `<th>${esc(it.label)}</th>`).join('')}${wk && wk.score_label ? `<th>${esc(wk.score_label)}</th>` : ''}</tr></thead><tbody>
+          ${rk.map((l, i) => `<tr class="${i === 0 ? 'top' : ''}"><td>${i + 1}</td><td>${esc(nameOf(l.profile_id))}</td>${show.map(it => `<td${it.kind === 't' ? ' class="sc"' : ''}>${cell(it, (l.entries || {})[it.key]) || '·'}</td>`).join('')}${wk && wk.score_label ? `<td class="sc">${esc(l.score || '·')}</td>` : ''}</tr>`).join('')}</tbody></table>`
           : '<p class="tvEmpty">Nobody has logged yet. Be first.</p>'; };
       out.push(`${head(fmtDW(today()), `Today's <em>board</em>`)}<div class="tvBody">${w ? `<div class="tvSub">${esc(w.title)} · ${logs.length} of ${members.length} logged</div>` : ''}${board(w, logs, 12)}</div>`);
       // 4. Yesterday's results

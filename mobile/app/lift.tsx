@@ -46,7 +46,7 @@ export default function LiftFocus() {
         sb.from('workout_logs').select('*').eq('workout_id', wid).eq('profile_id', me.id).maybeSingle(),
       ]);
       const L = (w?.lifts ?? []).find((x: any) => x.id === lid);
-      const mine = board.find(b => b.profile_id === me.id) ?? { bw: Number(me.bodyweight) || 200, bench: 0, squat: 0, dead: 0, clean: 0 };
+      const mine = board.find(b => b.profile_id === me.id) ?? { bw: Number(me.bodyweight) || 200, sex: me.sex, bench: 0, squat: 0, dead: 0, clean: 0 };
       const t = L ? target(L, mine) : 0;
       setLift(L); setTitle(w?.title ?? ''); setTgt(t); setLog(l);
       const saved = l?.sets?.[lid as string];

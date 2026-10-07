@@ -336,7 +336,7 @@ export function install(X) {
     if (!isPro()) return proWall(tok, 'Set by set <span>logging</span>', 'Log every set with weight and reps, with a rest timer between sets. Part of DSI Pro.');
     const [w, board, log] = await Promise.all([sb.from('workouts').select('*').eq('id', wid).single().then(must), loadBoard(), sb.from('workout_logs').select('*').eq('workout_id', wid).eq('profile_id', S.me.id).maybeSingle().then(must)]);
     const L = (w.lifts || []).find(x => x.id === lid); if (!L) throw new Error('That lift is not in this workout.');
-    const meRow = boardRow(S.me.id) || { bw: num(S.me.bodyweight), bench: 0, squat: 0, dead: 0, clean: 0 };
+    const meRow = boardRow(S.me.id) || { bw: num(S.me.bodyweight), sex: S.me.sex, bench: 0, squat: 0, dead: 0, clean: 0 };
     const tgt = D.target(L, meRow);
     const saved = log && log.sets && log.sets[lid];
     let sets = saved && saved.length ? saved.map(x => ({ w: x.w, r: x.r, done: true })) : Array.from({ length: scheme(L.sch).n }, () => ({ w: tgt || '', r: scheme(L.sch).r, done: false }));

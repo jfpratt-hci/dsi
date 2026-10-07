@@ -75,8 +75,10 @@ export function target(l, p) {
     return base >= 185 ? f[1] : f[0];
   }
   if (l.rx) {
-    if (l.f2) return base >= 270 ? l.rx[1] : l.rx[0];
-    return base * 0.7 >= l.rx[1] ? l.rx[1] : base * 0.7 >= l.rx[0] ? l.rx[0] : r5(base * 0.6);
+    // rx is the men's [Rx, Rx+]; rxw is the women's [Rx, Rx+] when the coach set one.
+    const rx = p.sex === 'female' && l.rxw && l.rxw.length ? l.rxw : l.rx;
+    if (l.f2) return base >= 270 ? rx[1] : rx[0];
+    return base * 0.7 >= rx[1] ? rx[1] : base * 0.7 >= rx[0] ? rx[0] : r5(base * 0.6);
   }
   if (!base) return 0;
   return r5(base * l.f + (l.plus || 0));

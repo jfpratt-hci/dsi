@@ -41,7 +41,7 @@ export default function Week() {
 
   const w = useMemo(() => wks?.find(x => x.day === day), [wks, day]);
   const mine = me ? board.find(b => b.profile_id === me.id) ?? null : null;
-  const base = mine ?? { bw: Number(me?.bodyweight) || 200, bench: 0, squat: 0, dead: 0, clean: 0 };
+  const base = mine ?? { bw: Number(me?.bodyweight) || 200, sex: me?.sex, bench: 0, squat: 0, dead: 0, clean: 0 };
 
   // Everyone's logs for the day (the day board) and my own entries
   const loadLogs = useCallback(async () => {

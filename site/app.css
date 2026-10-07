@@ -583,3 +583,10 @@ main.wrap>.tvDots{padding:0;margin:0;left:auto}
 .adStaff{display:grid;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
 @media (max-width:1000px){.adStats{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:560px){.adStats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.wodTog{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.wodTog>span{width:100%;font:600 11px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.tog{position:relative;cursor:pointer}
+.tog input{position:absolute;opacity:0;width:1px;height:1px}
+.tog span{display:inline-block;padding:7px 14px;border:1px solid var(--line);border-radius:999px;font:700 13px var(--sans);color:var(--muted)}
+.tog input:checked+span{background:var(--accent);border-color:var(--accent);color:#111}
+.tog input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
