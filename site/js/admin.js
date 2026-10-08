@@ -16,7 +16,7 @@ export function install(X) {
     if (!S.me) return needLogin(tok, 'manage DSI');
     if (!isAdmin()) return paint(tok, '<section class="prEmpty"><b>Founder only</b><p>The management dashboard is for the DSI Founder.</p></section>');
     const qs = new URLSearchParams(location.search), tab = ['members', 'gyms', 'requests'].includes(qs.get('tab')) ? qs.get('tab') : 'members';
-    const [profiles, gyms, staff, claims, reps, prots, ws] = await Promise.all([
+    const [profiles, gyms, staff, claims, reps, prots, ws, , leadsR] = await Promise.all([
       sb.from('profiles').select('*').order('created_at', { ascending: false }).then(must),
       sb.from('gyms').select('*').order('name').then(must),
       sb.from('gym_staff').select('gym_id,profile_id,role').then(must),
@@ -25,7 +25,9 @@ export function install(X) {
       sb.from('protests').select('id', { count: 'exact', head: true }).eq('status', 'open'),
       sb.from('workouts').select('gym_id,day').not('gym_id', 'is', null).order('day', { ascending: false }).limit(500).then(must),
       loadBoard(),
+      sb.from('gym_leads').select('*').order('created_at', { ascending: false }).limit(200),
     ]);
+    const leads = (leadsR && leadsR.data) || [], newLeads = leads.filter(l => l.status === 'new').length;
     const byId = new Map(profiles.map(p => [p.id, p])), gymBy = new Map(gyms.map(g => [g.id, g]));
     const nm = id => (byId.get(id) || {}).display_name || 'Unfinished signup';
     const scoreOf = id => (S.board.find(r => r.profile_id === id) || {}).score || 0;
@@ -34,11 +36,11 @@ export function install(X) {
       ['Members', profiles.filter(p => p.display_name).length, `${profiles.filter(p => Date.parse(p.created_at) > weekAgo).length} new this week`],
       ['DSI Pro', profiles.filter(proOn).length, 'paid or given'],
       ['Gyms', gyms.length, `${gyms.filter(g => staff.some(s => s.gym_id === g.id && s.role === 'owner')).length} with an owner`],
-      ['Gym requests', claims.length, claims.length ? 'waiting on you' : 'all clear'],
+      ['Gym requests', claims.length + newLeads, claims.length + newLeads ? 'waiting on you' : 'all clear'],
       ['Open reports', reps.count || 0, 'answer within 24 hours'],
       ['Open protests', prots.count || 0, "the Commissioner's court"],
     ];
-    const tabs = [['members', 'Members'], ['gyms', 'Gyms'], ['requests', `Requests${claims.length ? ' · ' + claims.length : ''}`]];
+    const tabs = [['members', 'Members'], ['gyms', 'Gyms'], ['requests', `Requests${claims.length + newLeads ? ' · ' + (claims.length + newLeads) : ''}`]];
 
     let body = '';
     if (tab === 'members') {
@@ -69,7 +71,10 @@ export function install(X) {
           <div class="field w2"><label for="ng-o">Owner (optional)</label><select id="ng-o"><option value="">No owner yet</option>${named.map(p => `<option value="${p.id}">${esc(p.display_name)}</option>`).join('')}</select></div></div>
           <div class="row"><button class="btn">Create gym</button><span class="hint" id="ng-msg"></span></div></form>`;
     } else {
-      body = `<h3>Gym owner <span>requests</span></h3><div class="board"><div class="tablewrap"><table class="adT"><thead><tr><th>Lifter</th><th>Gym</th><th>Their note</th><th>Asked</th><th></th></tr></thead><tbody>
+      body = `<h3>New <span>gym leads</span></h3><p class="secSub">Owners who asked to come aboard from the Bring your gym page.</p><div class="board"><div class="tablewrap"><table class="adT"><thead><tr><th>Gym</th><th>Contact</th><th class="r">Members</th><th>Uses now</th><th>Plan</th><th>Note</th><th>Asked</th><th>Status</th></tr></thead><tbody>
+        ${leads.map(l => `<tr><td><b>${esc(l.gym_name)}</b><div class="sub">${esc(l.city || '')}</div></td><td>${esc(l.contact_name)}<div class="sub"><a href="mailto:${esc(l.email)}">${esc(l.email)}</a>${l.phone ? ' ' + esc(l.phone) : ''}</div></td><td class="r n">${l.members ?? ''}</td><td>${esc(l.current_software || '')}</td><td>${esc(l.tier || '')}</td><td>${esc(l.note || '')}</td><td>${esc(day(l.created_at))}</td><td><select data-lead="${l.id}" aria-label="Status for ${esc(l.gym_name)}">${['new', 'contacted', 'won', 'lost'].map(v => `<option${v === l.status ? ' selected' : ''}>${v}</option>`).join('')}</select></td></tr>`).join('') || '<tr><td colspan="8" class="empty">No leads yet. They arrive from dandystrength.com/start.</td></tr>'}
+        </tbody></table></div></div>
+        <h3 style="margin-top:28px">Gym owner <span>requests</span></h3><div class="board"><div class="tablewrap"><table class="adT"><thead><tr><th>Lifter</th><th>Gym</th><th>Their note</th><th>Asked</th><th></th></tr></thead><tbody>
         ${claims.map(c => `<tr><td><a href="/u/${c.profile_id}">${esc(nm(c.profile_id))}</a></td><td><a href="/gyms/${c.gym_id}">${esc((gymBy.get(c.gym_id) || {}).name || '')}</a></td><td>${esc(c.note || '')}</td><td>${esc(day(c.created_at))}</td><td class="r"><button class="btn sm" data-cl="${c.id}" data-ok="1">Approve</button> <button class="btn ghost sm" data-cl="${c.id}">Decline</button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">No requests waiting.</td></tr>'}
         </tbody></table></div></div>
         <div class="tools" style="margin-top:20px"><a class="tool" href="/reports"><b>Reports · ${reps.count || 0} open</b><span>Chat and profile reports. Answer within 24 hours.</span></a><a class="tool" href="/protests"><b>Protests · ${prots.count || 0} open</b><span>Lifts and logs under protest.</span></a></div>`;
@@ -161,6 +166,7 @@ export function install(X) {
     }
 
     if (tab === 'requests') {
+      $$('[data-lead]').forEach(sel => sel.onchange = async () => { const { error } = await sb.from('gym_leads').update({ status: sel.value }).eq('id', sel.dataset.lead); toast(error ? error.message : 'Lead updated'); });
       $$('[data-cl]').forEach(b => b.onclick = async () => {
         const { error } = await sb.rpc('decide_gym_claim', { p_id: b.dataset.cl, p_approve: !!b.dataset.ok });
         if (error) return toast(error.message);

@@ -112,7 +112,7 @@ export default function Me() {
         <Row label="Sign out" onPress={signOut} />
         <Row label="Delete account" danger onPress={deleteAccount} />
       </Group>
-      <Muted style={{ textAlign: 'center', fontSize: 12 }}>Dandy Strength Index™ · For bragging rights, not medical or training advice.</Muted>
+      <Muted style={{ textAlign: 'center', fontSize: 12 }}>Dandy Strength™ · For bragging rights, not medical or training advice.</Muted>
     </Screen>
   );
 }

@@ -339,7 +339,7 @@ export function install(X) {
     const screens = () => {
       const { g, w, logs, members, rowOf, lb, prs, q, battles, by, yday, from30 } = st;
       const out = [];
-      const head = (k, t) => `<header class="tvHead"><div class="tvGym"><img src="/assets/mark.svg" alt="DSI" class="tvLogo"><div><b>${esc(g.name)}</b><span>${esc(k)}</span></div></div><div class="tvTitle">${t}</div><div class="tvClock">${clock()}</div></header>`;
+      const head = (k, t) => `<header class="tvHead"><div class="tvGym"><img src="/assets/mark.svg" alt="Dandy Strength" class="tvLogo"><div><b>${esc(g.name)}</b><span>${esc(k)}</span></div></div><div class="tvTitle">${t}</div><div class="tvClock">${clock()}</div></header>`;
       // 1. Workout of the day
       out.push(`${head(fmtDW(today()), 'Workout of the <em>day</em>')}<div class="tvBody tvWodS">
         ${w ? `<h1>${esc(w.title)}</h1><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`

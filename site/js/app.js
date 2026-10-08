@@ -5,6 +5,7 @@ import { install as installGym } from './gym.js';
 import { install as installAdmin } from './admin.js';
 import { install as installClub } from './club.js';
 import { install as installPlan } from './plan.js';
+import { install as installHome } from './home.js';
 
 /* ---------- helpers ---------- */
 const $ = (s, el = document) => el.querySelector(s);
@@ -83,7 +84,7 @@ const officeHref = (gid, k) => k === 'plan' ? `/plan/${gid}` : k === 'wod' ? `/w
 function navGroups() {
   const me = S.me && S.me.display_name ? S.me : null, pro = isPro(), P = pro ? '' : 'Pro. ';
   const g = [
-    { k: 'boards', n: 'Boards', sections: [{ h: 'Rankings', items: [['/', 'Leaderboard', 'Every lifter ranked by DSI'], ['/prs', 'PR wall', 'The newest personal records'], ['/benchmarks', 'Benchmarks', 'How strong is strong'], ['/gyms', 'Gym league', 'Gyms ranked head to head']] },
+    { k: 'boards', n: 'Boards', sections: [{ h: 'Rankings', items: [['/boards', 'Leaderboard', 'Every lifter ranked by DSI'], ['/prs', 'PR wall', 'The newest personal records'], ['/benchmarks', 'Benchmarks', 'How strong is strong'], ['/gyms', 'Gym league', 'Gyms ranked head to head']] },
       { h: 'Competition', items: [['/compete', 'Compete', 'Seasons, battles and the league'], ['/season', 'This season', 'Standings for the current season'], ['/battles', 'Weekly battles', 'One lift, one week, one winner'], ['/protests', 'Protests', 'Challenge a lift, vote on it']] }] },
     { k: 'train', n: 'Train', sections: [{ h: 'Every day', items: [['/week', 'The week', 'This week\'s workouts by day'], ...(me && me.gym_id ? [['/classes', 'Book a class', 'Reserve your spot']] : []), ['/log', 'Log a lift', 'Add a set and update your DSI'], ['/plates', 'Plate calculator', 'What to put on the bar']] },
       { h: 'Get better', items: [['/progress', 'Progress', P + 'Charts for every lift'], ['/plans', 'Goal plans', P + 'A plan to hit your next number'], ['/coach', 'Coach', P + 'Ask about your training'], ...(me ? [['/import', 'Import history', 'Bring in your old lifts']] : [])] }] },
@@ -99,7 +100,7 @@ function navGroups() {
   if (me && (me.role === 'admin' || me.role === 'commissioner')) g.push({ k: 'admin', n: 'Admin', sections: [{ h: me.role === 'admin' ? 'Management' : 'Commissioner', items: [...(me.role === 'admin' ? [['/admin', 'Management dashboard', 'Members, gyms and stats'], ['/admin?tab=gyms', 'All gyms', 'Edit gyms and open any office'], ['/admin?tab=requests', 'Requests', 'Gym claims and approvals']] : []), ['/reports', 'Reports', 'Flagged lifts and people'], ['/protests', 'Protest court', 'Rule on protested lifts'], ['/program', 'Import workouts', 'Load a program for a gym']] }] });
   return g;
 }
-const ROUTE_GROUP = { '': 'boards', prs: 'boards', pr: 'boards', compete: 'boards', season: 'boards', battles: 'boards', gyms: 'boards', benchmarks: 'boards', protests: 'boards', recap: 'boards', u: 'boards',
+const ROUTE_GROUP = { '': 'home', pricing: 'home', start: 'home', boards: 'boards', prs: 'boards', pr: 'boards', compete: 'boards', season: 'boards', battles: 'boards', gyms: 'boards', benchmarks: 'boards', protests: 'boards', recap: 'boards', u: 'boards',
   week: 'train', log: 'train', progress: 'train', plans: 'train', coach: 'train', plates: 'train', import: 'train', lift: 'train', chat: 'chat', classes: 'mygym', mygym: 'mygym', billing: 'mygym', sign: 'mygym', signed: 'mygym',
   club: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office', admin: 'admin', reports: 'admin', program: 'admin', me: 'me', pro: 'me', rules: 'me', blocked: 'me' };
 const ACCT = () => [['/me', 'Profile', 'Name, gym and lifter details'], ['/me?tab=goals', 'Goals', 'What you are chasing'], ['/me?tab=reminders', 'Reminders', 'Nudges to log'], ['/me?tab=account', 'Account and safety', 'Email, privacy and blocks'], ['/u/' + S.me.id, 'My lifter card', 'Your public page'], ['/pro', 'DSI Pro', 'Membership and perks']];
@@ -179,7 +180,7 @@ async function route() {
     await VIEWS[r](parts[1], tok);
   } catch (e) {
     console.error(e);
-    if (tok === S.tok) main.innerHTML = `<div class="prEmpty"><b>That didn't load</b><p class="err">${esc(e.message || e)}</p><p><a class="btn ghost sm" href="/">Back to the boards</a></p></div>`;
+    if (tok === S.tok) main.innerHTML = `<div class="prEmpty"><b>That didn't load</b><p class="err">${esc(e.message || e)}</p><p><a class="btn ghost sm" href="/boards">Back to the boards</a></p></div>`;
   }
   if (tok === S.tok && document.activeElement === document.body) main.focus({ preventScroll: true });
 }
@@ -221,7 +222,7 @@ function bindActions(root, reload) {
 }
 
 /* ---------- home: boards ---------- */
-VIEWS[''] = async (_, tok) => {
+VIEWS.boards = async (_, tok) => {
   const [board, prs] = await Promise.all([loadBoard(), sb.from('pr_feed').select('*').gte('performed_on', monday(today())).order('created_at', { ascending: false }).limit(60)]);
   const weekPRs = must(prs);
   const top = [...board].sort((a, b) => b.score - a.score)[0];
@@ -1074,7 +1075,7 @@ const CONTACT = 'dandy@dandystrength.com';
 const doc = (kicker, title, updated, body) => `<section class="sec narrow"><div><div class="kicker">${kicker}</div><h2>${title}</h2><p class="secSub">Last updated ${updated}</p></div></section>
   <section class="sec"><div class="doc">${body}</div></section>`;
 VIEWS.privacy = async (_, tok) => paint(tok, doc('Your data', 'Privacy <span>policy</span>', 'September 29, 2026', `
-  <p>The Dandy Strength Index ("DSI") runs dandystrength.com and the DSI apps for iPhone and Android. This policy explains what we collect and why. Questions: <a href="mailto:${CONTACT}">${CONTACT}</a>.</p>
+  <p>Dandy Strength runs dandystrength.com, the Dandy Strength Index ("DSI") and the Dandy Strength apps for iPhone and Android. This policy explains what we collect and why. Questions: <a href="mailto:${CONTACT}">${CONTACT}</a>.</p>
   <h3>What we collect</h3>
   <ul><li><b>Account:</b> your email address, used only to sign you in.</li>
   <li><b>Profile:</b> board name, birth year, bodyweight, sex and division. These score your lifts fairly against lifters your age and size.</li>
@@ -1368,6 +1369,7 @@ installGym(CTX);
 installAdmin(CTX);
 installClub(CTX);
 installPlan(CTX);
+installHome(CTX);
 
 /* ---------- boot ---------- */
 async function boot() {
@@ -1392,7 +1394,7 @@ async function boot() {
       if (ev === 'SIGNED_IN') {
         const had = S.me && S.me.display_name, j = await finishJoin();
         if (j && j.ok) { history.replaceState(null, '', '/u/' + S.me.id); toast('You\'re on the board, ' + S.me.display_name); }
-        else if (/^#access_token/.test(location.hash) || ['/', '/login', '/join'].includes(location.pathname)) history.replaceState(null, '', S.me && !S.me.display_name ? '/join' : '/');
+        else if (/^#access_token/.test(location.hash) || ['/', '/login', '/join'].includes(location.pathname)) history.replaceState(null, '', S.me && !S.me.display_name ? '/join' : '/boards');
         if (!j || !j.ok) toast(had ? 'Welcome back, ' + S.me.display_name : (j && j.error) || 'Signed in');
       }
       route();
