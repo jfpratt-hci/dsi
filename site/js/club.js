@@ -67,7 +67,7 @@ export function install(X) {
   // One tab bar across every gym office page: check in, schedule, workouts, results, members, billing, documents, staff, settings.
   function officeBar(g, active) {
     const owner = isOwner(g.id);
-    const tabs = X.OFFICE.filter(o => !o[2] || owner);
+    const tabs = X.OFFICE.filter(o => !o[3] || owner);
     return `<section class="sec offHead"><div class="secHead"><div><div class="kicker">${esc(g.city || 'Gym')} · Gym office</div><h2>${esc(g.name)}</h2></div>
         <div class="row"><a class="btn ghost sm" href="/tv/${esc(g.slug || g.id)}" target="_blank">Big screen</a><a class="btn ghost sm" href="/gyms/${g.id}">Gym board</a></div></div>
       <nav class="tabs offTabs" aria-label="Gym office">${tabs.map(([k, n]) => `<a class="tab" href="${X.officeHref(g.id, k)}"${k === active ? ' aria-current="page" aria-selected="true"' : ''}>${esc(n)}</a>`).join('')}</nav></section>`;

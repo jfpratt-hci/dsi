@@ -73,52 +73,66 @@ const nameOf = id => (S.people.get(id) || {}).display_name || 'Someone';
 const boardRow = id => S.board.find(r => r.profile_id === id);
 
 /* ---------- navigation ---------- */
-// The top bar is a few grouped menus, built for who is signed in: everyone gets Boards, Train and Chat;
+// The top bar is a mega menu, built for who is signed in: everyone gets Boards, Train and Chat;
 // members of a gym get My gym; owners and coaches get Gym office; the Founder and Commissioners get Admin.
+// Each panel spans the bar with a kicker and a grid of links, each a name and one line. On phones it is a drawer.
 const nav = $('#nav'), menuBtn = $('#menuBtn');
-const OFFICE = [['today', 'Check in'], ['schedule', 'Schedule'], ['wod', 'Workouts'], ['results', 'Results'], ['members', 'Members'], ['billing', 'Billing', 1], ['docs', 'Documents', 1], ['staff', 'Staff'], ['settings', 'Settings']];
+const OFFICE = [['today', 'Check in', 'Today\'s classes and who is here'], ['schedule', 'Schedule', 'Classes, times and coaches'], ['wod', 'Workouts', 'Write the week, Parts A to D'], ['results', 'Results', 'Enter scores for the day'], ['members', 'Members', 'Profiles, waivers and attendance'], ['billing', 'Billing', 'Plans, invoices and payments', 1], ['docs', 'Documents', 'Waiver and membership contract', 1], ['staff', 'Staff', 'Coaches, swaps, hours and pay'], ['settings', 'Settings', 'Gym details and board link']];
 const officeHref = (gid, k) => k === 'wod' ? `/wod/${gid}` : k === 'results' ? `/results/${gid}` : k === 'settings' ? `/gym/${gid}` : `/club/${gid}?tab=${k}`;
 function navGroups() {
-  const me = S.me && S.me.display_name ? S.me : null, pro = isPro();
+  const me = S.me && S.me.display_name ? S.me : null, pro = isPro(), P = pro ? '' : 'Pro. ';
   const g = [
-    { k: 'boards', n: 'Boards', items: [['/', 'Leaderboard'], ['/prs', 'PR wall'], ['/compete', 'Compete'], ['/season', 'This season'], ['/battles', 'Weekly battles'], ['/gyms', 'Gym league'], ['/benchmarks', 'Benchmarks'], ['/protests', 'Protests']] },
-    { k: 'train', n: 'Train', items: [['/week', 'The week'], ...(me && me.gym_id ? [['/classes', 'Book a class']] : []), ['/log', 'Log a lift'], ['/progress', 'Progress charts' + (pro ? '' : ' (Pro)')], ['/plans', 'Goal plans' + (pro ? '' : ' (Pro)')], ['/coach', 'Coach' + (pro ? '' : ' (Pro)')], ['/plates', 'Plate calculator'], ...(me ? [['/import', 'Import history']] : [])] },
+    { k: 'boards', n: 'Boards', sections: [{ h: 'Rankings', items: [['/', 'Leaderboard', 'Every lifter ranked by DSI'], ['/prs', 'PR wall', 'The newest personal records'], ['/benchmarks', 'Benchmarks', 'How strong is strong'], ['/gyms', 'Gym league', 'Gyms ranked head to head']] },
+      { h: 'Competition', items: [['/compete', 'Compete', 'Seasons, battles and the league'], ['/season', 'This season', 'Standings for the current season'], ['/battles', 'Weekly battles', 'One lift, one week, one winner'], ['/protests', 'Protests', 'Challenge a lift, vote on it']] }] },
+    { k: 'train', n: 'Train', sections: [{ h: 'Every day', items: [['/week', 'The week', 'This week\'s workouts by day'], ...(me && me.gym_id ? [['/classes', 'Book a class', 'Reserve your spot']] : []), ['/log', 'Log a lift', 'Add a set and update your DSI'], ['/plates', 'Plate calculator', 'What to put on the bar']] },
+      { h: 'Get better', items: [['/progress', 'Progress', P + 'Charts for every lift'], ['/plans', 'Goal plans', P + 'A plan to hit your next number'], ['/coach', 'Coach', P + 'Ask about your training'], ...(me ? [['/import', 'Import history', 'Bring in your old lifts']] : [])] }] },
     { k: 'chat', n: 'Chat', href: '/chat' },
   ];
-  if (me && me.gym_id) g.push({ k: 'mygym', n: 'My gym', items: [['/mygym', 'Membership and billing'], ['/classes', 'Book a class'], ['/mygym#attendance', 'My attendance'], ['/gyms/' + me.gym_id, 'Gym board']] });
+  if (me && me.gym_id) g.push({ k: 'mygym', n: 'My gym', sections: [{ h: 'Your membership', items: [['/mygym', 'Membership and billing', 'Plan, payments and documents'], ['/classes', 'Book a class', 'Reserve your spot'], ['/mygym#attendance', 'My attendance', 'Every class you have made'], ['/gyms/' + me.gym_id, 'Gym board', 'Your gym\'s lifters and PRs']] }] });
   const gyms = S.myGyms || [];
-  if (gyms.length) g.push({ k: 'office', n: 'Gym office', sections: gyms.map(x => ({ h: gyms.length > 1 ? x.gym.name : null, items: OFFICE.filter(o => !o[2] || x.role === 'owner' || (S.me && S.me.role === 'admin')).map(([k, n]) => [officeHref(x.gym_id, k), n]).concat([[`/tv/${x.gym.slug || x.gym_id}`, 'Big screen', 1]]) })) });
-  if (me && (me.role === 'admin' || me.role === 'commissioner')) g.push({ k: 'admin', n: 'Admin', items: [...(me.role === 'admin' ? [['/admin', 'Management dashboard'], ['/admin?tab=gyms', 'All gyms'], ['/admin?tab=requests', 'Requests']] : []), ['/reports', 'Reports'], ['/protests', 'Protest court'], ['/program', 'Import workouts']] });
+  const offItems = (x, keys) => OFFICE.filter(o => keys.includes(o[0]) && (!o[3] || x.role === 'owner' || (S.me && S.me.role === 'admin'))).map(([k, n, d]) => [officeHref(x.gym_id, k), n, d]);
+  const screen = x => [`/tv/${x.gym.slug || x.gym_id}`, 'Big screen', 'The TV board, opens in a new tab', 1];
+  if (gyms.length === 1) { const x = gyms[0], nm = x.gym.name || 'Gym';
+    g.push({ k: 'office', n: 'Gym office', sections: [{ h: nm + ' · Run the floor', items: [...offItems(x, ['today', 'schedule', 'wod', 'results']), screen(x)] }, { h: 'Run the business', items: offItems(x, ['members', 'billing', 'docs', 'staff', 'settings']) }] }); }
+  else if (gyms.length) g.push({ k: 'office', n: 'Gym office', sections: gyms.map(x => ({ h: (x.gym.name || 'Gym') + ' office', items: [...offItems(x, OFFICE.map(o => o[0])), screen(x)] })) });
+  if (me && (me.role === 'admin' || me.role === 'commissioner')) g.push({ k: 'admin', n: 'Admin', sections: [{ h: me.role === 'admin' ? 'Management' : 'Commissioner', items: [...(me.role === 'admin' ? [['/admin', 'Management dashboard', 'Members, gyms and stats'], ['/admin?tab=gyms', 'All gyms', 'Edit gyms and open any office'], ['/admin?tab=requests', 'Requests', 'Gym claims and approvals']] : []), ['/reports', 'Reports', 'Flagged lifts and people'], ['/protests', 'Protest court', 'Rule on protested lifts'], ['/program', 'Import workouts', 'Load a program for a gym']] }] });
   return g;
 }
 const ROUTE_GROUP = { '': 'boards', prs: 'boards', pr: 'boards', compete: 'boards', season: 'boards', battles: 'boards', gyms: 'boards', benchmarks: 'boards', protests: 'boards', recap: 'boards', u: 'boards',
   week: 'train', log: 'train', progress: 'train', plans: 'train', coach: 'train', plates: 'train', import: 'train', lift: 'train', chat: 'chat', classes: 'mygym', mygym: 'mygym', billing: 'mygym', sign: 'mygym', signed: 'mygym',
   club: 'office', wod: 'office', results: 'office', gym: 'office', admin: 'admin', reports: 'admin', program: 'admin', me: 'me', pro: 'me', rules: 'me', blocked: 'me' };
+const ACCT = () => [['/me', 'Profile', 'Name, gym and lifter details'], ['/me?tab=goals', 'Goals', 'What you are chasing'], ['/me?tab=reminders', 'Reminders', 'Nudges to log'], ['/me?tab=account', 'Account and safety', 'Email, privacy and blocks'], ['/u/' + S.me.id, 'My lifter card', 'Your public page'], ['/pro', 'DSI Pro', 'Membership and perks']];
 function buildNav(r) {
   const groups = navGroups(), cur = ROUTE_GROUP[r] ?? '';
   const here = location.pathname + location.search;
-  const link = ([href, n, ext]) => `<a href="${href}"${ext ? ' target="_blank"' : ''}${href === here || (href === location.pathname && !location.search) ? ' aria-current="page"' : ''}>${esc(n)}</a>`;
-  nav.innerHTML = groups.map(gr => gr.href
+  const isHere = href => href === here || (href === location.pathname && !location.search);
+  const link = ([href, n, d, ext]) => `<a href="${href}"${ext ? ' target="_blank" rel="noopener"' : ''}${isHere(href) ? ' aria-current="page"' : ''}><b>${esc(n)}${ext ? ' <span aria-hidden="true">↗</span>' : ''}</b>${d ? `<span>${esc(d)}</span>` : ''}</a>`;
+  const panel = (gr, wide) => `<div class="nvM" id="nvm-${gr.k}"><div class="nvIn${wide ? ' wide' : ''}">${gr.sections.map(sec => `<section class="nvSec"><h5>${esc(sec.h)}</h5><div class="nvL">${sec.items.map(link).join('')}</div></section>`).join('')}</div></div>`;
+  const me = S.me && S.me.display_name;
+  const acctMobile = me
+    ? `<div class="nvG nvMob" data-g="me"><button type="button" class="nvTop" aria-expanded="false" aria-controls="nvm-me"${cur === 'me' ? ' aria-current="page"' : ''}>${esc(S.me.display_name)}<i aria-hidden="true"></i></button>${panel({ k: 'me', sections: [{ h: 'Your account', items: ACCT() }] })}</div><button type="button" class="nvOut nvMob">Sign out</button>`
+    : `<div class="nvJoin nvMob"><a class="acct" href="/login">Sign in</a><a class="acct in" href="/join">Join free</a></div>`;
+  nav.innerHTML = `<div class="nvBar">${groups.map(gr => gr.href
     ? `<a class="nvTop" href="${gr.href}" data-g="${gr.k}"${cur === gr.k ? ' aria-current="page"' : ''}>${esc(gr.n)}</a>`
-    : `<div class="nvG" data-g="${gr.k}"><button type="button" class="nvTop" aria-expanded="false"${cur === gr.k ? ' aria-current="page"' : ''}>${esc(gr.n)}<i aria-hidden="true"></i></button>
-        <div class="nvM">${(gr.sections || [{ items: gr.items }]).map(sec => `${sec.h ? `<h5>${esc(sec.h)}</h5>` : ''}${sec.items.map(link).join('')}`).join('')}</div></div>`).join('')
-    ;
-  const am = $('#acctNav'), me = S.me && S.me.display_name;
-  am.innerHTML = me ? `<div class="nvG nvMe" data-g="me"><button type="button" class="nvTop acct in" aria-expanded="false"${cur === 'me' ? ' aria-current="page"' : ''}>${esc(S.me.display_name)}<i aria-hidden="true"></i></button><div class="nvM">${[['/me', 'Profile'], ['/me?tab=goals', 'Goals'], ['/me?tab=reminders', 'Reminders'], ['/me?tab=account', 'Account and safety'], ['/u/' + S.me.id, 'My lifter card'], ['/pro', 'DSI Pro membership']].map(link).join('')}<button type="button" class="nvOut">Sign out</button></div></div>` : '';
-  $$('.nvG > button.nvTop', document).forEach(b => b.onclick = e => { e.stopPropagation(); const g = b.parentElement, open = !g.classList.contains('open'); closeMenus(); g.classList.toggle('open', open); b.setAttribute('aria-expanded', String(open)); });
-  const out = $('.nvOut', am); if (out) out.onclick = async () => { await sb.auth.signOut(); go('/'); };
+    : `<div class="nvG" data-g="${gr.k}"><button type="button" class="nvTop" aria-expanded="false" aria-controls="nvm-${gr.k}"${cur === gr.k ? ' aria-current="page"' : ''}>${esc(gr.n)}<i aria-hidden="true"></i></button>${panel(gr, gr.sections.length > 1)}</div>`).join('')}${acctMobile}</div>`;
+  const am = $('#acctNav');
+  am.innerHTML = me ? `<div class="nvG nvMe" data-g="me"><button type="button" class="nvTop acct in" aria-expanded="false" aria-controls="nvm-me2"${cur === 'me' ? ' aria-current="page"' : ''}>${esc(S.me.display_name)}<i aria-hidden="true"></i></button><div class="nvM" id="nvm-me2"><div class="nvIn">${ACCT().map(link).join('')}<button type="button" class="nvOut">Sign out</button></div></div></div>` : '';
+  $$('.nvG > button.nvTop', document).forEach(b => b.onclick = e => { e.stopPropagation(); const g = b.parentElement, open = !g.classList.contains('open'); if (!nav.classList.contains('open') || !g.closest('#nav')) closeMenus(); else closeMenus(g.closest('#nav')); g.classList.toggle('open', open); b.setAttribute('aria-expanded', String(open)); });
+  $$('.nvOut', document).forEach(o => o.onclick = async () => { await sb.auth.signOut(); go('/'); });
 }
-function closeMenus() { $$('.nvG.open').forEach(g => { g.classList.remove('open'); const b = $('button.nvTop', g); if (b) b.setAttribute('aria-expanded', 'false'); }); }
+function closeMenus(scope) { $$('.nvG.open', scope || document).forEach(g => { g.classList.remove('open'); const b = $('button.nvTop', g); if (b) b.setAttribute('aria-expanded', 'false'); }); }
 function setMenu(open) {
   nav.classList.toggle('open', open);
+  document.documentElement.classList.toggle('navLock', open);
   menuBtn.setAttribute('aria-expanded', String(open));
   menuBtn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
-  if (!open) closeMenus();
+  closeMenus();
+  if (open) { const c = nav.querySelector('.nvTop[aria-current="page"]'); const g = c && c.closest('.nvG'); if (g) { g.classList.add('open'); c.setAttribute('aria-expanded', 'true'); } }
 }
 menuBtn.onclick = () => { const open = !nav.classList.contains('open'); setMenu(open); if (open) { const f = nav.querySelector('a,button'); if (f) f.focus(); } };
 nav.addEventListener('click', e => { if (e.target.closest('a')) setMenu(false); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (document.querySelector('.nvG.open')) closeMenus(); else if (nav.classList.contains('open')) { setMenu(false); menuBtn.focus(); } } });
-document.addEventListener('click', e => { if (!e.target.closest('.nvG')) closeMenus(); else if (e.target.closest('.nvM a')) closeMenus(); if (nav.classList.contains('open') && !e.target.closest('.bar')) setMenu(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!nav.classList.contains('open') && document.querySelector('.nvG.open')) { const g = document.querySelector('.nvG.open'); closeMenus(); const b = $('button.nvTop', g); if (b) b.focus(); } else if (nav.classList.contains('open')) { setMenu(false); menuBtn.focus(); } } });
+document.addEventListener('click', e => { if (nav.classList.contains('open')) { if (!e.target.closest('#nav') && !e.target.closest('#menuBtn')) setMenu(false); return; } if (!e.target.closest('.nvG') || e.target.closest('.nvM a')) closeMenus(); });
 matchMedia('(min-width:861px)').addEventListener('change', e => { if (e.matches) setMenu(false); });
 
 function updateChrome(r) {
