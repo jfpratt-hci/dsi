@@ -1,4 +1,5 @@
 // Import workouts from a gym web page or screenshots and return DSI week drafts.
+// Plan mode ({ plan }) builds new programming from a gym's goals: first an outline of the cycle, then one week at a time.
 // Staff and gym coaches only. Nothing is saved here: the page shows the draft and the admin saves it.
 // Needs the secret ANTHROPIC_API_KEY (Supabase dashboard > Edge Functions > Secrets).
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -70,6 +71,68 @@ function pageText(html: string) {
     .replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim().slice(0, 60000);
 }
 
+const OUTLINE = {
+  type: 'object',
+  properties: {
+    name: { type: 'string', description: 'Short name for the cycle, like "Murph Prep" or "10 Week Max Out"' },
+    summary: { type: 'string', description: 'Two or three sentences a coach would read to the gym about what this cycle does and why' },
+    questions: { type: 'array', items: { type: 'string' }, description: 'Up to 3 short questions whose answers would change the plan a lot. Empty when the goals are clear enough.' },
+    phases: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, weeks: { type: 'string', description: 'Like "1-3" or "4"' }, focus: { type: 'string', description: 'One line' } }, required: ['name', 'weeks', 'focus'] } },
+    weeks: { type: 'array', description: 'One entry per week of the cycle, in order', items: { type: 'object', properties: {
+      n: { type: 'number' }, theme: { type: 'string', description: 'A few words' },
+      strength: { type: 'string', description: 'The main lift work this week with sets, reps and percentages, like "Back squat 5x5 at 70%, bench 5x5 at 70%"' },
+      conditioning: { type: 'string', description: 'The conditioning emphasis this week, one line' },
+      test: { type: 'string', description: 'Only if the week has a test, max out or event day, what it is' },
+    }, required: ['n', 'theme', 'strength', 'conditioning'] } },
+  },
+  required: ['name', 'summary', 'phases', 'weeks'],
+};
+
+type Plan = { step: string; goals?: string; gym?: string; length?: string; start?: string; weeks?: number; event?: string; eventName?: string;
+  days?: string[]; minutes?: number; level?: string; equipment?: string[]; lifts?: string[]; style?: string; answers?: string; feedback?: string;
+  outline?: unknown; week?: number; dates?: string[]; prev?: unknown };
+
+function brief(p: Plan) {
+  const l = (k: string, v: unknown) => (v == null || v === '' || (Array.isArray(v) && !v.length) ? '' : `${k}: ${Array.isArray(v) ? v.join(', ') : v}\n`);
+  return `Gym: ${p.gym || 'a CrossFit style gym'}\n` + l('Goals for this period', p.goals) + l('Length', p.length === 'day' ? 'one day' : `${p.weeks} week${p.weeks === 1 ? '' : 's'}`) +
+    l('Starts', p.start) + l('Event or test day', p.event ? `${p.eventName || 'Event'} on ${p.event}` : '') + l('Class days', p.days) + l('Class length in minutes', p.minutes) +
+    l('Members', p.level) + l('Equipment on hand', p.equipment) + l('Main lifts to push', p.lifts) + l('How the gym usually writes a day', p.style) +
+    l("Coach's answers to your questions", p.answers) + l('Changes the coach wants', p.feedback);
+}
+
+const PLAN_RULES = `How DSI programming works: every class day is Part A, B, C and sometimes D. Part A is the warmup and skill, never tracked. Part B is usually strength, Part C conditioning, Part D optional accessory or core.
+Members only log a weight for B, C and D (reps are assumed done), so give each of those parts at most one tracked loaded movement. Use lb.
+Track strength work as a fraction f of one of the four DSI lifts (bench, squat, dead, clean) so every member gets their own target from their PRs. Common fractions: back squat 1.0 of squat, front squat 0.58, overhead squat 0.37, RDL 0.55, sumo deadlift 0.65, strict press 0.45, push press 0.55, power clean 0.85 of clean.
+Conditioning with a barbell or dumbbell uses rx (men's [Rx, Rx+]) and rxw (women's [Rx, Rx+]). Set time true when a part is for time, reps true when it is scored in total reps.
+On a max out or test day set max true on that tracked lift and pr_lift to the lift. Progress sensibly week to week, deload before a test, and keep every day doable in the class length with the listed equipment.`;
+
+async function claude(key: string, system: string, prompt: string, tool: string, desc: string, schema: unknown, max: number) {
+  const ai = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({ model: MODEL, max_tokens: max, system, tools: [{ name: tool, description: desc, input_schema: schema }], tool_choice: { type: 'tool', name: tool }, messages: [{ role: 'user', content: prompt }] }),
+  });
+  const out = await ai.json();
+  if (!ai.ok) return { error: out?.error?.message ?? 'The planner failed. Try again.' };
+  const t = (out.content ?? []).find((c: { type: string }) => c.type === 'tool_use');
+  return t ? { input: t.input } : { error: 'The planner came back empty. Try again.' };
+}
+
+async function planStep(key: string, p: Plan) {
+  const sys = 'You are an experienced CrossFit head coach and strength coach writing group class programming for a gym on the Dandy Strength Index. Programming is safe, scalable, progressive and fun, written the way a coach writes a whiteboard: short and clear.';
+  if (p.step === 'outline') {
+    const r = await claude(key, sys, `${brief(p)}\n${PLAN_RULES}\n\nPlan this cycle. Return the outline with the plan_outline tool: a name, a short summary, phases, and exactly ${p.weeks} weeks. ${p.event ? 'Build toward the event day and taper into it.' : ''} Ask questions only if the answer would change the plan a lot.`, 'plan_outline', 'Return the outline of the cycle', OUTLINE, 6000);
+    return r.error ? { error: r.error } : r.input;
+  }
+  if (p.step === 'week') {
+    const dates = (p.dates ?? []).slice(0, 7);
+    if (!dates.length) return { error: 'No class days in that week.' };
+    const r = await claude(key, sys, `${brief(p)}\nThe approved outline:\n${JSON.stringify(p.outline ?? {})}\n\n${p.prev ? `Last week, for progression:\n${JSON.stringify(p.prev)}\n\n` : ''}${PLAN_RULES}\n\nWrite ${p.length === 'day' ? 'the class' : `week ${p.week}`} now: exactly one day for each of these dates, in order: ${dates.join(', ')}. ${p.event && dates.includes(p.event) ? `${p.event} is the event day (${p.eventName || 'event'}): program the event itself that day.` : ''} Vary the movements and time domains across the week. Return them with the save_days tool.`, 'save_days', 'Return the class days', SCHEMA, 12000);
+    return r.error ? { error: r.error } : r.input;
+  }
+  return { error: 'Unknown plan step.' };
+}
+
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
@@ -86,7 +149,9 @@ Deno.serve(async req => {
     const key = Deno.env.get('ANTHROPIC_API_KEY');
     if (!key) return json({ error: 'The import reader is not switched on yet. Add the ANTHROPIC_API_KEY secret in Supabase.' }, 503);
 
-    const { url, images, start, text } = await req.json();
+    const reqBody = await req.json();
+    if (reqBody.plan) { const r = await planStep(key, reqBody.plan as Plan); return json(r, (r as { error?: string }).error ? 502 : 200); }
+    const { url, images, start, text } = reqBody;
     const content: unknown[] = [];
     if (url) {
       if (!/^https?:\/\//i.test(url)) return json({ error: 'That link should start with http or https.' }, 400);

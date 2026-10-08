@@ -4,6 +4,7 @@ import { install as installExtra } from './extra.js';
 import { install as installGym } from './gym.js';
 import { install as installAdmin } from './admin.js';
 import { install as installClub } from './club.js';
+import { install as installPlan } from './plan.js';
 
 /* ---------- helpers ---------- */
 const $ = (s, el = document) => el.querySelector(s);
@@ -77,8 +78,8 @@ const boardRow = id => S.board.find(r => r.profile_id === id);
 // members of a gym get My gym; owners and coaches get Gym office; the Founder and Commissioners get Admin.
 // Each panel spans the bar with a kicker and a grid of links, each a name and one line. On phones it is a drawer.
 const nav = $('#nav'), menuBtn = $('#menuBtn');
-const OFFICE = [['today', 'Check in', 'Today\'s classes and who is here'], ['schedule', 'Schedule', 'Classes, times and coaches'], ['wod', 'Workouts', 'Write the week, Parts A to D'], ['results', 'Results', 'Enter scores for the day'], ['members', 'Members', 'Profiles, waivers and attendance'], ['billing', 'Billing', 'Plans, invoices and payments', 1], ['docs', 'Documents', 'Waiver and membership contract', 1], ['staff', 'Staff', 'Coaches, swaps, hours and pay'], ['settings', 'Settings', 'Gym details and board link']];
-const officeHref = (gid, k) => k === 'wod' ? `/wod/${gid}` : k === 'results' ? `/results/${gid}` : k === 'settings' ? `/gym/${gid}` : `/club/${gid}?tab=${k}`;
+const OFFICE = [['today', 'Check in', 'Today\'s classes and who is here'], ['schedule', 'Schedule', 'Classes, times and coaches'], ['wod', 'Workouts', 'Write the week, Parts A to D'], ['results', 'Results', 'Enter scores for the day'], ['plan', 'Plan builder', 'AI cycles from a day to a quarter'], ['members', 'Members', 'Profiles, waivers and attendance'], ['billing', 'Billing', 'Plans, invoices and payments', 1], ['docs', 'Documents', 'Waiver and membership contract', 1], ['staff', 'Staff', 'Coaches, swaps, hours and pay'], ['settings', 'Settings', 'Gym details and board link']];
+const officeHref = (gid, k) => k === 'plan' ? `/plan/${gid}` : k === 'wod' ? `/wod/${gid}` : k === 'results' ? `/results/${gid}` : k === 'settings' ? `/gym/${gid}` : `/club/${gid}?tab=${k}`;
 function navGroups() {
   const me = S.me && S.me.display_name ? S.me : null, pro = isPro(), P = pro ? '' : 'Pro. ';
   const g = [
@@ -93,14 +94,14 @@ function navGroups() {
   const offItems = (x, keys) => OFFICE.filter(o => keys.includes(o[0]) && (!o[3] || x.role === 'owner' || (S.me && S.me.role === 'admin'))).map(([k, n, d]) => [officeHref(x.gym_id, k), n, d]);
   const screen = x => [`/tv/${x.gym.slug || x.gym_id}`, 'Big screen', 'The TV board, opens in a new tab', 1];
   if (gyms.length === 1) { const x = gyms[0], nm = x.gym.name || 'Gym';
-    g.push({ k: 'office', n: 'Gym office', sections: [{ h: nm + ' · Run the floor', items: [...offItems(x, ['today', 'schedule', 'wod', 'results']), screen(x)] }, { h: 'Run the business', items: offItems(x, ['members', 'billing', 'docs', 'staff', 'settings']) }] }); }
+    g.push({ k: 'office', n: 'Gym office', sections: [{ h: nm + ' · Run the floor', items: [...offItems(x, ['today', 'schedule', 'wod', 'plan', 'results']), screen(x)] }, { h: 'Run the business', items: offItems(x, ['members', 'billing', 'docs', 'staff', 'settings']) }] }); }
   else if (gyms.length) g.push({ k: 'office', n: 'Gym office', sections: gyms.map(x => ({ h: (x.gym.name || 'Gym') + ' office', items: [...offItems(x, OFFICE.map(o => o[0])), screen(x)] })) });
   if (me && (me.role === 'admin' || me.role === 'commissioner')) g.push({ k: 'admin', n: 'Admin', sections: [{ h: me.role === 'admin' ? 'Management' : 'Commissioner', items: [...(me.role === 'admin' ? [['/admin', 'Management dashboard', 'Members, gyms and stats'], ['/admin?tab=gyms', 'All gyms', 'Edit gyms and open any office'], ['/admin?tab=requests', 'Requests', 'Gym claims and approvals']] : []), ['/reports', 'Reports', 'Flagged lifts and people'], ['/protests', 'Protest court', 'Rule on protested lifts'], ['/program', 'Import workouts', 'Load a program for a gym']] }] });
   return g;
 }
 const ROUTE_GROUP = { '': 'boards', prs: 'boards', pr: 'boards', compete: 'boards', season: 'boards', battles: 'boards', gyms: 'boards', benchmarks: 'boards', protests: 'boards', recap: 'boards', u: 'boards',
   week: 'train', log: 'train', progress: 'train', plans: 'train', coach: 'train', plates: 'train', import: 'train', lift: 'train', chat: 'chat', classes: 'mygym', mygym: 'mygym', billing: 'mygym', sign: 'mygym', signed: 'mygym',
-  club: 'office', wod: 'office', results: 'office', gym: 'office', admin: 'admin', reports: 'admin', program: 'admin', me: 'me', pro: 'me', rules: 'me', blocked: 'me' };
+  club: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office', admin: 'admin', reports: 'admin', program: 'admin', me: 'me', pro: 'me', rules: 'me', blocked: 'me' };
 const ACCT = () => [['/me', 'Profile', 'Name, gym and lifter details'], ['/me?tab=goals', 'Goals', 'What you are chasing'], ['/me?tab=reminders', 'Reminders', 'Nudges to log'], ['/me?tab=account', 'Account and safety', 'Email, privacy and blocks'], ['/u/' + S.me.id, 'My lifter card', 'Your public page'], ['/pro', 'DSI Pro', 'Membership and perks']];
 function buildNav(r) {
   const groups = navGroups(), cur = ROUTE_GROUP[r] ?? '';
@@ -1158,6 +1159,15 @@ const shrink = file => new Promise((res, rej) => {
   img.src = u;
 });
 const liftRule = l => l.rx && l.rx.length ? `Rx ${l.rx[0]}${l.rxw ? '/' + l.rxw[0] : ''}${l.rx[1] && l.rx[1] !== l.rx[0] ? `, Rx+ ${l.rx[1]}${l.rxw && l.rxw[1] !== l.rxw[0] ? '/' + l.rxw[1] : ''}` : ''} lb` : l.f ? `${Math.round(l.f * 100)}% of ${(BASES.find(b => b[0] === l.b) || [, l.b])[1].toLowerCase()}` : 'n/a';
+// The reader and the planner return Parts A to D; Part A is never logged and B, C, D log at most one weight each.
+const fixLift = l => { const x = { ...l }; if (x.rx && x.rx.length) { if (x.rx.length === 1) x.rx = [x.rx[0], x.rx[0]]; delete x.f; if (x.rxw && x.rxw.length) { if (x.rxw.length === 1) x.rxw = [x.rxw[0], x.rxw[0]]; } else delete x.rxw; } else { delete x.rx; delete x.rxw; } return x; };
+function normDay(d) {
+  if (!d.parts) return d.sections && d.sections.some(x => x.part) ? d : { ...d, lifts: (d.lifts || []).map(fixLift) };
+  const ps = d.parts.slice(0, 4).map(x => ({ ...x }));
+  if (d.parts.length > 4) ps[3].text = [ps[3].text, ...d.parts.slice(4).map(x => `${x.name}: ${x.text}`)].join('\n');
+  return { ...d, sections: ps.map((x, i) => ({ part: 'ABCD'[i], name: x.name, text: x.text, ...(i && x.time ? { time: true } : {}), ...(i && x.reps ? { reps: true } : {}) })),
+    lifts: ps.map((x, i) => (i && x.track && x.track.n ? fixLift({ ...x.track, id: 'abcd'[i], part: 'ABCD'[i] }) : null)).filter(Boolean), score_label: null, score_type: null };
+}
 VIEWS.program = async (_, tok) => {
   if (!S.me) return needLogin(tok, 'import workouts');
   if (!isStaff() && !S.myGyms.length) return paint(tok, '<section class="prEmpty"><b>Staff only</b><p>The Founder, Commissioners and gym coaches post workouts.</p><p><a class="btn ghost sm" href="/week">Back to the week</a></p></section>');
@@ -1204,16 +1214,7 @@ VIEWS.program = async (_, tok) => {
     draft = data; renderDraft();
   };
   async function renderDraft() {
-    const fix = l => { const x = { ...l }; if (x.rx && x.rx.length) { if (x.rx.length === 1) x.rx = [x.rx[0], x.rx[0]]; delete x.f; if (x.rxw && x.rxw.length) { if (x.rxw.length === 1) x.rxw = [x.rxw[0], x.rxw[0]]; } else delete x.rxw; } else { delete x.rx; delete x.rxw; } return x; };
-    // The reader returns Parts A to D; Part A is never logged and B, C, D log at most one weight each.
-    const norm = d => {
-      if (!d.parts) return d.sections && d.sections.some(x => x.part) ? d : { ...d, lifts: (d.lifts || []).map(fix) };
-      const ps = d.parts.slice(0, 4).map(x => ({ ...x }));
-      if (d.parts.length > 4) ps[3].text = [ps[3].text, ...d.parts.slice(4).map(x => `${x.name}: ${x.text}`)].join('\n');
-      return { ...d, sections: ps.map((x, i) => ({ part: 'ABCD'[i], name: x.name, text: x.text, ...(i && x.time ? { time: true } : {}), ...(i && x.reps ? { reps: true } : {}) })),
-        lifts: ps.map((x, i) => (i && x.track && x.track.n ? fix({ ...x.track, id: 'abcd'[i], part: 'ABCD'[i] }) : null)).filter(Boolean), score_label: null, score_type: null };
-    };
-    const days = draft.days.map(norm);
+    const days = draft.days.map(normDay);
     draft.days = days;
     const dates = days.map(d => d.day).filter(Boolean);
     const gymTo = $('#pg-to').value || null;
@@ -1361,11 +1362,12 @@ VIEWS.join = async (_, tok) => {
 
 /* ---------- compete and grow pages (extra.js) ---------- */
 const CTX = { OFFICE, officeHref, sb, D, S, VIEWS, $, $$, esc, num, fmt, today, pd, fmtD, addDays, monday, toast, must, paint, needLogin, go,
-  loadBoard, loadPeople, nameOf, boardRow, isPro, isStaff, PRO, bindActions, bindVideo, route, videoUrl };
+  loadBoard, loadPeople, nameOf, boardRow, isPro, isStaff, PRO, bindActions, bindVideo, route, videoUrl, normDay, liftRule };
 installExtra(CTX);
 installGym(CTX);
 installAdmin(CTX);
 installClub(CTX);
+installPlan(CTX);
 
 /* ---------- boot ---------- */
 async function boot() {
