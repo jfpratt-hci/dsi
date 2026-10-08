@@ -100,15 +100,7 @@ export function install(X) {
     const claimNames = claims.length ? new Map(must(await sb.from('profiles').select('id,display_name').in('id', claims.map(c => c.profile_id))).map(p => [p.id, p.display_name])) : new Map();
     const claimGyms = claims.length ? new Map(must(await sb.from('gyms').select('id,name').in('id', claims.map(c => c.gym_id))).map(x => [x.id, x.name])) : new Map();
     const tvUrl = location.origin + '/tv/' + (g.slug || gid);
-    if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.city || 'Gym')} · ${members.length} lifters</div><h2>${esc(g.name)}</h2><p class="secSub">Your gym's page. Post the day, enter results, and run the big screen.</p></div><a class="btn ghost sm" href="/gyms/${gid}">Gym board</a></div>
-      <div class="tools">
-        <a class="tool" href="/club/${gid}"><b>Gym office</b><span>Check in, class schedule, members, billing, waivers and contracts, coach staffing and pay.</span></a>
-        <a class="tool" href="/wod/${gid}"><b>Edit workouts</b><span>Type or fix the day: Part A, B, C and sometimes D. Pick the weight members log for each part.</span></a>
-        <a class="tool" href="/program?gym=${gid}"><b>Import a week</b><span>From your programming page, Kilo, a whiteboard photo or pasted text. Then fix anything in Edit workouts.</span></a>
-        <a class="tool" href="/results/${gid}"><b>Enter results</b><span>Type in everyone's weights and scores from the floor. They go straight to the day board.</span></a>
-        <a class="tool" href="/tv/${g.slug || gid}" target="_blank"><b>Big screen</b><span>Open this on the gym TV. It updates live all day.</span></a>
-        <a class="tool" href="/week"><b>The week</b><span>What your members see on their phones.</span></a>
-      </div>
+    if (!paint(tok, `${X.officeBar(g, 'settings')}<section class="sec"><h3>Gym <span>settings</span></h3><p class="secSub">${members.length} lifters. Big screen link, coaches and gym details.</p>
       <div class="formCard"><div class="formH">Big screen link<span class="sub">Open it in the TV's browser, a Fire Stick or a laptop on HDMI, then go full screen. No login needed.</span></div>
         <div class="row"><input id="tvUrl" readonly value="${esc(tvUrl)}" style="max-width:420px"><button class="btn ghost sm" type="button" id="tvCopy">Copy link</button></div>
         ${owns(gid) ? `<form class="row" id="slF"><label for="sl-v" class="sub">Change it: ${esc(location.host)}/tv/</label><input id="sl-v" maxlength="40" value="${esc(g.slug || '')}" placeholder="yourgym" autocapitalize="none" spellcheck="false" style="max-width:220px"><button class="btn sm">Save link</button><span class="hint" id="sl-msg">Letters, numbers and dashes. The old link stops working.</span></form>` : ''}</div></section>
@@ -152,7 +144,7 @@ export function install(X) {
     const day = /^\d{4}-\d{2}-\d{2}$/.test(q0 || '') ? q0 : today();
     let wq = sb.from('workouts').select('*').eq('day', day);
     wq = dsi ? wq.is('gym_id', null) : wq.eq('gym_id', gid);
-    const [g, ws] = await Promise.all([dsi ? { name: 'The DSI week' } : sb.from('gyms').select('id,name').eq('id', gid).maybeSingle().then(must), wq.then(must), loadBoard()]);
+    const [g, ws] = await Promise.all([dsi ? { name: 'The DSI week' } : sb.from('gyms').select('id,name,city,slug').eq('id', gid).maybeSingle().then(must), wq.then(must), loadBoard()]);
     if (!g) throw new Error('No gym here.');
     const w = ws[0] || null;
     const nLogs = w ? ((await sb.from('workout_logs').select('id', { count: 'exact', head: true }).eq('workout_id', w.id)).count || 0) : 0;
@@ -182,9 +174,9 @@ export function install(X) {
       </article>`;
     };
     const dest = dsi ? '/week/' + day + (S.me.gym_id ? '?src=dsi' : '') : '/week/' + day;
-    if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>${w ? 'Edit the' : 'Post the'} <span>workout</span></h2>
+    if (!paint(tok, `${dsi ? '' : X.officeBar(g, 'wod')}<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>${w ? 'Edit the' : 'Post the'} <span>workout</span></h2>
         <p class="secSub">Part A is the warmup and is never logged. Parts B, C and D can each log a weight, a time, total reps, or any mix. Everyone is assumed to do all the reps.</p></div>
-        <div class="row"><a class="btn ghost sm" href="/wod/${gid}?day=${addDays(day, -1)}">← Day before</a><input type="date" id="wd-day" value="${day}" aria-label="Pick a day" style="max-width:170px"><a class="btn ghost sm" href="/wod/${gid}?day=${addDays(day, 1)}">Next day →</a></div></div></section>
+        <div class="row"><a class="btn ghost sm" href="/wod/${gid}?day=${addDays(day, -1)}">← Day before</a><input type="date" id="wd-day" value="${day}" aria-label="Pick a day" style="max-width:170px"><a class="btn ghost sm" href="/wod/${gid}?day=${addDays(day, 1)}">Next day →</a><a class="btn ghost sm" href="/program${dsi ? '' : '?gym=' + gid}">Import a week</a></div></div></section>
       <section class="sec"><form id="wodF" class="wodEd">
         <div class="field"><label for="wd-t">Title</label><input id="wd-t" maxlength="80" value="${esc((w && w.title) || '')}" placeholder="Front squat + Grace"></div>
         ${old ? '<p class="hint" style="color:var(--flat)">This day still has the old lift list. Saving switches it to Parts, so pick the weight each part logs.</p>' : ''}
@@ -251,7 +243,7 @@ export function install(X) {
     const day = new URLSearchParams(location.search).get('day') || today();
     const { g, members, w, logs, rowOf } = await gymData(gid, day);
     const nav = `<div class="row"><a class="btn ghost sm" href="/results/${gid}?day=${addDays(day, -1)}">← Day before</a>${day !== today() ? `<a class="btn ghost sm" href="/results/${gid}">Today</a>` : ''}<a class="btn ghost sm" href="/results/${gid}?day=${addDays(day, 1)}">Next day →</a></div>`;
-    if (!w || w.gym_id !== gid) return paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>Enter <span>results</span></h2></div>${nav}</div>
+    if (!w || w.gym_id !== gid) return paint(tok, `${X.officeBar(g, 'results')}<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>Enter <span>results</span></h2></div>${nav}</div>
       <div class="prEmpty"><b>${esc(g.name)} has no workout posted for this day</b><p>Results go on your own gym's workout. Post it first.</p><p><a class="btn" href="/wod/${gid}?day=${day}">Post the workout</a></p></div></section>`);
     const its = items(w), logOf = id => logs.find(l => l.profile_id === id);
     const inp = (it, m, ent, r) => it.kind === 'r'
@@ -259,7 +251,7 @@ export function install(X) {
       : it.kind === 't'
       ? `<input class="wkIn wkTime" inputmode="numeric" maxlength="8" data-l="${esc(it.key)}" data-kind="t" value="${esc(fmtT(ent[it.key]))}" placeholder="m:ss" aria-label="${esc(m.display_name + ' ' + it.label)}">`
       : `<input class="wkIn" type="number" inputmode="decimal" step="any" min="0" max="1499" data-l="${esc(it.key)}" value="${esc(ent[it.key] ?? '')}" placeholder="${D.target(it.lift, r) || ''}" aria-label="${esc(m.display_name + ' ' + it.label)}">`;
-    if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>${esc(w.title)}</h2><p class="secSub">Type the weight each member used, their time where a part is timed (like 8:45), and total reps where a part counts reps. Blank means they did not do it. Targets show in grey.</p><p><a class="btn ghost sm" href="/wod/${gid}?day=${day}">Edit this workout</a></p></div>${nav}</div>
+    if (!paint(tok, `${X.officeBar(g, 'results')}<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>${esc(w.title)}</h2><p class="secSub">Type the weight each member used, their time where a part is timed (like 8:45), and total reps where a part counts reps. Blank means they did not do it. Targets show in grey.</p><p><a class="btn ghost sm" href="/wod/${gid}?day=${day}">Edit this workout</a></p></div>${nav}</div>
       <form id="rsF"><div class="board"><div class="tablewrap"><table class="wkT rsT"><thead><tr><th>Member</th>${its.map(it => `<th class="r">${esc(it.label)}<div class="sub">${esc(it.sch || (it.kind === 't' ? 'm:ss' : ''))}</div></th>`).join('')}${w.score_label ? `<th class="r">${esc(w.score_label)}</th>` : ''}</tr></thead><tbody>
       ${members.map(m => { const lg = logOf(m.id), ent = (lg && lg.entries) || {}, r = rowOf(m); return `<tr data-pid="${m.id}"><td><b>${esc(m.display_name)}</b>${lg ? ' <span class="pill up">Logged</span>' : ''}</td>
         ${its.map(it => `<td class="r">${inp(it, m, ent, r)}</td>`).join('')}

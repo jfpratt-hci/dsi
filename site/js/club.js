@@ -64,6 +64,15 @@ export function install(X) {
      STAFF: the gym office
      ================================================================= */
   const TABS = [['today', 'Check in'], ['schedule', 'Schedule'], ['members', 'Members'], ['billing', 'Billing', 1], ['docs', 'Waivers and contracts', 1], ['staff', 'Staff']];
+  // One tab bar across every gym office page: check in, schedule, workouts, results, members, billing, documents, staff, settings.
+  function officeBar(g, active) {
+    const owner = isOwner(g.id);
+    const tabs = X.OFFICE.filter(o => !o[2] || owner);
+    return `<section class="sec offHead"><div class="secHead"><div><div class="kicker">${esc(g.city || 'Gym')} · Gym office</div><h2>${esc(g.name)}</h2></div>
+        <div class="row"><a class="btn ghost sm" href="/tv/${esc(g.slug || g.id)}" target="_blank">Big screen</a><a class="btn ghost sm" href="/gyms/${g.id}">Gym board</a></div></div>
+      <nav class="tabs offTabs" aria-label="Gym office">${tabs.map(([k, n]) => `<a class="tab" href="${X.officeHref(g.id, k)}"${k === active ? ' aria-current="page" aria-selected="true"' : ''}>${esc(n)}</a>`).join('')}</nav></section>`;
+  }
+  X.officeBar = officeBar;
 
   VIEWS.club = async (gid, tok) => {
     if (!S.me) return needLogin(tok, 'run your gym');
@@ -74,10 +83,7 @@ export function install(X) {
     const qs = new URLSearchParams(location.search);
     const tabs = TABS.filter(t => !t[2] || owner);
     const tab = tabs.some(t => t[0] === qs.get('tab')) ? qs.get('tab') : 'today';
-    const shell = inner => `<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.city || 'Gym')} · Gym office</div><h2>${esc(g.name)}</h2></div>
-        <div class="row"><a class="btn ghost sm" href="/gym/${gid}">Gym page</a><a class="btn ghost sm" href="/wod/${gid}">Workouts</a><a class="btn ghost sm" href="/tv/${esc(g.slug || gid)}" target="_blank">Big screen</a></div></div>
-      <div class="tabs" role="tablist">${tabs.map(([k, n]) => `<a class="tab" role="tab" href="/club/${gid}?tab=${k}" aria-selected="${k === tab}">${esc(n)}</a>`).join('')}</div></section>
-      <section class="sec">${inner}</section>`;
+    const shell = inner => `${officeBar(g, tab)}<section class="sec">${inner}</section>`;
     const view = { today: tabToday, schedule: tabSchedule, members: tabMembers, billing: tabBilling, docs: tabDocs, staff: tabStaff }[tab];
     await view(g, tok, shell, qs, owner);
   };
@@ -432,7 +438,7 @@ export function install(X) {
         <div class="formCard"><div class="formH">Invoices ${open.length ? `<span class="pill down">${open.length} open</span>` : ''}</div>
           ${inv.slice(0, 12).map(i => `<div class="plRow"><div><b>${esc(i.description)}</b><span class="sub">#${i.number} · ${i.status === 'paid' ? 'paid ' + esc(fmtD((i.paid_at || i.created_at).slice(0, 10))) : i.status === 'void' ? 'void' : 'due ' + esc(fmtD(i.due_date))}</span></div><b>${money(i.amount_cents)}</b>${i.status === 'open' ? (g.stripe_ready ? `<button class="btn sm" data-pay="${i.id}">Pay</button>` : '<span class="pill down">Pay at desk</span>') : i.status === 'paid' ? '<span class="pill up">Paid</span>' : ''}</div>`).join('') || '<p class="hint">No invoices yet.</p>'}
         </div>
-        <div class="formCard"><div class="formH">Attendance <span class="sub">${visits.filter(a => (a.checked_in_at || '').slice(0, 7) === monthKey).length} this month · ${visits.length} logged</span></div>
+        <div class="formCard" id="attendance"><div class="formH">Attendance <span class="sub">${visits.filter(a => (a.checked_in_at || '').slice(0, 7) === monthKey).length} this month · ${visits.length} logged</span></div>
           ${upcoming.length ? `<p class="sub">Coming up: ${upcoming.slice(0, 3).map(a => `${esc(a.session.name)} ${esc(when(a.session.starts_at))}${a.status === 'waitlist' ? ' (waitlist)' : ''}`).join(' · ')}</p>` : ''}
           <ol class="mdAtt">${visits.slice(0, 20).map(a => `<li>${esc(a.session ? a.session.name : 'Class')} <span class="sub">${a.session ? esc(when(a.session.starts_at)) : ''}</span></li>`).join('') || '<li class="hint">No visits yet. Coaches check you in at class.</li>'}</ol>
         </div>

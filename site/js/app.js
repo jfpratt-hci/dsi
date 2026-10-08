@@ -49,7 +49,7 @@ async function loadMe() {
   S.me = data || null;
   S.blocked = new Set();
   if (S.me) {
-    const [{ data: b }, { data: gs }] = await Promise.all([sb.from('blocks').select('blocked').eq('blocker', S.me.id), sb.from('gym_staff').select('gym_id,role,gym:gyms(id,name)').eq('profile_id', S.me.id)]);
+    const [{ data: b }, { data: gs }] = await Promise.all([sb.from('blocks').select('blocked').eq('blocker', S.me.id), sb.from('gym_staff').select('gym_id,role,gym:gyms(id,name,slug)').eq('profile_id', S.me.id)]);
     S.blocked = new Set((b || []).map(x => x.blocked));
     S.myGyms = (gs || []).filter(x => x.gym);
   }
@@ -72,25 +72,62 @@ async function loadPeople() {
 const nameOf = id => (S.people.get(id) || {}).display_name || 'Someone';
 const boardRow = id => S.board.find(r => r.profile_id === id);
 
-/* mobile menu */
+/* ---------- navigation ---------- */
+// The top bar is a few grouped menus, built for who is signed in: everyone gets Boards, Train and Chat;
+// members of a gym get My gym; owners and coaches get Gym office; the Founder and Commissioners get Admin.
 const nav = $('#nav'), menuBtn = $('#menuBtn');
+const OFFICE = [['today', 'Check in'], ['schedule', 'Schedule'], ['wod', 'Workouts'], ['results', 'Results'], ['members', 'Members'], ['billing', 'Billing', 1], ['docs', 'Documents', 1], ['staff', 'Staff'], ['settings', 'Settings']];
+const officeHref = (gid, k) => k === 'wod' ? `/wod/${gid}` : k === 'results' ? `/results/${gid}` : k === 'settings' ? `/gym/${gid}` : `/club/${gid}?tab=${k}`;
+function navGroups() {
+  const me = S.me && S.me.display_name ? S.me : null, pro = isPro();
+  const g = [
+    { k: 'boards', n: 'Boards', items: [['/', 'Leaderboard'], ['/prs', 'PR wall'], ['/compete', 'Compete'], ['/season', 'This season'], ['/battles', 'Weekly battles'], ['/gyms', 'Gym league'], ['/benchmarks', 'Benchmarks'], ['/protests', 'Protests']] },
+    { k: 'train', n: 'Train', items: [['/week', 'The week'], ...(me && me.gym_id ? [['/classes', 'Book a class']] : []), ['/log', 'Log a lift'], ['/progress', 'Progress charts' + (pro ? '' : ' (Pro)')], ['/plans', 'Goal plans' + (pro ? '' : ' (Pro)')], ['/coach', 'Coach' + (pro ? '' : ' (Pro)')], ['/plates', 'Plate calculator'], ...(me ? [['/import', 'Import history']] : [])] },
+    { k: 'chat', n: 'Chat', href: '/chat' },
+  ];
+  if (me && me.gym_id) g.push({ k: 'mygym', n: 'My gym', items: [['/mygym', 'Membership and billing'], ['/classes', 'Book a class'], ['/mygym#attendance', 'My attendance'], ['/gyms/' + me.gym_id, 'Gym board']] });
+  const gyms = S.myGyms || [];
+  if (gyms.length) g.push({ k: 'office', n: 'Gym office', sections: gyms.map(x => ({ h: gyms.length > 1 ? x.gym.name : null, items: OFFICE.filter(o => !o[2] || x.role === 'owner' || (S.me && S.me.role === 'admin')).map(([k, n]) => [officeHref(x.gym_id, k), n]).concat([[`/tv/${x.gym.slug || x.gym_id}`, 'Big screen', 1]]) })) });
+  if (me && (me.role === 'admin' || me.role === 'commissioner')) g.push({ k: 'admin', n: 'Admin', items: [...(me.role === 'admin' ? [['/admin', 'Management dashboard'], ['/admin?tab=gyms', 'All gyms'], ['/admin?tab=requests', 'Requests']] : []), ['/reports', 'Reports'], ['/protests', 'Protest court'], ['/program', 'Import workouts']] });
+  return g;
+}
+const ROUTE_GROUP = { '': 'boards', prs: 'boards', pr: 'boards', compete: 'boards', season: 'boards', battles: 'boards', gyms: 'boards', benchmarks: 'boards', protests: 'boards', recap: 'boards', u: 'boards',
+  week: 'train', log: 'train', progress: 'train', plans: 'train', coach: 'train', plates: 'train', import: 'train', lift: 'train', chat: 'chat', classes: 'mygym', mygym: 'mygym', billing: 'mygym', sign: 'mygym', signed: 'mygym',
+  club: 'office', wod: 'office', results: 'office', gym: 'office', admin: 'admin', reports: 'admin', program: 'admin', me: 'me', pro: 'me', rules: 'me', blocked: 'me' };
+function buildNav(r) {
+  const groups = navGroups(), cur = ROUTE_GROUP[r] ?? '';
+  const here = location.pathname + location.search;
+  const link = ([href, n, ext]) => `<a href="${href}"${ext ? ' target="_blank"' : ''}${href === here || (href === location.pathname && !location.search) ? ' aria-current="page"' : ''}>${esc(n)}</a>`;
+  nav.innerHTML = groups.map(gr => gr.href
+    ? `<a class="nvTop" href="${gr.href}" data-g="${gr.k}"${cur === gr.k ? ' aria-current="page"' : ''}>${esc(gr.n)}</a>`
+    : `<div class="nvG" data-g="${gr.k}"><button type="button" class="nvTop" aria-expanded="false"${cur === gr.k ? ' aria-current="page"' : ''}>${esc(gr.n)}<i aria-hidden="true"></i></button>
+        <div class="nvM">${(gr.sections || [{ items: gr.items }]).map(sec => `${sec.h ? `<h5>${esc(sec.h)}</h5>` : ''}${sec.items.map(link).join('')}`).join('')}</div></div>`).join('')
+    ;
+  const am = $('#acctNav'), me = S.me && S.me.display_name;
+  am.innerHTML = me ? `<div class="nvG nvMe" data-g="me"><button type="button" class="nvTop acct in" aria-expanded="false"${cur === 'me' ? ' aria-current="page"' : ''}>${esc(S.me.display_name)}<i aria-hidden="true"></i></button><div class="nvM">${[['/me', 'Profile'], ['/me?tab=goals', 'Goals'], ['/me?tab=reminders', 'Reminders'], ['/me?tab=account', 'Account and safety'], ['/u/' + S.me.id, 'My lifter card'], ['/pro', 'DSI Pro membership']].map(link).join('')}<button type="button" class="nvOut">Sign out</button></div></div>` : '';
+  $$('.nvG > button.nvTop', document).forEach(b => b.onclick = e => { e.stopPropagation(); const g = b.parentElement, open = !g.classList.contains('open'); closeMenus(); g.classList.toggle('open', open); b.setAttribute('aria-expanded', String(open)); });
+  const out = $('.nvOut', am); if (out) out.onclick = async () => { await sb.auth.signOut(); go('/'); };
+}
+function closeMenus() { $$('.nvG.open').forEach(g => { g.classList.remove('open'); const b = $('button.nvTop', g); if (b) b.setAttribute('aria-expanded', 'false'); }); }
 function setMenu(open) {
   nav.classList.toggle('open', open);
   menuBtn.setAttribute('aria-expanded', String(open));
   menuBtn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+  if (!open) closeMenus();
 }
-menuBtn.onclick = () => { const open = !nav.classList.contains('open'); setMenu(open); if (open) nav.querySelector('a').focus(); };
+menuBtn.onclick = () => { const open = !nav.classList.contains('open'); setMenu(open); if (open) { const f = nav.querySelector('a,button'); if (f) f.focus(); } };
 nav.addEventListener('click', e => { if (e.target.closest('a')) setMenu(false); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && nav.classList.contains('open')) { setMenu(false); menuBtn.focus(); } });
-document.addEventListener('click', e => { if (nav.classList.contains('open') && !e.target.closest('.bar')) setMenu(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (document.querySelector('.nvG.open')) closeMenus(); else if (nav.classList.contains('open')) { setMenu(false); menuBtn.focus(); } } });
+document.addEventListener('click', e => { if (!e.target.closest('.nvG')) closeMenus(); else if (e.target.closest('.nvM a')) closeMenus(); if (nav.classList.contains('open') && !e.target.closest('.bar')) setMenu(false); });
 matchMedia('(min-width:861px)').addEventListener('change', e => { if (e.matches) setMenu(false); });
 
 function updateChrome(r) {
   setMenu(false);
-  $$('#nav a').forEach(a => { if (a.dataset.r === r) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  buildNav(r);
   const acct = $('#acct');
   if (S.me) { acct.textContent = S.me.display_name || 'Finish joining'; acct.href = S.me.display_name ? '/me' : '/join'; acct.classList.add('in'); }
   else { acct.textContent = 'Sign in'; acct.href = '/login'; acct.classList.remove('in'); }
+  acct.hidden = !!(S.me && S.me.display_name);
   $('#joinBtn').hidden = !!S.me || r === 'join';
 }
 
@@ -120,7 +157,7 @@ async function route() {
   if (S.me && !S.me.display_name && !['join', 'login', 'privacy', 'terms', 'support', 'rules'].includes(r)) { go('/join', true); return; }
   if (!VIEWS[r]) r = '';
   document.body.classList.toggle('tvMode', r === 'tv');
-  updateChrome(['season', 'battles', 'gyms', 'gym', 'results', 'benchmarks', 'recap', 'plates'].includes(r) ? 'compete' : r === 'pr' ? 'prs' : r === 'lift' ? 'week' : r === 'u' ? '' : r);
+  updateChrome(r);
   const tok = ++S.tok;
   main.innerHTML = '<p class="empty">Loading…</p>';
   try {
@@ -707,6 +744,15 @@ VIEWS.me = async (_, tok) => {
     <section class="sec"><div><div class="kicker">Account</div><h2>Your <span>account</span></h2></div>
       <div class="row"><span class="pill acc" style="margin:0">${pro ? 'DSI Pro' : 'Member'}</span><a class="btn ghost sm" href="/pro">Membership</a><button class="btn ghost sm" id="so">Sign out</button><button class="btn ghost sm dangerText" id="delAcct">Delete account</button></div>
       <p class="hint">Deleting removes your profile, every lift, goal, log, message and video, and your login. It cannot be undone.</p></section>`}`)) return;
+  // One short page per tab instead of one long page. The tool tiles live in the top menus now.
+  if (!first) {
+    const TABS = [['profile', 'Profile'], ['goals', 'Goals'], ['reminders', 'Reminders'], ['account', 'Account and safety']];
+    const want = new URLSearchParams(location.search).get('tab'), tab = TABS.some(t => t[0] === want) ? want : 'profile';
+    const kindOf = sec => { const k = (($('.kicker', sec) || {}).textContent || '').trim(); return k === 'Reminders' ? 'reminders' : k === 'Profile' ? 'profile' : /chasing/.test(k) ? 'goals' : (k === 'Community' || k === 'Account') ? 'account' : (k === 'DSI Pro' || k === 'Compete and grow') ? 'drop' : null; };
+    const secs = $$('section.sec', main);
+    secs.slice(1).forEach(sec => { const k = kindOf(sec); if (k === 'drop') sec.remove(); else if (k && k !== tab) sec.hidden = true; });
+    secs[0].insertAdjacentHTML('beforeend', `<nav class="tabs" aria-label="Account" style="margin-top:20px">${TABS.map(([k, n]) => `<a class="tab" href="/me${k === 'profile' ? '' : '?tab=' + k}"${k === tab ? ' aria-current="page" aria-selected="true"' : ''}>${n}</a>`).join('')}</nav>`);
+  }
   const nf = $('#nf');
   if (nf) nf.onsubmit = async e => {
     e.preventDefault();
@@ -1300,7 +1346,7 @@ VIEWS.join = async (_, tok) => {
 };
 
 /* ---------- compete and grow pages (extra.js) ---------- */
-const CTX = { sb, D, S, VIEWS, $, $$, esc, num, fmt, today, pd, fmtD, addDays, monday, toast, must, paint, needLogin, go,
+const CTX = { OFFICE, officeHref, sb, D, S, VIEWS, $, $$, esc, num, fmt, today, pd, fmtD, addDays, monday, toast, must, paint, needLogin, go,
   loadBoard, loadPeople, nameOf, boardRow, isPro, isStaff, PRO, bindActions, bindVideo, route, videoUrl };
 installExtra(CTX);
 installGym(CTX);
