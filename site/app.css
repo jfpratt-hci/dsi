@@ -848,3 +848,21 @@ main.wrap>.tvDots{padding:0;margin:0;left:auto}
 .hmCmp tbody th,.hmMath th{font:500 15px/1.4 var(--sans);text-transform:none;letter-spacing:0;color:var(--ink)}
 .hmMath .sum th{font-weight:700;color:var(--up)}
 @media (max-width:520px){.hmCmp thead th:first-child{width:34%}.hmCmp tbody th{font-size:13px}}
+
+/* log a class: one row per person, big boxes for thumbs */
+.clPick{margin-top:4px}
+.clPick .chip{font-size:14px;padding:8px 14px}
+.clRule{margin:0;color:var(--muted)}
+.clRule b{color:var(--ink)}
+.clList{list-style:none;margin:8px 0 0;padding:0;display:grid;border-top:1px solid var(--line)}
+.clList li{display:grid;grid-template-columns:minmax(0,1fr) 150px 84px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.clWho{display:flex;align-items:center;gap:8px;min-width:0}
+.clWho b{font-size:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.clWho .pill{margin-left:0}
+.clIn{font:700 24px var(--mono);text-align:right;padding:10px 12px;height:52px}
+.clIn::placeholder{color:var(--muted);opacity:.55;font-weight:500}
+.clSt{justify-self:start}
+.clSt .pill{margin-left:0}
+.clAdd{margin-top:16px}
+.ckLog{margin-right:8px}
+@media (max-width:560px){.clList li{grid-template-columns:minmax(0,1fr) 116px;row-gap:4px}.clSt{grid-column:2;justify-self:end}.clWho b{font-size:17px}}

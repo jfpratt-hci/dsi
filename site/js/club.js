@@ -60,6 +60,104 @@ export function install(X) {
     };
   }
 
+
+  /* ---------- log a class: coaches type each person's weight during class, straight to the board ---------- */
+  // /class/<gym>?s=<session>&it=<item key>. One part at a time, one box per person, each box saves on its own.
+  let noEnteredBy = false;
+  VIEWS.class = async (gid, tok) => {
+    if (!S.me) return needLogin(tok, 'log a class');
+    if (!gid && (S.myGyms || []).length) return go('/class/' + S.myGyms[0].gym_id, true);
+    if (!isCoach(gid)) return paint(tok, '<section class="prEmpty"><b>Coaches only</b><p>Gym owners and coaches log weights for their classes here.</p></section>');
+    const D = X.D, P = X.parts, qs = new URLSearchParams(location.search);
+    const g = await gymById(gid);
+    if (!g) return paint(tok, '<section class="prEmpty"><b>No gym here</b></section>');
+    const day = new Date().toLocaleDateString('en-CA', { timeZone: g.tz });
+    const [ss, wr, board, members] = await Promise.all([
+      sessionsFor(g, day, day),
+      sb.from('workouts').select('*').eq('gym_id', gid).eq('day', day).maybeSingle().then(must),
+      X.loadBoard(),
+      sb.from('profiles').select('id,display_name,sex').eq('gym_id', gid).not('display_name', 'is', null).order('display_name').then(must),
+    ]);
+    const live = ss.filter(x => x.status !== 'canceled'), now = Date.now();
+    const pick = live.find(x => x.id === qs.get('s')) || live.find(x => Date.parse(x.starts_at) <= now && Date.parse(x.ends_at) >= now)
+      || live.find(x => Date.parse(x.starts_at) > now) || live[live.length - 1] || null;
+    const shell = inner => `${X.officeBar(g, 'class')}<section class="sec clSec">${inner}</section>`;
+    if (!wr) return paint(tok, shell(`<div class="prEmpty"><b>No workout posted for today</b><p>Post today's workout first, then log the class against it.</p><p><a class="btn" href="/wod/${gid}?day=${day}">Post the workout</a> <a class="btn ghost" href="/plan/${gid}">Plan builder</a></p></div>`));
+    const w = wr, its = P.items(w);
+    if (!its.length) return paint(tok, shell(`<div class="prEmpty"><b>Nothing to log today</b><p>Today's workout has no weight, time or reps to record. Turn one on in the workout editor.</p><p><a class="btn" href="/wod/${gid}?day=${day}">Edit the workout</a></p></div>`));
+    const it = its.find(i => i.key === qs.get('it')) || its.find(i => i.kind === 'w') || its[0];
+    const bk = pick ? must(await sb.from('bookings').select('profile_id,status').eq('session_id', pick.id).in('status', ['booked', 'attended']).order('created_at')) : [];
+    const ids = bk.map(b => b.profile_id);
+    const memberBy = new Map(members.map(m => [m.id, m]));
+    const extra = await people(ids.filter(id => !memberBy.has(id)));
+    const nameOf = id => (memberBy.get(id) || {}).display_name || extra.get(id) || 'Member';
+    const logs = ids.length ? must(await sb.from('workout_logs').select('profile_id,entries,score,sets').eq('workout_id', w.id).in('profile_id', ids)) : [];
+    const logOf = new Map(logs.map(l => [l.profile_id, l]));
+    const rowOf = id => board.find(r => r.profile_id === id) || { sex: (memberBy.get(id) || {}).sex };
+    const order = [...bk].sort((a, b) => (b.status === 'attended') - (a.status === 'attended') || nameOf(a.profile_id).localeCompare(nameOf(b.profile_id)));
+    const isPrDay = it.kind === 'w' && it.lift && it.lift.max && w.pr_lift && D.LIFT_BY_DB[w.pr_lift];
+    const val = id => { const v = ((logOf.get(id) || {}).entries || {})[it.key]; return it.kind === 't' ? P.fmtT(v) : (v ?? ''); };
+    const tgt = id => it.kind === 'w' && it.lift ? D.target(it.lift, rowOf(id)) : 0;
+    const href = (sid, key) => `/class/${gid}?s=${sid || ''}&it=${encodeURIComponent(key)}`;
+    const box = id => it.kind === 'r'
+      ? `<input class="clIn" type="number" inputmode="numeric" min="0" max="99999" step="1" data-p="${id}" value="${esc(val(id))}" placeholder="reps" aria-label="${esc(nameOf(id))} reps">`
+      : it.kind === 't'
+      ? `<input class="clIn" inputmode="numeric" maxlength="8" data-p="${id}" value="${esc(val(id))}" placeholder="m:ss" aria-label="${esc(nameOf(id))} time">`
+      : `<input class="clIn" type="number" inputmode="decimal" min="0" max="1499" step="any" data-p="${id}" value="${esc(val(id))}" placeholder="${tgt(id) || 'lb'}" aria-label="${esc(nameOf(id))} weight in pounds">`;
+    if (!paint(tok, shell(`<div class="secHead"><div><div class="kicker">${pick ? esc(tAt(pick.starts_at, g.tz)) + ' ' + esc(pick.name) : 'Today'} · ${esc(w.title)}</div><h2>Log the <span>class</span></h2>
+        <p class="secSub">Type each person's ${it.kind === 't' ? 'time' : it.kind === 'r' ? 'total reps' : 'weight'} as they finish. Every box saves on its own and goes straight to the board and the TV.${isPrDay ? ' Today is a max out day, so a new best counts as a PR.' : ''}</p></div>
+        <div class="row"><a class="btn ghost sm" href="/tv/${esc(g.slug || gid)}" target="_blank" rel="noopener">Big screen</a><a class="btn ghost sm" href="/results/${gid}">All of today's results</a></div></div>
+      ${live.length > 1 ? `<div class="chips clPick" aria-label="Class">${live.map(x => `<a class="chip" href="${href(x.id, it.key)}" aria-pressed="${pick && x.id === pick.id}">${esc(tAt(x.starts_at, g.tz))} ${esc(x.name)}</a>`).join('')}</div>` : ''}
+      <div class="chips clPick" aria-label="Part">${its.map(i => `<a class="chip" href="${href(pick && pick.id, i.key)}" aria-pressed="${i.key === it.key}">${esc(i.label)}</a>`).join('')}</div>
+      ${it.lift ? `<p class="clRule"><b>${esc(it.lift.n)}</b> ${esc(it.sch || '')}${X.liftRule(it.lift) !== 'n/a' ? ' · ' + esc(X.liftRule(it.lift)) : ''}. The grey number is each person's target.</p>` : ''}
+      ${!pick ? `<div class="prEmpty"><b>No classes today</b><p>Set up the weekly classes on the Schedule tab, or add people below to log them anyway.</p></div>` : ''}
+      <ol class="clList" id="clList">${order.map(b => `<li data-row="${b.profile_id}"><span class="clWho"><b>${esc(nameOf(b.profile_id))}</b>${b.status === 'attended' ? '<span class="pill up">Here</span>' : '<span class="pill">Booked</span>'}</span>${box(b.profile_id)}<span class="clSt" data-st aria-live="polite">${val(b.profile_id) !== '' ? '<span class="pill up">Saved</span>' : ''}</span></li>`).join('')}</ol>
+      ${pick ? `<div class="row clAdd"><label class="vh" for="clAddSel">Add someone to this class</label><select id="clAddSel" style="max-width:280px"><option value="">Add someone to this class…</option>${members.filter(m => !ids.includes(m.id)).map(m => `<option value="${m.id}">${esc(m.display_name)}</option>`).join('')}</select></div>` : ''}`))) return;
+
+    const parse = raw => {
+      const v = String(raw).trim(); if (!v) return { empty: true };
+      if (it.kind === 't') { const x = P.parseT(v); return x > 0 ? { x } : { bad: `"${v}" is not a time. Use minutes and seconds, like 8:45.` }; }
+      if (it.kind === 'r') return { x: Math.max(0, Math.min(99999, Math.round(+v) || 0)) };
+      const x = Math.max(0, Math.min(1499, Math.round(+v * 2) / 2 || 0));
+      return x > 0 ? { x } : { bad: `"${v}" is not a weight.` };
+    };
+    const save = async inp => {
+      const pid = inp.dataset.p, st = $('[data-st]', inp.closest('li')), r = parse(inp.value);
+      if (r.bad) { st.innerHTML = `<span class="pill down">Check it</span>`; toast(r.bad); return; }
+      const had = logOf.get(pid), entries = { ...((had && had.entries) || {}) };
+      if (r.empty) { if (!(it.key in entries)) return; delete entries[it.key]; } else { if (entries[it.key] === r.x) return; entries[it.key] = r.x; }
+      st.innerHTML = '<span class="pill">Saving</span>';
+      const row = { workout_id: w.id, profile_id: pid, entries, score: (had && had.score) || null, sets: (had && had.sets) || {} };
+      let { error } = await sb.from('workout_logs').upsert(noEnteredBy ? row : { ...row, entered_by: S.me.id }, { onConflict: 'workout_id,profile_id' });
+      if (error && /entered_by/.test(error.message)) { noEnteredBy = true; ({ error } = await sb.from('workout_logs').upsert(row, { onConflict: 'workout_id,profile_id' })); }
+      if (error) { st.innerHTML = '<span class="pill down">Not saved</span>'; toast(/row-level security/i.test(error.message) ? `${nameOf(pid)} is not a member of ${g.name} yet, so their result can't be entered here.` : error.message); return; }
+      logOf.set(pid, row);
+      st.innerHTML = '<span class="pill up">Saved</span>';
+      // Max out day: a new best becomes a PR for the DSI and the PR wall.
+      if (isPrDay && !r.empty) {
+        const L = D.LIFT_BY_DB[w.pr_lift], br = rowOf(pid), best = num(br[L.k]);
+        if (r.x > best) {
+          const { data, error: e2 } = await sb.from('lift_entries').insert({ profile_id: pid, lift: w.pr_lift, weight_lb: r.x, performed_on: day, source: 'workout', entered_by: S.me.id, note: `Entered by ${S.me.display_name} in class` }).select().single();
+          if (!e2 && data && data.is_pr) { br[L.k] = r.x; st.innerHTML = '<span class="pill acc">PR</span>'; toast(`New ${D.liftName(w.pr_lift)} PR for ${nameOf(pid)}: ${r.x} lb`); }
+          else if (e2) { console.error(e2); toast(`Saved. ${nameOf(pid)} can confirm the PR from their own log.`); }
+        }
+      }
+    };
+    const list = $('#clList');
+    list.addEventListener('change', e => { if (e.target.matches('.clIn')) save(e.target); });
+    list.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' || !e.target.matches('.clIn')) return;
+      e.preventDefault();
+      const all = $$('.clIn', list), i = all.indexOf(e.target);
+      e.target.blur();
+      if (all[i + 1]) all[i + 1].focus();
+    });
+    const add = $('#clAddSel');
+    if (add) add.onchange = async () => { const p = add.value; if (!p) return; try { await rpc('check_in', { p_session: pick.id, p_profile: p, p_in: true }); toast('Added and checked in'); route(); } catch (err) { toast(err.message); } };
+    const first = $$('.clIn', list).find(i => !i.value); if (first && window.matchMedia('(min-width:861px)').matches) first.focus();
+    if (window.matchMedia('(max-width:860px)').matches) { const sec = $('.clSec'); if (sec) window.scrollTo(0, sec.getBoundingClientRect().top + window.scrollY - 60); }
+  };
+
   /* =================================================================
      STAFF: the gym office
      ================================================================= */
@@ -110,7 +208,7 @@ export function install(X) {
     const card = s => {
       const roster = bk.filter(b => b.session_id === s.id), here = roster.filter(b => b.status === 'attended').length, booked = roster.filter(b => b.status !== 'waitlist').length;
       return `<article class="ckS${s.status === 'canceled' ? ' off' : ''}" data-s="${s.id}">
-        <header><div><b>${tAt(s.starts_at, g.tz)}</b> ${esc(s.name)}${s.status === 'canceled' ? ' <span class="pill down">Canceled</span>' : ''}<div class="sub">Coach ${esc(s.coach_id ? nm(s.coach_id) : 'not set')}</div></div><div class="ckN"><b>${here}</b>/${booked} here<span class="sub">${s.capacity} spots</span></div></header>
+        <header><div><b>${tAt(s.starts_at, g.tz)}</b> ${esc(s.name)}${s.status === 'canceled' ? ' <span class="pill down">Canceled</span>' : ''}<div class="sub">Coach ${esc(s.coach_id ? nm(s.coach_id) : 'not set')}</div></div><a class="btn sm ckLog" href="/class/${g.id}?s=${s.id}">Log weights</a><div class="ckN"><b>${here}</b>/${booked} here<span class="sub">${s.capacity} spots</span></div></header>
         <div class="ckRoster">${roster.map(b => `<button type="button" class="ckP${b.status === 'attended' ? ' in' : ''}${b.status === 'waitlist' ? ' wl' : ''}" data-p="${b.profile_id}" data-in="${b.status === 'attended' ? 0 : 1}" aria-pressed="${b.status === 'attended'}"><span>${esc(nm(b.profile_id))}</span>${b.status === 'waitlist' ? '<span class="pill flat">Waitlist</span>' : ''}${flags(b.profile_id)}</button>`).join('') || '<p class="hint">Nobody booked yet.</p>'}</div>
         <div class="row"><label class="vh" for="wi-${s.id}">Walk in</label><select id="wi-${s.id}" data-walk style="max-width:240px"><option value="">Check in a walk in…</option>${members.filter(m => !roster.some(b => b.profile_id === m.id)).map(m => `<option value="${m.id}">${esc(m.display_name)}</option>`).join('')}</select></div>
       </article>`;

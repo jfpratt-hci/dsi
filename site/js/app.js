@@ -79,8 +79,8 @@ const boardRow = id => S.board.find(r => r.profile_id === id);
 // members of a gym get My gym; owners and coaches get Gym office; the Founder and Commissioners get Admin.
 // Each panel spans the bar with a kicker and a grid of links, each a name and one line. On phones it is a drawer.
 const nav = $('#nav'), menuBtn = $('#menuBtn');
-const OFFICE = [['today', 'Check in', 'Today\'s classes and who is here'], ['schedule', 'Schedule', 'Classes, times and coaches'], ['wod', 'Workouts', 'Write the week, Parts A to D'], ['results', 'Results', 'Enter scores for the day'], ['plan', 'Plan builder', 'AI cycles from a day to a quarter'], ['members', 'Members', 'Profiles, waivers and attendance'], ['billing', 'Billing', 'Plans, invoices and payments', 1], ['docs', 'Documents', 'Waiver and membership contract', 1], ['staff', 'Staff', 'Coaches, swaps, hours and pay'], ['settings', 'Settings', 'Gym details and board link']];
-const officeHref = (gid, k) => k === 'plan' ? `/plan/${gid}` : k === 'wod' ? `/wod/${gid}` : k === 'results' ? `/results/${gid}` : k === 'settings' ? `/gym/${gid}` : `/club/${gid}?tab=${k}`;
+const OFFICE = [['today', 'Check in', 'Today\'s classes and who is here'], ['schedule', 'Schedule', 'Classes, times and coaches'], ['wod', 'Workouts', 'Write the week, Parts A to D'], ['results', 'Results', 'Enter scores for the day'], ['plan', 'Plan builder', 'AI cycles from a day to a quarter'], ['class', 'Log a class', 'Type weights live, straight to the board'], ['members', 'Members', 'Profiles, waivers and attendance'], ['billing', 'Billing', 'Plans, invoices and payments', 1], ['docs', 'Documents', 'Waiver and membership contract', 1], ['staff', 'Staff', 'Coaches, swaps, hours and pay'], ['settings', 'Settings', 'Gym details and board link']];
+const officeHref = (gid, k) => k === 'class' ? `/class/${gid}` : k === 'plan' ? `/plan/${gid}` : k === 'wod' ? `/wod/${gid}` : k === 'results' ? `/results/${gid}` : k === 'settings' ? `/gym/${gid}` : `/club/${gid}?tab=${k}`;
 function navGroups() {
   const me = S.me && S.me.display_name ? S.me : null, pro = isPro(), P = pro ? '' : 'Pro. ';
   const g = [
@@ -95,14 +95,14 @@ function navGroups() {
   const offItems = (x, keys) => OFFICE.filter(o => keys.includes(o[0]) && (!o[3] || x.role === 'owner' || (S.me && S.me.role === 'admin'))).map(([k, n, d]) => [officeHref(x.gym_id, k), n, d]);
   const screen = x => [`/tv/${x.gym.slug || x.gym_id}`, 'Big screen', 'The TV board, opens in a new tab', 1];
   if (gyms.length === 1) { const x = gyms[0], nm = x.gym.name || 'Gym';
-    g.push({ k: 'office', n: 'Gym office', sections: [{ h: nm + ' · Run the floor', items: [...offItems(x, ['today', 'schedule', 'wod', 'plan', 'results']), screen(x)] }, { h: 'Run the business', items: offItems(x, ['members', 'billing', 'docs', 'staff', 'settings']) }] }); }
+    g.push({ k: 'office', n: 'Gym office', sections: [{ h: nm + ' · Run the floor', items: [...offItems(x, ['today', 'class', 'schedule', 'wod', 'plan', 'results']), screen(x)] }, { h: 'Run the business', items: offItems(x, ['members', 'billing', 'docs', 'staff', 'settings']) }] }); }
   else if (gyms.length) g.push({ k: 'office', n: 'Gym office', sections: gyms.map(x => ({ h: (x.gym.name || 'Gym') + ' office', items: [...offItems(x, OFFICE.map(o => o[0])), screen(x)] })) });
   if (me && (me.role === 'admin' || me.role === 'commissioner')) g.push({ k: 'admin', n: 'Admin', sections: [{ h: me.role === 'admin' ? 'Management' : 'Commissioner', items: [...(me.role === 'admin' ? [['/admin', 'Management dashboard', 'Members, gyms and stats'], ['/admin?tab=gyms', 'All gyms', 'Edit gyms and open any office'], ['/admin?tab=requests', 'Requests', 'Gym claims and approvals']] : []), ['/reports', 'Reports', 'Flagged lifts and people'], ['/protests', 'Protest court', 'Rule on protested lifts'], ['/program', 'Import workouts', 'Load a program for a gym']] }] });
   return g;
 }
 const ROUTE_GROUP = { '': 'home', pricing: 'home', start: 'home', boards: 'boards', prs: 'boards', pr: 'boards', compete: 'boards', season: 'boards', battles: 'boards', gyms: 'boards', benchmarks: 'boards', protests: 'boards', recap: 'boards', u: 'boards',
   week: 'train', log: 'train', progress: 'train', plans: 'train', coach: 'train', plates: 'train', import: 'train', lift: 'train', chat: 'chat', classes: 'mygym', mygym: 'mygym', billing: 'mygym', sign: 'mygym', signed: 'mygym',
-  club: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office', admin: 'admin', reports: 'admin', program: 'admin', me: 'me', pro: 'me', rules: 'me', blocked: 'me' };
+  club: 'office', class: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office', admin: 'admin', reports: 'admin', program: 'admin', me: 'me', pro: 'me', rules: 'me', blocked: 'me' };
 const ACCT = () => [['/me', 'Profile', 'Name, gym and lifter details'], ['/me?tab=goals', 'Goals', 'What you are chasing'], ['/me?tab=reminders', 'Reminders', 'Nudges to log'], ['/me?tab=account', 'Account and safety', 'Email, privacy and blocks'], ['/u/' + S.me.id, 'My lifter card', 'Your public page'], ['/pro', 'DSI Pro', 'Membership and perks']];
 function buildNav(r) {
   const groups = navGroups(), cur = ROUTE_GROUP[r] ?? '';
