@@ -3,9 +3,11 @@ import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { loadWear, ReadinessCard, type Link } from '@/components/Readiness';
 import { Btn, Card, Eyebrow, Loading, Mono, Muted, ProBadge, s, Screen, Title } from '@/components/ui';
 import { C } from '@/constants/Colors';
 import { fmt, fmtD, monday, today } from '@/lib/data';
+import { healthKind, healthOn, syncHealth } from '@/lib/health';
 import { useSession } from '@/lib/session';
 import { sb } from '@/lib/supabase';
 import { fmtDW, insights, missing, num, sessionTotal, setText, topSet, type Session } from '@/lib/training';
@@ -20,6 +22,7 @@ export default function Training() {
   const [err, setErr] = useState('');
   const [shown, setShown] = useState(PAGE);
   const [flash, setFlash] = useState('');
+  const [wear, setWear] = useState<{ links: Link[]; rows: any[] } | null>(null);
 
   const load = useCallback(async () => {
     if (!me) return;
@@ -33,6 +36,21 @@ export default function Training() {
     setWks(((res.data ?? []) as any[]).map(w => ({ ...w, exercises: Array.isArray(w.exercises) ? w.exercises : [] })) as Session[]);
   }, [me]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  // Pro: readiness from connected apps. Pull fresh Health data first when it is over an hour old.
+  useFocusEffect(useCallback(() => {
+    if (!me || !isPro) return;
+    let live = true;
+    (async () => {
+      let w = await loadWear(me.id).catch(() => null);
+      const h = w && healthKind ? w.links.find(l => l.provider === healthKind) : undefined;
+      if (await healthOn() && (!h || !h.last_sync || Date.now() - Date.parse(h.last_sync) > 3600000)) {
+        await syncHealth(me.id, 7).catch(() => 0);
+        w = await loadWear(me.id).catch(() => w);
+      }
+      if (live) setWear(w);
+    })();
+    return () => { live = false; };
+  }, [me, isPro]));
 
   // A short confirmation after saving or deleting, passed in by the editor.
   useEffect(() => {
@@ -98,6 +116,7 @@ export default function Training() {
       </View>
 
       {err ? <Card><Muted style={{ fontSize: 14, color: C.down }}>{err}</Muted></Card> : null}
+      {isPro && wear ? <View style={{ marginTop: 14 }}><ReadinessCard rows={wear.rows} links={wear.links} /></View> : null}
 
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 14, marginBottom: 8 }}>
         <Eyebrow>Your trend</Eyebrow><ProBadge />

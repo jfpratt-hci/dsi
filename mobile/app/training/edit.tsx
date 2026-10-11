@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Btn, Card, Eyebrow, Loading, Muted, ProBadge, s, Screen } from '@/components/ui';
 import { C } from '@/constants/Colors';
 import { addDays, ALL_LIFTS, fmt, fmtD, liftName, today } from '@/lib/data';
+import { saveStrengthWorkout } from '@/lib/health';
 import { useSession } from '@/lib/session';
 import { sb } from '@/lib/supabase';
 import {
@@ -162,6 +163,11 @@ export default function EditSession() {
       return;
     }
     const { written, failed } = await writeSingles(me.id, isPro, exercises, day, t);
+    // New sessions also go to Apple Health or Health Connect as a strength workout, when that is on.
+    if (isNew) {
+      const end = day === today() ? new Date() : new Date(`${day}T18:00:00`);
+      saveStrengthWorkout(new Date(end.getTime() - 60 * 60000), end, t);
+    }
     setBusy(false);
     // A single that beat an earlier best gets the PR moment. Replace so Done lands back where you started.
     const big = written.find(w => w.isPr && w.prev);

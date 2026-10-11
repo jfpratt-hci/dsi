@@ -26,7 +26,14 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.dandystrength.dsi"
+      "package": "com.dandystrength.dsi",
+      "permissions": [
+        "android.permission.health.READ_HEART_RATE_VARIABILITY",
+        "android.permission.health.READ_RESTING_HEART_RATE",
+        "android.permission.health.READ_SLEEP",
+        "android.permission.health.READ_WEIGHT",
+        "android.permission.health.WRITE_EXERCISE"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -58,6 +65,23 @@
         {
           "color": "#F2C94C",
           "mode": "production"
+        }
+      ],
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "Dandy reads your HRV, resting heart rate, sleep and bodyweight to give you a readiness call for lifting each morning.",
+          "NSHealthUpdateUsageDescription": "Dandy saves the sessions you log as strength workouts in Apple Health.",
+          "background": false
+        }
+      ],
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
         }
       ]
     ],

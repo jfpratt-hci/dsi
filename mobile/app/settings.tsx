@@ -73,6 +73,7 @@ export default function Settings() {
 
       <Group title="Membership">
         <Row first label={isPro ? 'DSI Pro' : 'See DSI Pro'} detail={isPro ? (me.role === 'admin' ? 'Founder' : me.role === 'commissioner' ? 'Commissioner' : 'Active') : undefined} onPress={() => router.push('/pro')} />
+        <Row label="Connected apps" detail="Health, WHOOP" pro={!isPro} onPress={() => router.push('/connect')} />
         {SALES_ON ? <Row label="Restore purchases" onPress={doRestore} /> : null}
         {SALES_ON && me.pro_source === 'app_store' ? <Row label="Manage subscription" onPress={manage} /> : null}
       </Group>

@@ -26,11 +26,13 @@ export function install(X) {
     const wks = res.data || [];
     const thisWeek = wks.filter(w => w.day >= monday(today()));
     const pro = isPro();
+    const wr = pro && X.wear ? await X.wear.load().catch(() => null) : null;
     if (!paint(tok, `<section class="sec"><div class="secHead"><div><h2>My <span>training</span></h2>
         <p class="secSub">Log your own sessions: open gym, travel, your own program. Heavy singles on a catalog lift count as PRs${pro ? '' : ' (the four DSI lifts on free, every lift on Pro)'}.</p></div>
         <a class="btn" href="/training/new">Log a session</a></div>
         <div class="trStats"><div><b>${thisWeek.length}</b><span>${thisWeek.length === 1 ? "session" : "sessions"} this week</span></div><div><b>${fmt(thisWeek.reduce((t, w) => t + total(w), 0))}</b><span>lb moved this week</span></div><div><b>${wks.length}</b><span>sessions logged</span></div></div>
       </section>
+      ${wr && !wr.off ? `<section class="sec">${X.wear.card(D.readiness(wr.rows, today()), wr.links)}</section>` : ''}
       ${pro ? insights(wks) : `<section class="sec"><div class="formCard trTease"><b>See your training trend with DSI Pro</b><p>Weekly volume, your best estimated max on every exercise, and the AI coach reading your sessions.</p><p><a class="btn sm" href="/pro">See DSI Pro</a></p></div></section>`}
       <section class="sec"><h3 class="hmH3">Sessions</h3>
         ${wks.length ? `<ol class="trList">${wks.map(w => `<li><a href="/training/${w.id}"><span class="trDay">${esc(fmtDW(w.day))}</span><b>${esc(w.title)}</b><span class="trEx">${(w.exercises || []).map(ex => esc(ex.name)).join(', ') || 'No exercises'}</span><span class="trVol">${fmt(total(w))} lb</span></a></li>`).join('')}</ol>`

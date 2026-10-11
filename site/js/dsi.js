@@ -101,3 +101,39 @@ export function gains(r, days = 7) {
   if (any) { out.score = score(r) - score(prev); out.total = total(r) - total(prev); }
   return out;
 }
+
+// Readiness from wearables: WHOOP's recovery when there is one, otherwise our own from HRV and resting heart rate
+// against the member's last four weeks, plus last night's sleep. rows are wearable_days rows (any providers).
+const PREFER = { whoop: 0, apple: 1, health_connect: 2 };
+export function readiness(rows, today) {
+  const byDay = new Map();
+  [...(rows || [])].sort((a, b) => PREFER[b.provider] - PREFER[a.provider]).forEach(r => {
+    const d = byDay.get(r.day) || { day: r.day, src: r.provider };
+    for (const k of ['recovery', 'hrv_ms', 'rhr', 'sleep_hours', 'sleep_perf', 'strain', 'calories', 'bodyweight_lb']) if (r[k] != null) d[k] = +r[k];
+    d.src = r.provider; // sorted so WHOOP comes last and wins
+    byDay.set(r.day, d);
+  });
+  const days = [...byDay.values()].sort((a, b) => (a.day < b.day ? 1 : -1));
+  const scoreOf = (d, i) => {
+    if (d.recovery != null) return { v: d.recovery, how: 'WHOOP recovery' };
+    if (d.hrv_ms == null) return null;
+    const base = days.slice(i + 1, i + 29), h = base.map(x => x.hrv_ms).filter(x => x != null), r = base.map(x => x.rhr).filter(x => x != null);
+    if (h.length < 5) return null;
+    const z = (arr, v) => { const m = arr.reduce((a, b) => a + b, 0) / arr.length, sd = Math.sqrt(arr.reduce((a, b) => a + (b - m) ** 2, 0) / arr.length); return { m, z: (v - m) / Math.max(sd, m * 0.05, 1) }; };
+    const cap = x => Math.max(-2.5, Math.min(2.5, x));
+    const zh = z(h, d.hrv_ms), zr = d.rhr != null && r.length >= 5 ? cap(z(r, d.rhr).z) : 0;
+    zh.z = cap(zh.z);
+    const sl = d.sleep_hours != null ? Math.max(-3, Math.min(1.5, d.sleep_hours - 7.5)) : 0;
+    return { v: Math.round(Math.max(5, Math.min(99, 55 + 14 * zh.z - 8 * zr + 6 * sl))), how: 'From your HRV, resting heart rate and sleep', hrvAvg: Math.round(zh.m) };
+  };
+  const list = days.slice(0, 28).map((d, i) => ({ ...d, score: scoreOf(d, i) }));
+  const last = list[0];
+  const fresh = last && today && (Date.parse(today) - Date.parse(last.day)) / 864e5 <= 1;
+  const s = fresh && last.score;
+  if (!s) return { today: null, days: list };
+  const zone = s.v >= 67 ? 'up' : s.v >= 34 ? 'flat' : 'down';
+  const advice = zone === 'up' ? 'Green. A good day to push: go after a heavy single or add weight.'
+    : zone === 'flat' ? 'Yellow. Train as written and keep the top sets honest.'
+    : 'Red. Back off today: take 10 to 15% off your targets and save the max out for a green day.';
+  return { today: { ...last, score: s.v, how: s.how, hrvAvg: s.hrvAvg, zone, advice, label: zone === 'up' ? 'Green' : zone === 'flat' ? 'Yellow' : 'Red' }, days: list };
+}

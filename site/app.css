@@ -974,3 +974,28 @@ main.wrap>.tvDots{padding:0;margin:0;left:auto}
 .tkPitch li{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;color:var(--muted)}
 .tkPitch b{display:block;color:var(--ink);font:800 20px var(--disp);text-transform:uppercase;margin-bottom:4px}
 @media (max-width:860px){.tkGrid{grid-template-columns:1fr}.tkCam{max-height:62vh}.tkPitch{grid-template-columns:1fr}.tkHud b{font-size:64px}}
+
+/* connected apps and readiness */
+.wrGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.wrApps{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.wrApp p{color:var(--muted);margin:6px 0 10px;font-size:14px}
+.wrAppHead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.wrAppHead b{font:800 20px var(--disp);text-transform:uppercase;letter-spacing:.03em}
+.wrAppHead .pill{margin:0}
+.wrCard{border-left:4px solid var(--line)}
+.wrCard.wr-up{border-left-color:var(--up)}.wrCard.wr-flat{border-left-color:var(--flat)}.wrCard.wr-down{border-left-color:var(--down)}
+.wrTop{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
+.wrScore{display:grid;justify-items:center;width:96px;height:96px;border-radius:50%;border:6px solid var(--line);align-content:center}
+.wr-up .wrScore{border-color:var(--up)}.wr-flat .wrScore{border-color:var(--flat)}.wr-down .wrScore{border-color:var(--down)}
+.wrScore b{font:900 42px/1 var(--disp)}
+.wrScore span{font:700 11px var(--sans);text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.wrAdvice{font-size:16px;margin:4px 0}
+.wrNone{color:var(--muted)}
+.wrFacts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:14px 0}
+.wrFacts div{display:grid;gap:2px}
+.wrFacts b{font:600 20px var(--mono)}
+.wrFacts span{font-size:12px;color:var(--muted)}
+.wrBars{display:grid;grid-template-columns:repeat(14,1fr);gap:4px;align-items:end;height:56px}
+.wrBars i{display:block;background:var(--line);border-radius:2px 2px 0 0}
+.wrBars i.up{background:var(--up)}.wrBars i.flat{background:var(--flat)}.wrBars i.down{background:var(--down)}
+@media (max-width:860px){.wrGrid,.wrApps{grid-template-columns:1fr}.wrFacts{grid-template-columns:repeat(2,1fr)}}
