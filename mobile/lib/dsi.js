@@ -67,6 +67,8 @@ export const medianFor = (l, r) => med(l.b, bwOf(r), ageOf(r));
 
 // Weekly targets
 const r5 = x => Math.max(5, Math.round(x / 5) * 5);
+// What a target weight is measured in: lb for a barbell, lb DB or lb KB (x2 for a pair).
+export const unit = l => (l && (l.imp === 'db' || l.imp === 'kb') ? `lb ${l.imp.toUpperCase()}${l.pair ? ' x2' : ''}` : 'lb');
 export function target(l, p) {
   const base = +p[l.b] || 0, bw = +p.bw || 200;
   if (l.fixed) {
@@ -77,6 +79,8 @@ export function target(l, p) {
   if (l.rx) {
     // rx is the men's [Rx, Rx+]; rxw is the women's [Rx, Rx+] when the coach set one.
     const rx = p.sex === 'female' && l.rxw && l.rxw.length ? l.rxw : l.rx;
+    // Dumbbells and kettlebells: the suggested Rx weight for their sex, not scaled from a barbell lift.
+    if (l.imp === 'db' || l.imp === 'kb') return rx[0];
     if (l.f2) return base >= 270 ? rx[1] : rx[0];
     return base * 0.7 >= rx[1] ? rx[1] : base * 0.7 >= rx[0] ? rx[0] : r5(base * 0.6);
   }

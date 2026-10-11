@@ -164,7 +164,9 @@ export function install(X) {
         <div class="wodTrk"${p.lift ? '' : ' hidden'}>
           <div class="field"><label for="wn-${p.L}">Movement</label><input id="wn-${p.L}" data-n maxlength="60" value="${esc(l.n || '')}" placeholder="Front squat"></div>
           <div class="field"><label for="ws-${p.L}">Scheme</label><input id="ws-${p.L}" data-sch maxlength="60" value="${esc(l.sch || '')}" placeholder="5 x 3, build"></div>
-          <div class="field"><label for="wtt-${p.L}">Target weight</label><select id="wtt-${p.L}" data-tt><option value=""${tt === '' ? ' selected' : ''}>No target</option><option value="f"${tt === 'f' ? ' selected' : ''}>Percent of a lift</option><option value="rx"${tt === 'rx' ? ' selected' : ''}>Rx weight</option></select></div>
+          <div class="field"><label for="wi-${p.L}">Equipment</label><select id="wi-${p.L}" data-imp>${[['', 'Barbell'], ['db', 'Dumbbell'], ['kb', 'Kettlebell']].map(([v, n]) => `<option value="${v}"${(l.imp || '') === v ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
+          <div class="field" data-imponly><span class="lbl">How many</span><label class="tog"><input type="checkbox" data-pair${l.pair ? ' checked' : ''}><span>A pair</span></label></div>
+          <div class="field"><label for="wtt-${p.L}">Target weight</label><select id="wtt-${p.L}" data-tt><option value=""${tt === '' ? ' selected' : ''}>No target</option><option value="f"${tt === 'f' ? ' selected' : ''} data-bar>Percent of a lift</option><option value="rx"${tt === 'rx' ? ' selected' : ''}>Rx and Rx+ weights</option></select></div>
           <div class="field" data-for="f rx"><label for="wb-${p.L}">Based on their</label><select id="wb-${p.L}" data-b>${BASE_OPTS.map(([k, n]) => `<option value="${k}"${(l.b || 'squat') === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
           <div class="field" data-for="f"><label for="wf-${p.L}">Percent</label><input id="wf-${p.L}" data-f type="number" inputmode="numeric" min="1" max="150" value="${l.f ? Math.round(l.f * 100) : ''}" placeholder="75"></div>
           ${[['rx0', 'Rx men', l.rx && l.rx[0], '95'], ['rxw0', 'Rx women', l.rxw && l.rxw[0], '65'], ['rx1', 'Rx+ men', l.rx && l.rx[1] !== l.rx[0] && l.rx[1], 'optional'], ['rxw1', 'Rx+ women', l.rxw && l.rxw[1] !== l.rxw[0] && l.rxw[1], 'optional']]
@@ -188,7 +190,7 @@ export function install(X) {
     const build = a => {
       const L = a.dataset.p, trk = $('[data-trk]', a);
       if (!trk || !trk.checked) return null;
-      const n = $('[data-n]', a).value.trim(), tt = $('[data-tt]', a).value, b = $('[data-b]', a).value;
+      const n = $('[data-n]', a).value.trim(), imp = $('[data-imp]', a).value, tt = imp && $('[data-tt]', a).value === 'f' ? 'rx' : $('[data-tt]', a).value, b = $('[data-b]', a).value;
       const prev = (ps.find(p => p.L === L) || {}).lift || {};
       const l = { id: L.toLowerCase(), part: L, n, sch: $('[data-sch]', a).value.trim() };
       const bn = (BASE_OPTS.find(x => x[0] === b) || [, ''])[1].toLowerCase();
@@ -199,17 +201,30 @@ export function install(X) {
           l.b = b; l.rx = [r0, r1 > r0 ? r1 : r0];
           if (w0 > 0) l.rxw = [w0, w1 > w0 ? w1 : w0];
           const pair = (m, w) => (w ? `${m}/${w}` : `${m}`);
-          l.why = `${pair(r0, w0 || 0)} Rx${r1 > r0 ? `, ${pair(r1, w1 > w0 ? w1 : 0)} Rx+ once your ${bn} is strong enough` : ''}`;
+          if (imp) {
+            l.imp = imp; if ($('[data-pair]', a).checked) l.pair = true;
+            const what = `${l.pair ? 'pair of ' : ''}${imp === 'db' ? 'dumbbell' : 'kettlebell'}${l.pair ? 's' : ''}`;
+            l.why = `Rx ${pair(r0, w0 || 0)} lb${r1 > r0 ? `, Rx+ ${pair(r1, w1 > w0 ? w1 : 0)} lb` : ''} ${what} (men/women)`;
+          } else l.why = `${pair(r0, w0 || 0)} Rx${r1 > r0 ? `, ${pair(r1, w1 > w0 ? w1 : 0)} Rx+ once your ${bn} is strong enough` : ''}`;
         }
       }
       if (!l.why) l.why = 'Log the weight you used';
       if (prev.max) l.max = true;
       return l;
     };
-    const preview = a => { const out = $('[data-prev]', a); if (!out) return; const l = build(a); const t = l && D.target(l, me); out.textContent = t ? `Your target: ${t} lb` : ''; };
+    const preview = a => { const out = $('[data-prev]', a); if (!out) return; const l = build(a); const t = l && D.target(l, me); out.textContent = t ? `Your target: ${t} ${D.unit(l)}` : ''; };
     $$('.wodPart').forEach(a => {
       const trk = $('[data-trk]', a), tk = $('.wodTrk', a);
-      const sync = () => { if (!tk) return; tk.hidden = !trk.checked; const tt = $('[data-tt]', a).value; $$('[data-for]', a).forEach(f => { f.hidden = !tt || !f.dataset.for.split(' ').includes(tt); }); preview(a); };
+      const sync = () => {
+        if (!tk) return; tk.hidden = !trk.checked;
+        const imp = $('[data-imp]', a).value, sel = $('[data-tt]', a);
+        // Dumbbells and kettlebells take Rx and Rx+ weights, not a percent of a barbell lift.
+        $('[data-bar]', sel).disabled = !!imp; if (imp && sel.value === 'f') sel.value = 'rx';
+        const tt = sel.value;
+        $$('[data-for]', a).forEach(f => { f.hidden = !tt || !f.dataset.for.split(' ').includes(tt) || (imp && f.querySelector('[data-b]')); });
+        $('[data-imponly]', a).hidden = !imp;
+        preview(a);
+      };
       if (trk) { trk.onchange = sync; a.addEventListener('input', sync); a.addEventListener('change', sync); sync(); }
     });
     const dBox = $('.wodPart[data-p="D"]');
