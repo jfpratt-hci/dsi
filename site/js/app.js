@@ -6,6 +6,7 @@ import { install as installAdmin } from './admin.js';
 import { install as installClub } from './club.js';
 import { install as installPlan } from './plan.js';
 import { install as installHome } from './home.js';
+import { install as installTraining } from './training.js';
 
 /* ---------- helpers ---------- */
 const $ = (s, el = document) => el.querySelector(s);
@@ -86,7 +87,7 @@ function navGroups() {
   const g = [
     { k: 'boards', n: 'Boards', sections: [{ h: 'Rankings', items: [['/boards', 'Leaderboard', 'Every lifter ranked by DSI'], ['/prs', 'PR wall', 'The newest personal records'], ['/benchmarks', 'Benchmarks', 'How strong is strong'], ['/gyms', 'Gym league', 'Gyms ranked head to head']] },
       { h: 'Competition', items: [['/compete', 'Compete', 'Seasons, battles and the league'], ['/season', 'This season', 'Standings for the current season'], ['/battles', 'Weekly battles', 'One lift, one week, one winner'], ['/protests', 'Protests', 'Challenge a lift, vote on it']] }] },
-    { k: 'train', n: 'Train', sections: [{ h: 'Every day', items: [['/week', 'The week', 'This week\'s workouts by day'], ...(me && me.gym_id ? [['/classes', 'Book a class', 'Reserve your spot']] : []), ['/log', 'Log a lift', 'Add a set and update your DSI'], ['/plates', 'Plate calculator', 'What to put on the bar']] },
+    { k: 'train', n: 'Train', sections: [{ h: 'Every day', items: [['/week', 'The week', 'This week\'s workouts by day'], ...(me && me.gym_id ? [['/classes', 'Book a class', 'Reserve your spot']] : []), ['/training', 'My training', 'Log your own sessions, sets and reps'], ['/log', 'Log a lift', 'Add a set and update your DSI'], ['/plates', 'Plate calculator', 'What to put on the bar']] },
       { h: 'Get better', items: [['/progress', 'Progress', P + 'Charts for every lift'], ['/plans', 'Goal plans', P + 'A plan to hit your next number'], ['/coach', 'Coach', P + 'Ask about your training'], ...(me ? [['/import', 'Import history', 'Bring in your old lifts']] : [])] }] },
     { k: 'chat', n: 'Chat', href: '/chat' },
   ];
@@ -101,7 +102,7 @@ function navGroups() {
   return g;
 }
 const ROUTE_GROUP = { '': 'home', pricing: 'home', start: 'home', boards: 'boards', prs: 'boards', pr: 'boards', compete: 'boards', season: 'boards', battles: 'boards', gyms: 'boards', benchmarks: 'boards', protests: 'boards', recap: 'boards', u: 'boards',
-  week: 'train', log: 'train', progress: 'train', plans: 'train', coach: 'train', plates: 'train', import: 'train', lift: 'train', chat: 'chat', classes: 'mygym', mygym: 'mygym', billing: 'mygym', sign: 'mygym', signed: 'mygym',
+  week: 'train', training: 'train', log: 'train', progress: 'train', plans: 'train', coach: 'train', plates: 'train', import: 'train', lift: 'train', chat: 'chat', classes: 'mygym', mygym: 'mygym', billing: 'mygym', sign: 'mygym', signed: 'mygym',
   club: 'office', class: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office', admin: 'admin', reports: 'admin', program: 'admin', me: 'me', pro: 'me', rules: 'me', blocked: 'me' };
 const ACCT = () => [['/me', 'Profile', 'Name, gym and lifter details'], ['/me?tab=goals', 'Goals', 'What you are chasing'], ['/me?tab=reminders', 'Reminders', 'Nudges to log'], ['/me?tab=account', 'Account and safety', 'Email, privacy and blocks'], ['/u/' + S.me.id, 'My lifter card', 'Your public page'], ['/pro', 'DSI Pro', 'Membership and perks']];
 function buildNav(r) {
@@ -1370,6 +1371,7 @@ installAdmin(CTX);
 installClub(CTX);
 installPlan(CTX);
 installHome(CTX);
+installTraining(CTX);
 
 /* ---------- boot ---------- */
 async function boot() {
