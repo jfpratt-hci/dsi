@@ -26,3 +26,10 @@ begin new.updated_at := now(); return new; end $$;
 drop trigger if exists personal_workouts_touch on public.personal_workouts;
 create trigger personal_workouts_touch before update on public.personal_workouts
   for each row execute function public.personal_workouts_touch();
+
+-- Trigger functions are not callable from the API.
+revoke execute on function public.memberships_gym_pro() from public, anon, authenticated;
+revoke execute on function public.plans_gym_pro() from public, anon, authenticated;
+revoke execute on function public.personal_workouts_touch() from public, anon, authenticated;
+revoke execute on function public.gym_pro_seats(uuid) from public, anon;
+grant execute on function public.gym_pro_seats(uuid) to authenticated;
