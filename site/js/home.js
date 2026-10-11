@@ -70,7 +70,7 @@ export function install(X) {
       <section class="hmSplit">
         <div class="hmSide"><h2 class="hmH2">For gym owners</h2><p class="hmSideSub">Everything the gym runs on, in one office.</p>
           <dl class="hmParts">${OWNER.map(([n, d]) => `<div><dt>${esc(n)}</dt><dd>${esc(d)}</dd></div>`).join('')}</dl>
-          <a class="btn ghost" href="/pricing">See pricing</a></div>
+          <a class="btn ghost" href="/pricing">See plans</a></div>
         <div class="hmSide"><h2 class="hmH2">For members</h2><p class="hmSideSub">A number that proves you are getting stronger.</p>
           <dl class="hmParts">${MEMBER.map(([n, d]) => `<div><dt>${esc(n)}</dt><dd>${esc(d)}</dd></div>`).join('')}</dl>
           <a class="btn ghost" href="${m ? '/boards' : '/join'}">${m ? 'See where you rank' : 'Get your DSI free'}</a></div>
@@ -86,7 +86,7 @@ export function install(X) {
           <p class="hmSideSub">Card payments run on your own Stripe account at Stripe's rates. We add no markup.</p></div>
         <div class="hmTiers">${TIERS.map(t => `<div class="hmTier"><b>${t.n}</b><span class="hmAmt">$${t.p}<small>/mo</small></span><span class="hmWho2">${esc(t.who)}</span><p>${esc(t.line)}</p></div>`).join('')}${customCard(false)}</div>
         <p class="hmSeat"><b>DSI Pro seats, $${SEAT} per member a month.</b> Put Pro in a Plus tier at $10 more and each Plus member nets you $${10 - SEAT}. Forty Plus members cover the Build plan with $41 to spare.</p>
-        <div class="row"><a class="btn" href="/pricing">Full pricing</a><a class="btn ghost" href="/start">Bring your gym</a></div>
+        <div class="row"><a class="btn" href="/pricing">Compare plans</a><a class="btn ghost" href="/start">Bring your gym</a></div>
       </section>
 
       <section class="hmSwitch">
@@ -96,43 +96,76 @@ export function install(X) {
       </section>`)) return;
   };
 
-  /* ---------- pricing ---------- */
-  VIEWS.pricing = async (_, tok) => {
-    const Y = 'Included', N = '';
-    const rows = [
+  /* ---------- plans: sells the gym plans and compares every feature ---------- */
+  // Each card says what it adds over the one before; the table compares every feature by what owners care about.
+  const CARD = {
+    base: ['The DSI boards, PR wall and gym league', 'Workouts in Parts A to D, results and Log a class', 'Dandy Board on the gym TV', 'Class booking and check in'],
+    build: ['Everything in Base, for unlimited members', 'Billing, invoices and autopay on your Stripe', 'Waivers and contracts signed online', 'Staff, coach swaps, hours, attendance', 'Dandy Plan AI programming, 4 weeks a month'],
+    peak: ['Everything in Build', 'Unlimited Dandy Plan AI programming', 'DSI Pro seats at $3 instead of $4', 'Payroll export and multiple locations as they ship'],
+  };
+  const EVERY = ['The DSI score and leaderboards', 'Dandy Board for the gym TV', 'Workouts in Parts A to D', 'Class booking and check in', 'My training for every member', 'Month to month, no contract'];
+  const GROUPS = [
+    ['Members and the DSI', [
+      ['DSI score, leaderboards, PR wall and gym league', 'y', 'y', 'y'],
+      ['Member app and member accounts', 'y', 'y', 'y'],
+      ['My training: members log their own sessions', 'y', 'y', 'y'],
+      ['DSI Pro seats for your members', `$${SEAT} a member`, `$${SEAT} a member`, `$${SEAT_PEAK} a member`],
+    ]],
+    ['Running the floor', [
+      ['Workouts in Parts A to D with member targets', 'y', 'y', 'y'],
+      ['Log a class: coaches type weights live', 'y', 'y', 'y'],
+      ['Dandy Board on the gym TV', 'y', 'y', 'y'],
+      ['Class schedule, booking and check in', 'y', 'y', 'y'],
+      ['Attendance history for every member', '', 'y', 'y'],
+    ]],
+    ['Running the business', [
       ['Members', 'Up to 75', 'Unlimited', 'Unlimited'],
-      ['DSI boards, PR wall and gym league', Y, Y, Y],
-      ['Workouts in Parts A to D, results', Y, Y, Y],
-      ['Dandy Board for the TV', Y, Y, Y],
-      ['Class booking and check in', Y, Y, Y],
-      ['Billing, invoices and autopay', N, Y, Y],
-      ['Waivers and contracts, signed online', N, Y, Y],
-      ['Staff, coach swaps, hours and pay', N, Y, Y],
-      ['Attendance history', N, Y, Y],
-      ['Dandy Plan AI programming', N, 'Up to 4 weeks a month', 'Unlimited'],
-      ['DSI Pro seats', `$${SEAT} a member`, `$${SEAT} a member`, `$${SEAT_PEAK} a member`],
-      ['Payroll export, multiple locations', N, N, 'As they ship in 2027'],
-      ['Website, reviews, SEO, API access', 'Custom add on', 'Custom add on', 'Custom add on'],
-    ];
+      ['Billing, invoices and autopay through your own Stripe', '', 'y', 'y'],
+      ['Waivers and membership contracts, signed online', '', 'y', 'y'],
+      ['Staff, coach swaps, hours and pay', '', 'y', 'y'],
+      ['Payroll export', '', '', 'As it ships in 2027'],
+      ['Multiple locations', '', '', 'As it ships in 2027'],
+    ]],
+    ['Built with AI', [
+      ['Dandy Plan: cycles from a day to a quarter, from your goals', '', '4 weeks a month', 'Unlimited'],
+      ['Import workouts from a web page, photo or text', 'y', 'y', 'y'],
+      ['AI coach for members', 'With Pro seats', 'With Pro seats', 'With Pro seats'],
+    ]],
+    ['Custom services', [
+      ['Website, review management, SEO, API access', 'Add on', 'Add on', 'Add on'],
+      ['Text messaging and paid ads', 'Cost plus', 'Cost plus', 'Cost plus'],
+    ]],
+  ];
+  const cellOf = c => c === 'y' ? '<span class="plY" aria-hidden="true"></span><span class="vh">Included</span>' : c ? esc(c) : '<span class="plN" aria-hidden="true"></span><span class="vh">Not included</span>';
+
+  VIEWS.pricing = async (_, tok) => {
     if (!paint(tok, `
-      <section class="sec"><div class="secHead"><div><h2>Pricing</h2>
-        <p class="secSub">Three plans for the gym, billed monthly, plus custom services when you want us to run more of the business. Card payments run on your own Stripe account at Stripe's standard rates, and we add no markup.</p></div></div>
-        <div class="hmTiers">${TIERS.map(t => `<div class="hmTier"><b>${t.n}</b><span class="hmAmt">$${t.p}<small>/mo</small></span><span class="hmWho2">${esc(t.who)}</span><p>${esc(t.line)}</p><a class="btn sm" href="/start?tier=${t.k}">Start on ${t.n}</a></div>`).join('')}${customCard(true)}</div>
+      <section class="plHero">
+        <div><h1 class="plH">Plans for gyms that want members to stay</h1>
+          <p class="hmSub">Run classes, billing, waivers, staff and programming in one place, and give every member a score worth chasing. Month to month, and we move you over for you.</p>
+          <div class="row hmCta"><a class="btn" href="/start">Bring your gym</a><a class="btn ghost" href="#compare">Compare every feature</a></div></div>
+        <div class="plEvery"><b>Every plan includes</b><ul>${EVERY.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
       </section>
-      <section class="sec"><h3 class="hmH3">What each plan includes</h3>
-        <div class="tablewrap"><table class="hmCmp"><thead><tr><th></th>${TIERS.map(t => `<th>${t.n}</th>`).join('')}</tr></thead><tbody>
-          ${rows.map(r => `<tr><th scope="row">${esc(r[0])}</th>${r.slice(1).map(c => `<td${c ? '' : ' class="no"'}>${c ? esc(c) : '<span class="vh">Not included</span>'}</td>`).join('')}</tr>`).join('')}
-        </tbody></table></div>
+      <section class="sec">
+        <div class="plCards">${TIERS.map(t => `<article class="plCard"><b class="plName">${t.n}</b><span class="hmAmt">$${t.p}<small>/mo</small></span><span class="hmWho2">${esc(t.who)}</span>
+            <ul class="plList">${CARD[t.k].map(x => `<li>${esc(x)}</li>`).join('')}</ul><a class="btn" href="/start?tier=${t.k}">Start on ${t.n}</a></article>`).join('')}
+          <article class="plCard plCustom"><b class="plName">Custom</b><span class="hmAmt hmQuote">Quoted</span><span class="hmWho2">Any plan, plus services</span>
+            <ul class="plList"><li>Website build and management</li><li>Review management</li><li>SEO and AI search</li><li>API access</li><li>Texts and ads at cost plus</li></ul><a class="btn ghost" href="/start?tier=custom">Get a quote</a></article></div>
+        <p class="hmSeat">Card payments run on your own Stripe account at Stripe's standard rates. We add no markup.</p>
       </section>
-      <section class="sec"><h3 class="hmH3">Custom services</h3>
+      <section class="sec" id="compare"><h2 class="hmH2">Compare every feature</h2>
+        <div class="tablewrap"><table class="hmCmp plCmp"><thead><tr><th><span class="vh">Feature</span></th>${TIERS.map(t => `<th>${t.n}<small>$${t.p}/mo</small></th>`).join('')}</tr></thead>
+          ${GROUPS.map(([g, rows]) => `<tbody><tr class="plGrp"><th colspan="4" scope="colgroup">${esc(g)}</th></tr>${rows.map(r => `<tr><th scope="row">${esc(r[0])}</th>${r.slice(1).map(c => `<td>${cellOf(c)}</td>`).join('')}</tr>`).join('')}</tbody>`).join('')}
+        </table></div>
+      </section>
+      <section class="sec"><h2 class="hmH2">Custom services</h2>
         <p class="secSub">Add any of these to Base, Build or Peak. Each gym gets a quote. Where a service runs on someone else's meter, like texts or ad spend, you pay that cost plus our fee.</p>
         <div class="tablewrap"><table class="hmCmp hmAdd"><thead><tr><th>Service</th><th>What we do</th><th>How it's priced</th></tr></thead><tbody>
           ${ADDONS.map(([n, d, pr]) => `<tr><th scope="row"><b>${esc(n)}</b></th><td>${esc(d)}</td><td>${esc(pr)}</td></tr>`).join('')}
         </tbody></table></div>
-        <div class="row"><a class="btn" href="/start?tier=custom">Get a quote</a></div>
       </section>
-      <section class="sec hmProSec"><div><h3 class="hmH3">DSI Pro pays for itself</h3>
-        <p>Your gym buys DSI Pro seats at $${SEAT} a member a month ($${SEAT_PEAK} on Peak), against $${PRO_RETAIL} for a lifter on their own. Add Pro to a Plus membership at $10 more a month, and the members who want it pay for it.</p></div>
+      <section class="sec hmProSec"><div><h2 class="hmH2">DSI Pro pays for itself</h2>
+        <p>Your gym buys DSI Pro seats at $${SEAT} a member a month ($${SEAT_PEAK} on Peak), against $${PRO_RETAIL} for a lifter on their own. Put Pro in a Plus membership at $10 more a month, and the members who want it pay for it.</p></div>
         <div class="tablewrap"><table class="hmMath"><caption>A 120 member gym on Build where 40 members choose Plus</caption><tbody>
           <tr><th scope="row">Plus revenue, 40 at $10</th><td>$400</td></tr>
           <tr><th scope="row">DSI Pro seats, 40 at $${SEAT}</th><td>($160)</td></tr>
@@ -140,14 +173,25 @@ export function install(X) {
           <tr class="sum"><th scope="row">Left over each month</th><td>$41</td></tr>
         </tbody></table></div>
       </section>
-      <section class="sec"><h3 class="hmH3">Questions owners ask</h3>
-        <dl class="hmFaq">
-          <div><dt>Is there a contract?</dt><dd>No. Plans are month to month and you can change tiers any time.</dd></div>
+      <section class="sec"><h2 class="hmH2">Switching takes a week, not a season</h2>
+        <ol class="hmSteps plSwitch">
+          <li><b>Send us what you have</b><p>Your member list, plans and class schedule, from Kilo, Wodify, PushPress or a spreadsheet.</p></li>
+          <li><b>We set up your office</b><p>Plans, classes, waiver and contract ready, with your members and their history moved over.</p></li>
+          <li><b>Your members sign in</b><p>They book online, sign the waiver once and see their DSI on day one.</p></li>
+          <li><b>The TV goes on</b><p>Dandy Board shows the day's workout and every member's own target.</p></li>
+        </ol>
+      </section>
+      <section class="sec"><h2 class="hmH2">Questions owners ask</h2>
+        <dl class="hmFaq plFaq">
+          <div><dt>Is there a contract?</dt><dd>No. Plans are month to month, and you can move between plans any time.</dd></div>
           <div><dt>Who handles the switch?</dt><dd>We do. Send us your member list, plans and class schedule, and we set up your office before your first class on Dandy Strength.</dd></div>
-          <div><dt>Do members have to pay for the app?</dt><dd>No. The DSI and the app are free for every member. Pro is the upgrade, and your gym decides whether to include it.</dd></div>
+          <div><dt>Do members pay for the app?</dt><dd>No. The DSI, the app and My training are free for every member. Pro is the upgrade, and your gym decides whether to include it.</dd></div>
+          <div><dt>What do card payments cost?</dt><dd>Stripe's standard rates, paid to Stripe. Money goes straight to your own Stripe account, and we add nothing on top.</dd></div>
+          <div><dt>What is cost plus?</dt><dd>For services that run on someone else's meter, like text messages or ad spend, you pay that cost plus our fee. Everything else is a fixed monthly price.</dd></div>
+          <div><dt>Which plan should I start on?</dt><dd>If you bill members online, start on Build. If you only want the boards, the workouts and the TV, start on Base and move up when you are ready.</dd></div>
         </dl>
-        <div class="row"><a class="btn" href="/start">Bring your gym</a></div>
-      </section>`)) return;
+      </section>
+      <section class="sec plEnd"><div><h2 class="hmH2">Bring your gym to Dandy Strength</h2><p class="hmSideSub">Tell us about your gym and we reply within one business day.</p></div><a class="btn" href="/start">Bring your gym</a></section>`)) return;
   };
 
   /* ---------- bring your gym ---------- */

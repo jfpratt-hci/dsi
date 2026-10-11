@@ -82,6 +82,7 @@ const boardRow = id => S.board.find(r => r.profile_id === id);
 const nav = $('#nav'), menuBtn = $('#menuBtn');
 const OFFICE = [['today', 'Check in', 'Today\'s classes and who is here'], ['schedule', 'Schedule', 'Classes, times and coaches'], ['wod', 'Workouts', 'Write the week, Parts A to D'], ['results', 'Results', 'Enter scores for the day'], ['plan', 'Plan builder', 'AI cycles from a day to a quarter'], ['class', 'Log a class', 'Type weights live, straight to the board'], ['members', 'Members', 'Profiles, waivers and attendance'], ['billing', 'Billing', 'Plans, invoices and payments', 1], ['docs', 'Documents', 'Waiver and membership contract', 1], ['staff', 'Staff', 'Coaches, swaps, hours and pay'], ['settings', 'Settings', 'Gym details and board link']];
 const officeHref = (gid, k) => k === 'class' ? `/class/${gid}` : k === 'plan' ? `/plan/${gid}` : k === 'wod' ? `/wod/${gid}` : k === 'results' ? `/results/${gid}` : k === 'settings' ? `/gym/${gid}` : `/club/${gid}?tab=${k}`;
+const gyms0 = () => S.myGyms || [];
 function navGroups() {
   const me = S.me && S.me.display_name ? S.me : null, pro = isPro(), P = pro ? '' : 'Pro. ';
   const g = [
@@ -90,6 +91,7 @@ function navGroups() {
     { k: 'train', n: 'Train', sections: [{ h: 'Every day', items: [['/week', 'The week', 'This week\'s workouts by day'], ...(me && me.gym_id ? [['/classes', 'Book a class', 'Reserve your spot']] : []), ['/training', 'My training', 'Log your own sessions, sets and reps'], ['/log', 'Log a lift', 'Add a set and update your DSI'], ['/plates', 'Plate calculator', 'What to put on the bar']] },
       { h: 'Get better', items: [['/progress', 'Progress', P + 'Charts for every lift'], ['/plans', 'Goal plans', P + 'A plan to hit your next number'], ['/coach', 'Coach', P + 'Ask about your training'], ...(me ? [['/import', 'Import history', 'Bring in your old lifts']] : [])] }] },
     { k: 'chat', n: 'Chat', href: '/chat' },
+    ...(gyms0().length ? [] : [{ k: 'home', n: 'For gyms', href: '/pricing' }]),
   ];
   if (me && me.gym_id) g.push({ k: 'mygym', n: 'My gym', sections: [{ h: 'Your membership', items: [['/mygym', 'Membership and billing', 'Plan, payments and documents'], ['/classes', 'Book a class', 'Reserve your spot'], ['/mygym#attendance', 'My attendance', 'Every class you have made'], ['/gyms/' + me.gym_id, 'Gym board', 'Your gym\'s lifters and PRs']] }] });
   const gyms = S.myGyms || [];
