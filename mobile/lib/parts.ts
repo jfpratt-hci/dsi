@@ -76,7 +76,8 @@ export const liftRule = (l: Lift) => l.rx && l.rx.length
   ? `Rx ${l.rx[0]}${l.rxw ? '/' + l.rxw[0] : ''}${l.rx[1] && l.rx[1] !== l.rx[0] ? `, Rx+ ${l.rx[1]}${l.rxw && l.rxw[1] !== l.rxw[0] ? '/' + l.rxw[1] : ''}` : ''} lb`
   : l.f ? `${Math.round(l.f * 100)}% of ${BASES[l.b ?? ''] ?? l.b}` : '';
 
-// Sort a day's logs: struck last, then the score (time ascending), then the rank key.
+// Sort a day's logs like the web's day board (site/js/app.js dayBoard): struck last, then a timed score
+// (fastest first), then the rank key. Text scores do not reorder the board.
 export function sortDay<T extends { status?: string; score?: string | null; entries?: Record<string, number> | null }>(w: Workout, logs: T[]): T[] {
   const isT = w.score_type === 'time';
   const secs = (s?: string | null) => { const m = String(s ?? '').match(/^(\d+):(\d{1,2})$/); return m ? Number(m[1]) * 60 + Number(m[2]) : 1e9; };
@@ -84,7 +85,6 @@ export function sortDay<T extends { status?: string; score?: string | null; entr
   const ev = (x: T) => num((x.entries ?? {})[key]);
   return [...logs].sort((a, b) =>
     (Number(a.status === 'struck') - Number(b.status === 'struck'))
-    || (w.score_label && isT ? secs(a.score) - secs(b.score) : 0)
-    || (w.score_label && !isT ? num(b.score) - num(a.score) : 0)
+    || (isT ? secs(a.score) - secs(b.score) : 0)
     || (asc ? (ev(a) || 1e9) - (ev(b) || 1e9) : ev(b) - ev(a)));
 }

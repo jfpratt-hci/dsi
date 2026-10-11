@@ -74,6 +74,11 @@ export function dayIn(tz?: string | null, at: Date = new Date()): string {
     const out = `${v('year')}-${v('month')}-${v('day')}`;
     if (/^\d{4}-\d{2}-\d{2}$/.test(out)) return out;
   } catch {}
+  // No formatToParts on this engine: read the plain en-US date (MM/DD/YYYY) in the gym's time zone instead.
+  try {
+    const m = at.toLocaleDateString('en-US', { timeZone: tz || undefined, year: 'numeric', month: '2-digit', day: '2-digit' }).match(/(\d{1,2})\D+(\d{1,2})\D+(\d{4})/);
+    if (m) return `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+  } catch {}
   return iso(at);
 }
 // "6:00 AM" in the gym's time zone.

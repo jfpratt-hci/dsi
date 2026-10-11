@@ -16,6 +16,8 @@ const PERKS: [string, string, string][] = [
   ['Video on any set', 'Proof on every lift, not just PRs.', '/(tabs)/log'],
   ['Threads, groups and roast mode', 'Post in every thread, start your own groups, opt in to the roast.', '/(tabs)/chat'],
   ['Full history and imports', 'Every lift you ever logged, plus years more from a spreadsheet.', '/import'],
+  ['Battles and your year recap', 'Call out any lifter for a week, and share your year in PRs.', '/compete'],
+  ['Training trends', 'Weekly volume and estimated maxes from every session you log.', '/training'],
 ];
 
 export default function Pro() {
@@ -63,7 +65,7 @@ export default function Pro() {
       {isPro ? (
         <Card style={{ borderColor: C.up }}>
           <Text style={{ color: C.up, fontWeight: '800', fontSize: 16 }}>Pro is active on your account</Text>
-          <Muted style={{ fontSize: 14 }}>{me?.role === 'admin' || me?.role === 'commissioner' ? 'Included with your staff role.' : me?.pro_source === 'app_store' ? 'Thanks for backing the index.' : 'Granted by the DSI team.'}</Muted>
+          <Muted style={{ fontSize: 14 }}>{me?.role === 'admin' || me?.role === 'commissioner' ? 'Included with your staff role.' : me?.pro_source === 'app_store' ? 'Thanks for backing the index.' : me?.pro_source === 'gym' ? 'Included with your gym membership.' : 'Granted by the Dandy Strength team.'}</Muted>
           {me?.pro_source === 'app_store' ? <Btn ghost label="Manage subscription" onPress={manage} style={{ marginTop: 10 }} /> : null}
         </Card>
       ) : SALES_ON && !plans ? <ActivityIndicator color={C.accent} style={{ marginVertical: 20 }} /> : !plans?.length ? (
