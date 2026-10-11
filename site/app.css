@@ -800,7 +800,7 @@ main.wrap>.tvDots{padding:0;margin:0;left:auto}
 .hmSteps b{font-weight:700;font-size:16px}
 .hmSteps p{margin:0;color:var(--muted);font-size:15px}
 .hmPrice{display:grid;gap:24px}
-.hmTiers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.hmTiers{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
 .hmTier{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px;display:grid;gap:8px;align-content:start;justify-items:start}
 .hmTier>b{font:800 24px var(--disp);text-transform:uppercase;letter-spacing:.03em}
 .hmAmt{font:900 52px/1 var(--disp)}
@@ -907,3 +907,9 @@ main.wrap>.tvDots{padding:0;margin:0;left:auto}
   .trStats b{font-size:28px}
   .trSets li{grid-template-columns:20px minmax(0,1fr) 14px minmax(0,1.3fr) 36px}
 }
+
+.hmCustom{border-style:dashed}
+.hmQuote{font-size:40px;line-height:1.3}
+.hmAdd thead th:first-child{width:24%}.hmAdd thead th:last-child{width:26%}
+.hmAdd td{font-weight:400;color:var(--muted)}.hmAdd td:last-child{color:var(--ink);font-weight:600}
+@media (max-width:1060px) and (min-width:901px){.hmTiers{grid-template-columns:1fr 1fr}}

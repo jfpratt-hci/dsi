@@ -8,9 +8,19 @@ export function install(X) {
 
   const TIERS = [
     { k: 'base', n: 'Base', p: 99, who: 'Up to 75 members', line: 'The boards, the workouts and the TV in the gym.' },
-    { k: 'build', n: 'Build', p: 179, who: 'Unlimited members', line: 'Everything a gym runs on: booking, billing, waivers and staff.' },
-    { k: 'peak', n: 'Peak', p: 279, who: 'Gyms that want it all', line: 'Unlimited AI programming and the best Pro seat price.' },
+    { k: 'build', n: 'Build', p: 199, who: 'Unlimited members', line: 'Everything a gym runs on: booking, billing, waivers and staff.' },
+    { k: 'peak', n: 'Peak', p: 299, who: 'Gyms that want it all', line: 'Unlimited AI programming and the best Pro seat price.' },
   ];
+  // Custom: services on top of any plan. Quoted per gym; outside costs are passed through at cost plus.
+  const ADDONS = [
+    ['Website build and management', 'A fast gym site with class times, pricing and sign up wired to Dandy Strength. We host it and keep it current.', 'Quoted monthly'],
+    ['Review management', 'Ask members for Google reviews after class, reply to every review, and flag the unhappy ones to you first.', 'Quoted monthly'],
+    ['SEO and AI search', 'Get found for "CrossFit near me" on Google and in AI answers, with a monthly report.', 'Quoted monthly'],
+    ['API access', 'Connect your own tools and pull your gym data out through our API.', 'Quoted by usage'],
+    ['Text messaging', 'Class reminders and win back texts to members.', 'Cost plus: carrier fees plus a service fee'],
+    ['Paid ads', 'Local ads that send new members to your free class.', 'Cost plus: ad spend plus a management fee'],
+  ];
+  const customCard = cta => `<div class="hmTier hmCustom"><b>Custom</b><span class="hmAmt hmQuote">Quoted</span><span class="hmWho2">Any plan, plus services</span><p>Website, reviews, SEO and API access, run for you. Priced per gym.</p>${cta ? '<a class="btn sm" href="/start?tier=custom">Talk to us</a>' : ''}</div>`;
   const SEAT = 4, SEAT_PEAK = 3, PRO_RETAIL = '9.99';
   const OWNER = [
     ['Dandy Office', 'Check in, schedule, members, billing, waivers and contracts, staff and attendance, in one office.'],
@@ -74,8 +84,8 @@ export function install(X) {
       <section class="hmPrice">
         <div class="hmPriceHead"><h2 class="hmH2">Simple pricing, and it can pay for itself</h2>
           <p class="hmSideSub">Card payments run on your own Stripe account at Stripe's rates. We add no markup.</p></div>
-        <div class="hmTiers">${TIERS.map(t => `<div class="hmTier"><b>${t.n}</b><span class="hmAmt">$${t.p}<small>/mo</small></span><span class="hmWho2">${esc(t.who)}</span><p>${esc(t.line)}</p></div>`).join('')}</div>
-        <p class="hmSeat"><b>DSI Pro seats, $${SEAT} per member a month.</b> Put Pro in a Plus tier at $10 more and each Plus member nets you $${10 - SEAT}. Forty Plus members cover the Build plan with $61 to spare.</p>
+        <div class="hmTiers">${TIERS.map(t => `<div class="hmTier"><b>${t.n}</b><span class="hmAmt">$${t.p}<small>/mo</small></span><span class="hmWho2">${esc(t.who)}</span><p>${esc(t.line)}</p></div>`).join('')}${customCard(false)}</div>
+        <p class="hmSeat"><b>DSI Pro seats, $${SEAT} per member a month.</b> Put Pro in a Plus tier at $10 more and each Plus member nets you $${10 - SEAT}. Forty Plus members cover the Build plan with $41 to spare.</p>
         <div class="row"><a class="btn" href="/pricing">Full pricing</a><a class="btn ghost" href="/start">Bring your gym</a></div>
       </section>
 
@@ -101,25 +111,33 @@ export function install(X) {
       ['Attendance history', N, Y, Y],
       ['Dandy Plan AI programming', N, 'Up to 4 weeks a month', 'Unlimited'],
       ['DSI Pro seats', `$${SEAT} a member`, `$${SEAT} a member`, `$${SEAT_PEAK} a member`],
-      ['Payroll export, gym website, multiple locations', N, N, 'As they ship in 2027'],
+      ['Payroll export, multiple locations', N, N, 'As they ship in 2027'],
+      ['Website, reviews, SEO, API access', 'Custom add on', 'Custom add on', 'Custom add on'],
     ];
     if (!paint(tok, `
       <section class="sec"><div class="secHead"><div><h2>Pricing</h2>
-        <p class="secSub">Three plans for the gym, billed monthly. Card payments run on your own Stripe account at Stripe's standard rates, and we add no markup.</p></div></div>
-        <div class="hmTiers">${TIERS.map(t => `<div class="hmTier"><b>${t.n}</b><span class="hmAmt">$${t.p}<small>/mo</small></span><span class="hmWho2">${esc(t.who)}</span><p>${esc(t.line)}</p><a class="btn sm" href="/start?tier=${t.k}">Start on ${t.n}</a></div>`).join('')}</div>
+        <p class="secSub">Three plans for the gym, billed monthly, plus custom services when you want us to run more of the business. Card payments run on your own Stripe account at Stripe's standard rates, and we add no markup.</p></div></div>
+        <div class="hmTiers">${TIERS.map(t => `<div class="hmTier"><b>${t.n}</b><span class="hmAmt">$${t.p}<small>/mo</small></span><span class="hmWho2">${esc(t.who)}</span><p>${esc(t.line)}</p><a class="btn sm" href="/start?tier=${t.k}">Start on ${t.n}</a></div>`).join('')}${customCard(true)}</div>
       </section>
       <section class="sec"><h3 class="hmH3">What each plan includes</h3>
         <div class="tablewrap"><table class="hmCmp"><thead><tr><th></th>${TIERS.map(t => `<th>${t.n}</th>`).join('')}</tr></thead><tbody>
           ${rows.map(r => `<tr><th scope="row">${esc(r[0])}</th>${r.slice(1).map(c => `<td${c ? '' : ' class="no"'}>${c ? esc(c) : '<span class="vh">Not included</span>'}</td>`).join('')}</tr>`).join('')}
         </tbody></table></div>
       </section>
+      <section class="sec"><h3 class="hmH3">Custom services</h3>
+        <p class="secSub">Add any of these to Base, Build or Peak. Each gym gets a quote. Where a service runs on someone else's meter, like texts or ad spend, you pay that cost plus our fee.</p>
+        <div class="tablewrap"><table class="hmCmp hmAdd"><thead><tr><th>Service</th><th>What we do</th><th>How it's priced</th></tr></thead><tbody>
+          ${ADDONS.map(([n, d, pr]) => `<tr><th scope="row"><b>${esc(n)}</b></th><td>${esc(d)}</td><td>${esc(pr)}</td></tr>`).join('')}
+        </tbody></table></div>
+        <div class="row"><a class="btn" href="/start?tier=custom">Get a quote</a></div>
+      </section>
       <section class="sec hmProSec"><div><h3 class="hmH3">DSI Pro pays for itself</h3>
         <p>Your gym buys DSI Pro seats at $${SEAT} a member a month ($${SEAT_PEAK} on Peak), against $${PRO_RETAIL} for a lifter on their own. Add Pro to a Plus membership at $10 more a month, and the members who want it pay for it.</p></div>
         <div class="tablewrap"><table class="hmMath"><caption>A 120 member gym on Build where 40 members choose Plus</caption><tbody>
           <tr><th scope="row">Plus revenue, 40 at $10</th><td>$400</td></tr>
           <tr><th scope="row">DSI Pro seats, 40 at $${SEAT}</th><td>($160)</td></tr>
-          <tr><th scope="row">Build plan</th><td>($179)</td></tr>
-          <tr class="sum"><th scope="row">Left over each month</th><td>$61</td></tr>
+          <tr><th scope="row">Build plan</th><td>($199)</td></tr>
+          <tr class="sum"><th scope="row">Left over each month</th><td>$41</td></tr>
         </tbody></table></div>
       </section>
       <section class="sec"><h3 class="hmH3">Questions owners ask</h3>
@@ -154,7 +172,7 @@ export function install(X) {
             <div class="field w2"><label for="st-p">Phone (optional)</label><input id="st-p" type="tel" maxlength="40" autocomplete="tel"></div>
             <div class="field w2"><label for="st-m">Members today</label><input id="st-m" type="number" min="0" max="100000" inputmode="numeric"></div>
             <div class="field w2"><label for="st-s">What you use now</label><select id="st-s"><option value="">Pick one</option>${['Kilo', 'Wodify', 'PushPress', 'Zen Planner', 'Mindbody', 'Spreadsheets and paper', 'Something else'].map(o => `<option>${o}</option>`).join('')}</select></div>
-            <div class="field w2"><label for="st-t">Plan you are looking at</label><select id="st-t">${[['unsure', 'Not sure yet'], ...TIERS.map(t => [t.k, `${t.n}, $${t.p}/mo`])].map(([v, n]) => `<option value="${v}"${v === want ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
+            <div class="field w2"><label for="st-t">Plan you are looking at</label><select id="st-t">${[['unsure', 'Not sure yet'], ...TIERS.map(t => [t.k, `${t.n}, $${t.p}/mo`]), ['custom', 'Custom services']].map(([v, n]) => `<option value="${v}"${v === want ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
             <div class="field w4"><label for="st-x">Anything we should know (optional)</label><textarea id="st-x" rows="3" maxlength="1000" placeholder="Like: we want to switch before January, or we run two locations"></textarea></div>
           </div>
           <div class="row"><button class="btn" type="submit">Send</button><span class="hint" id="st-msg" role="status"></span></div>
