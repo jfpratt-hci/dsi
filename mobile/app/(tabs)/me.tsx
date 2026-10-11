@@ -1,4 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useState } from 'react';
 import { Alert, Linking, Text, View } from 'react-native';
 
@@ -7,6 +8,7 @@ import { C } from '@/constants/Colors';
 import { colorOf, fmt, LIFTS, loadBoard, verdict, type BoardRow } from '@/lib/data';
 import { inviteCrew } from '@/lib/invite';
 import { unregisterPush } from '@/lib/notify';
+import { myGyms } from '@/lib/office';
 import { stopPurchases } from '@/lib/purchases';
 import { useSession } from '@/lib/session';
 import { sb } from '@/lib/supabase';
@@ -15,12 +17,18 @@ export default function Me() {
   const { me, session, isPro, isStaff } = useSession();
   const [row, setRow] = useState<BoardRow | null>(null);
   const [openReports, setOpenReports] = useState(0);
+  const [gymName, setGymName] = useState('');
+  const [staffGyms, setStaffGyms] = useState(0);
 
   useFocusEffect(useCallback(() => {
     if (!me) return;
     loadBoard().then(b => setRow(b.find(x => x.profile_id === me.id) ?? null)).catch(() => {});
     if (isStaff) sb.from('reports').select('id', { count: 'exact', head: true }).eq('status', 'open').then(({ count }) => setOpenReports(count ?? 0));
+    if (me.gym_id) sb.from('gyms').select('name').eq('id', me.gym_id).maybeSingle().then(({ data }) => setGymName(data?.name ?? ''));
+    else setGymName('');
+    myGyms(me).then(g => setStaffGyms(g.length)).catch(() => setStaffGyms(0));
   }, [me, isStaff]));
+  const year = String(new Date().getFullYear());
 
   if (!session) return (
     <Screen>
@@ -82,9 +90,35 @@ export default function Me() {
 
       <Group title="You">
         <Row first label="My card and lift history" onPress={() => me && router.push({ pathname: '/lifter/[id]', params: { id: me.id } })} />
+        <Row label="My training" detail="Sessions, sets and reps" onPress={() => router.push('/training' as any)} />
         <Row label="Edit profile" onPress={() => router.push('/profile')} />
         <Row label="Goals" pro onPress={() => router.push(isPro ? '/goals' : '/pro')} />
         <Row label="Settings and notifications" onPress={() => router.push('/settings')} />
+      </Group>
+
+      <Group title="My gym">
+        <Row first label="My gym" detail={gymName || 'Pick your gym'} onPress={() => router.push(me?.gym_id ? '/mygym' : '/compete/gyms')} />
+        {me?.gym_id ? <Row label="Book a class" onPress={() => router.push('/mygym/classes')} /> : null}
+        {me?.gym_id ? <Row label="Gym board" onPress={() => router.push({ pathname: '/compete/gym/[id]', params: { id: me.gym_id! } })} /> : null}
+        <Row label="Gym league" onPress={() => router.push('/compete/gyms')} />
+      </Group>
+
+      {staffGyms ? (
+        <Group title="Gym office">
+          <Row first label="Check in and gym office" detail={staffGyms > 1 ? `${staffGyms} gyms` : undefined} onPress={() => router.push('/office')} />
+          <Row label="Log a class" onPress={() => router.push('/office/class')} />
+          <Row label="Enter results" onPress={() => router.push('/office/results')} />
+        </Group>
+      ) : null}
+
+      <Group title="Compete">
+        <Row first label="Compete" detail="Seasons and battles" onPress={() => router.push('/compete')} />
+        <Row label="Weekly battles" pro onPress={() => router.push('/compete/battles')} />
+        <Row label="This season" onPress={() => router.push('/compete/season')} />
+        <Row label="Benchmarks" onPress={() => router.push('/compete/benchmarks')} />
+        <Row label="Year recap" pro onPress={() => (isPro ? router.push({ pathname: '/compete/recap', params: { year } }) : router.push('/pro'))} />
+        <Row label="PR wall" onPress={() => router.push('/prs')} />
+        <Row label="Protests" onPress={() => router.push('/protests')} />
       </Group>
 
       <Group title="DSI Pro">
@@ -96,11 +130,10 @@ export default function Me() {
       </Group>
 
       <Group title="Community">
-        <Row first label="PR wall" onPress={() => router.push('/prs')} />
-        <Row label="Invite your crew" onPress={() => inviteCrew(me?.display_name)} />
+        <Row first label="Invite your crew" onPress={() => inviteCrew(me?.display_name)} />
         <Row label="Plate calculator" onPress={() => router.push('/plates')} />
-        <Row label="Protests" onPress={() => router.push('/protests')} />
         {isStaff ? <Row label="Reports" detail={openReports ? `${openReports} open` : 'None open'} onPress={() => router.push('/reports')} /> : null}
+        {me?.role === 'admin' ? <Row label="Management dashboard" detail="Website" onPress={() => WebBrowser.openBrowserAsync('https://dandystrength.com/admin').catch(() => {})} /> : null}
         <Row label="Blocked lifters" onPress={() => router.push('/blocked')} />
         <Row label="Community rules" onPress={() => router.push('/terms')} />
       </Group>

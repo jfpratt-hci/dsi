@@ -6,8 +6,9 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { Btn, Card, Chip, Eyebrow, Loading, Mono, Muted, s, Screen, Title } from '@/components/ui';
 import { C, liftColor } from '@/constants/Colors';
-import { loadBoard, target } from '@/lib/data';
+import { keyOf, loadBoard, target } from '@/lib/data';
 import { scheduleReminders } from '@/lib/notify';
+import type { Lift, Workout } from '@/lib/parts';
 import { useSession } from '@/lib/session';
 import { sb } from '@/lib/supabase';
 
@@ -27,9 +28,12 @@ function scheme(sch: string): { n: number; r: number } {
 export default function LiftFocus() {
   const { wid, lid } = useLocalSearchParams<{ wid: string; lid: string }>();
   const { me, isPro } = useSession();
-  const [lift, setLift] = useState<any>(null);
+  const [lift, setLift] = useState<Lift | null>(null);
+  const [wk, setWk] = useState<Workout | null>(null);
+  const [best, setBest] = useState(0);
   const [title, setTitle] = useState('');
   const [tgt, setTgt] = useState(0);
+  const [missing, setMissing] = useState(false);
   const [sets, setSets] = useState<Set_[] | null>(null);
   const [log, setLog] = useState<any>(null);
   const [rest, setRest] = useState(90);
@@ -45,13 +49,16 @@ export default function LiftFocus() {
         loadBoard(),
         sb.from('workout_logs').select('*').eq('workout_id', wid).eq('profile_id', me.id).maybeSingle(),
       ]);
-      const L = (w?.lifts ?? []).find((x: any) => x.id === lid);
+      // Works for older days and for a lift that belongs to a Part: the lift is found by its id in w.lifts.
+      const L = ((w as Workout | null)?.lifts ?? []).find(x => x.id === lid) ?? null;
+      if (!L) { setMissing(true); return; }
       const mine = board.find(b => b.profile_id === me.id) ?? { bw: Number(me.bodyweight) || 200, sex: me.sex, bench: 0, squat: 0, dead: 0, clean: 0 };
       const t = L ? target(L, mine) : 0;
-      setLift(L); setTitle(w?.title ?? ''); setTgt(t); setLog(l);
+      setLift(L); setWk(w as Workout); setTitle(L.part ? `${w?.title ?? ''} · Part ${L.part}` : w?.title ?? ''); setTgt(t); setLog(l);
+      setBest(w?.pr_lift ? Number((mine as Record<string, unknown>)[keyOf(w.pr_lift)]) || 0 : 0);
       const saved = l?.sets?.[lid as string];
       if (saved?.length) setSets(saved.map((x: any) => ({ w: String(x.w), r: String(x.r), done: true })));
-      else { const { n, r } = scheme(L?.sch ?? ''); setSets(Array.from({ length: n }, () => ({ w: t ? String(t) : '', r: String(r), done: false }))); }
+      else { const { n, r } = scheme(L.sch ?? ''); setSets(Array.from({ length: n }, () => ({ w: t ? String(t) : '', r: String(r), done: false }))); }
     })();
   }, [me?.id, wid, lid]);
 
@@ -79,17 +86,37 @@ export default function LiftFocus() {
     if (!isPro) { router.push('/pro'); return; }
     const done = sets.filter(x => x.done && Number(x.w) > 0).map(x => ({ w: Number(x.w), r: Number(x.r) || 0 }));
     const top = done.reduce((m, x) => Math.max(m, x.w), 0);
-    const entries = { ...(log?.entries ?? {}) }; if (top) entries[lid as string] = top; else delete entries[lid as string];
-    const allSets = { ...(log?.sets ?? {}), [lid as string]: done };
     setMsg('Saving…');
-    const { data, error } = await sb.from('workout_logs').upsert({ workout_id: wid, profile_id: me.id, entries, sets: allSets, score: log?.score ?? null }, { onConflict: 'workout_id,profile_id' }).select().single();
+    // Read the log fresh so numbers saved on the Week tab meanwhile (times, reps, other lifts) are kept.
+    const { data: cur } = await sb.from('workout_logs').select('*').eq('workout_id', wid).eq('profile_id', me.id).maybeSingle();
+    const now = cur ?? log;
+    const entries = { ...(now?.entries ?? {}) }; if (top) entries[lid as string] = top; else delete entries[lid as string];
+    const allSets = { ...(now?.sets ?? {}), [lid as string]: done };
+    const { data, error } = await sb.from('workout_logs').upsert({ workout_id: wid, profile_id: me.id, entries, sets: allSets, score: now?.score ?? null }, { onConflict: 'workout_id,profile_id' }).select().single();
     if (error) { setMsg(error.message); return; }
     setLog(data); scheduleReminders(me).catch(() => {});
+    // Max day: a top set over your best goes in as a lift entry, like the web.
+    if (lift?.max && wk?.pr_lift && top > best) {
+      const { data: e } = await sb.from('lift_entries').insert({ profile_id: me.id, lift: wk.pr_lift, weight_lb: top, performed_on: wk.day, source: 'workout' }).select().single();
+      if (e?.is_pr) { router.replace({ pathname: '/pr/[id]', params: { id: e.id, celebrate: '1' } }); return; }
+    }
     router.back();
   }
 
+  if (!me) return (
+    <Screen stack>
+      <Stack.Screen options={{ title: 'Log sets' }} />
+      <Card><Muted style={{ fontSize: 15, marginBottom: 10 }}>Sign in to log your sets.</Muted><Btn label="Sign in" onPress={() => router.push('/login')} /></Card>
+    </Screen>
+  );
+  if (missing) return (
+    <Screen stack>
+      <Stack.Screen options={{ title: 'Log sets' }} />
+      <Card><Muted style={{ fontSize: 15 }}>That lift is not in this workout.</Muted></Card>
+    </Screen>
+  );
   if (!sets || !lift) return <Screen stack><Loading /></Screen>;
-  const col = liftColor[lift.b] ?? C.accent;
+  const col = liftColor[lift.b ?? ''] ?? C.accent;
   const doneN = sets.filter(x => x.done).length;
   return (
     <Screen stack>

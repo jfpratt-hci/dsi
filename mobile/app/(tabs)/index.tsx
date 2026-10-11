@@ -44,9 +44,13 @@ export default function Board() {
         refreshControl={<RefreshControl tintColor={C.accent} refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Title eyebrow="Dandy Strength Index™" accent="">Board</Title>
-          <Pressable onPress={() => router.push('/prs')} style={{ borderWidth: 1, borderColor: C.line, borderRadius: 18, paddingHorizontal: 14, height: 36, justifyContent: 'center', marginTop: 18 }} accessibilityRole="button">
-            <Text style={{ color: C.ink, fontWeight: '700', fontSize: 13 }}>PR wall</Text>
-          </Pressable>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 18 }}>
+            {[['Compete', '/compete'], ['PR wall', '/prs']].map(([label, to]) => (
+              <Pressable key={to} onPress={() => router.push(to as any)} style={{ borderWidth: 1, borderColor: C.line, borderRadius: 18, paddingHorizontal: 14, height: 36, justifyContent: 'center' }} accessibilityRole="button">
+                <Text style={{ color: C.ink, fontWeight: '700', fontSize: 13 }}>{label}</Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
 
         {newPRs.slice(0, 3).map(({ r, l }) => (

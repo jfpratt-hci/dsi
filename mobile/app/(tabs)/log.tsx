@@ -64,6 +64,16 @@ export default function Log() {
   return (
     <Screen>
       <Title accent="lift">Log a</Title>
+      <Pressable onPress={() => router.push('/training/edit' as any)} accessibilityRole="button">
+        <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: C.ink, fontWeight: '800', fontSize: 16 }}>Log a full session</Text>
+            <Muted style={{ fontSize: 14 }}>Your own training, every exercise, set and rep. Free.</Muted>
+          </View>
+          <Text style={{ color: C.accent, fontSize: 24 }}>›</Text>
+        </Card>
+      </Pressable>
+      <Eyebrow style={{ marginBottom: 8 }}>Or one heavy single</Eyebrow>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         {MAIN.map(id => <Chip key={id} label={liftName(id)} on={lift === id} onPress={() => { setLift(id); setW(''); }} />)}
         <Chip label={more ? 'Fewer' : isPro ? 'More lifts' : 'More lifts · Pro'} on={false} onPress={() => (isPro ? setMore(!more) : router.push('/pro'))} />
