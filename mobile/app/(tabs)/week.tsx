@@ -9,6 +9,7 @@ import { scheduleReminders } from '@/lib/notify';
 import { boardItems, cell, fmtT, isParts, items, liftRule, logWords, parseT, shownParts, sortDay, type Item, type Workout } from '@/lib/parts';
 import { useSession } from '@/lib/session';
 import { sb } from '@/lib/supabase';
+import { CHAT_ON, PROTESTS_ON } from '@/lib/features';
 
 export type { Workout } from '@/lib/parts';
 type Log = { id: string; workout_id: string; profile_id: string; entries: Record<string, number> | null; score: string | null; sets?: Record<string, { w: number; r: number }[]> | null; status?: string };
@@ -279,7 +280,7 @@ export default function Week() {
           ) : null}
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 4 }}>
-            <Chip label="Day thread" on={false} onPress={talk} />
+            {CHAT_ON ? <Chip label="Day thread" on={false} onPress={talk} /> : null}
             {w.benchmark ? <Chip label={`Benchmark: ${w.benchmark}`} on={false} onPress={() => router.push({ pathname: '/compete/benchmark/[name]', params: { name: w.benchmark! } })} /> : null}
           </View>
           {runsGym ? (

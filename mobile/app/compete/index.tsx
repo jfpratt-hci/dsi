@@ -133,7 +133,6 @@ export default function Compete() {
 
         <Eyebrow style={{ marginTop: 8, marginBottom: 8 }}>The community</Eyebrow>
         <Tile title="PR wall" sub="The newest personal records. Resets every Monday." onPress={() => router.push('/prs')} />
-        <Tile title="Protests" sub="The Commissioner's court." onPress={() => router.push('/protests')} />
         <Btn ghost label="Invite your crew" onPress={() => inviteCrew(me?.display_name)} style={{ marginTop: 6 }} />
       </ScrollView>
     </SafeAreaView>

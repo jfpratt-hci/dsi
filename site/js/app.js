@@ -90,26 +90,24 @@ function navGroups() {
   const me = S.me && S.me.display_name ? S.me : null, pro = isPro(), P = pro ? '' : 'Pro. ';
   const g = [
     { k: 'boards', n: 'Boards', sections: [{ h: 'Rankings', items: [['/boards', 'Leaderboard', 'Every lifter ranked by DSI'], ['/prs', 'PR wall', 'The newest personal records'], ['/benchmarks', 'Benchmarks', 'How strong is strong'], ['/gyms', 'Gym league', 'Gyms ranked head to head']] },
-      { h: 'Competition', items: [['/compete', 'Compete', 'Seasons, battles and the league'], ['/season', 'This season', 'Standings for the current season'], ['/battles', 'Weekly battles', 'One lift, one week, one winner'], ['/protests', 'Protests', 'Challenge a lift, vote on it']] }] },
-    { k: 'train', n: 'Train', sections: [{ h: 'Every day', items: [['/week', 'The week', 'This week\'s workouts by day'], ...(me && me.gym_id ? [['/classes', 'Book a class', 'Reserve your spot']] : []), ['/training', 'My training', 'Log your own sessions, sets and reps'], ['/log', 'Log a lift', 'Add a set and update your DSI'], ['/tracker', 'Plate tracker', P + 'The camera counts reps and reads the plates']] },
+      { h: 'Competition', items: [['/compete', 'Compete', 'Seasons, battles and the league'], ['/season', 'This season', 'Standings for the current season'], ['/battles', 'Weekly battles', 'One lift, one week, one winner']] }] },
+    { k: 'train', n: 'Train', sections: [{ h: 'Every day', items: [['/week', 'The week', 'This week\'s workouts by day'], ...(me && me.gym_id ? [['/classes', 'Book a class', 'Reserve your spot'], ['/mygym#attendance', 'My attendance', 'Every class you have made']] : []), ['/training', 'My training', 'Log your own sessions, sets and reps'], ['/log', 'Log a lift', 'Add a set and update your DSI'], ['/tracker', 'Plate tracker', P + 'The camera counts reps and reads the plates']] },
       { h: 'Get better', items: [['/progress', 'Progress', P + 'Charts for every lift'], ['/plans', 'Goal plans', P + 'A plan to hit your next number'], ['/coach', 'Coach', P + 'Ask about your training'], ['/connect', 'Connected apps', P + 'WHOOP, Apple Health, Health Connect'], ...(me ? [['/import', 'Import history', 'Bring in your old lifts']] : [])] }] },
-    { k: 'chat', n: 'Chat', href: '/chat' },
     ...(gyms0().length ? [] : [{ k: 'home', n: 'For gyms', href: '/pricing' }]),
   ];
-  if (me && me.gym_id) g.push({ k: 'mygym', n: 'My gym', sections: [{ h: 'Your membership', items: [['/mygym', 'Membership and billing', 'Plan, payments and documents'], ['/classes', 'Book a class', 'Reserve your spot'], ['/mygym#attendance', 'My attendance', 'Every class you have made'], ['/gyms/' + me.gym_id, 'Gym board', 'Your gym\'s lifters and PRs']] }] });
   const gyms = S.myGyms || [];
   const offItems = (x, keys) => OFFICE.filter(o => keys.includes(o[0]) && (!o[3] || x.role === 'owner' || (S.me && S.me.role === 'admin'))).map(([k, n, d]) => [officeHref(x.gym_id, k), n, d]);
   const screen = x => [`/tv/${x.gym.slug || x.gym_id}`, 'Big screen', 'The TV board, opens in a new tab', 1];
   if (gyms.length === 1) { const x = gyms[0], nm = x.gym.name || 'Gym';
     g.push({ k: 'office', n: 'Gym office', sections: [{ h: nm + ' · Run the floor', items: [...offItems(x, ['today', 'class', 'schedule', 'wod', 'plan', 'results']), screen(x)] }, { h: 'Run the business', items: offItems(x, ['members', 'billing', 'docs', 'staff', 'settings']) }] }); }
   else if (gyms.length) g.push({ k: 'office', n: 'Gym office', sections: gyms.map(x => ({ h: (x.gym.name || 'Gym') + ' office', items: [...offItems(x, OFFICE.map(o => o[0])), screen(x)] })) });
-  if (me && (me.role === 'admin' || me.role === 'commissioner')) g.push({ k: 'admin', n: 'Admin', sections: [{ h: me.role === 'admin' ? 'Management' : 'Commissioner', items: [...(me.role === 'admin' ? [['/admin', 'Management dashboard', 'Members, gyms and stats'], ['/admin?tab=gyms', 'All gyms', 'Edit gyms and open any office'], ['/admin?tab=requests', 'Requests', 'Gym claims and approvals']] : []), ['/reports', 'Reports', 'Flagged lifts and people'], ['/protests', 'Protest court', 'Rule on protested lifts'], ['/program', 'Import workouts', 'Load a program for a gym']] }] });
+  if (me && (me.role === 'admin' || me.role === 'commissioner')) g.push({ k: 'admin', n: 'Admin', sections: [{ h: me.role === 'admin' ? 'Management' : 'Commissioner', items: [...(me.role === 'admin' ? [['/admin', 'Management dashboard', 'Members, gyms and stats'], ['/admin?tab=gyms', 'All gyms', 'Edit gyms and open any office'], ['/admin?tab=requests', 'Requests', 'Gym claims and approvals']] : []), ['/reports', 'Reports', 'Flagged lifts and people'], ['/program', 'Import workouts', 'Load a program for a gym']] }] });
   return g;
 }
 const ROUTE_GROUP = { '': 'home', pricing: 'home', start: 'home', boards: 'boards', prs: 'boards', pr: 'boards', compete: 'boards', season: 'boards', battles: 'boards', gyms: 'boards', benchmarks: 'boards', protests: 'boards', recap: 'boards', u: 'boards',
-  week: 'train', training: 'train', log: 'train', progress: 'train', plans: 'train', coach: 'train', tracker: 'train', connect: 'train', import: 'train', lift: 'train', chat: 'chat', classes: 'mygym', mygym: 'mygym', billing: 'mygym', sign: 'mygym', signed: 'mygym',
+  week: 'train', training: 'train', log: 'train', progress: 'train', plans: 'train', coach: 'train', tracker: 'train', connect: 'train', import: 'train', lift: 'train', classes: 'train', mygym: 'me', billing: 'me', sign: 'me', signed: 'me',
   club: 'office', insights: 'office', class: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office', admin: 'admin', reports: 'admin', program: 'admin', me: 'me', pro: 'me', rules: 'me', blocked: 'me' };
-const ACCT = () => [['/me', 'Profile', 'Name, gym and lifter details'], ['/me?tab=goals', 'Goals', 'What you are chasing'], ['/me?tab=reminders', 'Reminders', 'Nudges to log'], ['/me?tab=account', 'Account and safety', 'Email, privacy and blocks'], ['/u/' + S.me.id, 'My lifter card', 'Your public page'], ['/pro', 'DSI Pro', 'Membership and perks']];
+const ACCT = () => [['/me', 'Profile', 'Name, gym and lifter details'], ...(S.me.gym_id ? [['/mygym', 'Membership and billing', 'Plan, payments and documents']] : []), ['/me?tab=goals', 'Goals', 'What you are chasing'], ['/me?tab=reminders', 'Reminders', 'Nudges to log'], ['/me?tab=account', 'Account and safety', 'Email, privacy and blocks'], ['/u/' + S.me.id, 'My lifter card', 'Your public page'], ['/pro', 'DSI Pro', 'Membership and perks']];
 function buildNav(r) {
   const groups = navGroups(), cur = ROUTE_GROUP[r] ?? '';
   const here = location.pathname + location.search;
@@ -192,7 +190,7 @@ async function route() {
 }
 const paint = (tok, html) => { if (tok !== S.tok) return false; main.innerHTML = html; window.scrollTo(0, 0); return true; };
 function needLogin(tok, what) {
-  return paint(tok, `<section class="prEmpty"><b>Sign in to ${esc(what)}</b><p>Members log lifts, chat and file protests. Boards and PRs stay public.</p><p><a class="btn" href="/login">Sign in</a> <a class="btn ghost" href="/join">Join free</a></p></section>`);
+  return paint(tok, `<section class="prEmpty"><b>Sign in to ${esc(what)}</b><p>Members log lifts and follow the workouts. Boards and PRs stay public.</p><p><a class="btn" href="/login">Sign in</a> <a class="btn ghost" href="/join">Join free</a></p></section>`);
 }
 
 /* ---------- shared actions ---------- */
@@ -253,7 +251,7 @@ VIEWS.boards = async (_, tok) => {
     <div class="steps">
       <div class="step"><b>Log your lifts</b><p>Bench, squat, deadlift and clean. One heavy single each, with the date you hit it.</p></div>
       <div class="step"><b>Get your DSI™</b><p>Each lift is scored against lifters your age and bodyweight. 500 is the median.</p></div>
-      <div class="step"><b>Climb the board</b><p>Every PR moves you up. Follow the daily workout, chase goals, protest the fishy ones.</p></div>
+      <div class="step"><b>Climb the board</b><p>Every PR moves you up. Follow the daily workout and chase your goals.</p></div>
     </div>
   </section>`}
   <section class="sec" aria-labelledby="wkprs">
@@ -312,7 +310,7 @@ function renderBoard() {
     ${rows.map((r, i) => {
       const club = D.clubOf(r.total), up = v => v > 0 ? `<span class="upArrow" title="Up ${fmt(v)} this week">▲${fmt(v)}</span>` : '';
       return `<tr class="${S.me && S.me.id === r.profile_id ? 'me' : ''}"><td class="pos">${i + 1}</td>
-      <td><div class="who"><a href="/u/${r.profile_id}">${esc(r.name)}</a>${r.pro ? '<span class="pill acc proTag" title="DSI Pro">Pro</span>' : ''}${r.roast_opt_in ? '<i class="fire" title="Opted in to roasts">🔥</i>' : ''}${r.has_protest ? '<span class="pill flat">Protest</span>' : ''}</div><div class="sub">${r.age ? 'Age ' + r.age + ' · ' : ''}${r.bw ? r.bw + ' lb · ' : ''}${esc(r.division)}</div></td>
+      <td><div class="who"><a href="/u/${r.profile_id}">${esc(r.name)}</a>${r.pro ? '<span class="pill acc proTag" title="DSI Pro">Pro</span>' : ''}${r.roast_opt_in ? '<i class="fire" title="Opted in to roasts">🔥</i>' : ''}</div><div class="sub">${r.age ? 'Age ' + r.age + ' · ' : ''}${r.bw ? r.bw + ' lb · ' : ''}${esc(r.division)}</div></td>
       <td class="r n big">${r.score}${up(r.g.score)}</td><td class="r n">${fmt(r.total)}${up(r.g.total)}${club ? `<span class="club">${fmt(club)}</span>` : ''}</td>
       ${D.LIFTS.map(l => r[l.k] ? `<td class="r n">${fmt(r[l.k])}${up(r.g.lift[l.k])}<div class="sub">${isNew(r[l.k + '_date']) ? `<span class="prDateNew">PR ${fmtD(r[l.k + '_date'])}</span>` : D.fmtPct(r.p[l.k]) + ' pct'}</div></td>` : '<td class="r sub">n/a</td>').join('')}
       </tr>`;
@@ -560,7 +558,11 @@ function dayBoard(w, logs) {
 }
 
 /* ---------- chat ---------- */
+// Chat and protests are switched off for now: the code stays, the pages send people home.
+const OFF_FOR_NOW = { chat: true, protests: true };
+document.documentElement.classList.add('noChat', 'noProtests');
 VIEWS.chat = async (roomId, tok) => {
+  if (OFF_FOR_NOW.chat) return go('/', true);
   if (!S.me) return needLogin(tok, 'chat');
   const [rooms, groups, gm] = await Promise.all([
     sb.from('chat_rooms').select('*').order('created_at', { ascending: false }).limit(200),
@@ -667,6 +669,7 @@ VIEWS.chat = async (roomId, tok) => {
 
 /* ---------- protests ---------- */
 VIEWS.protests = async (_, tok) => {
+  if (OFF_FOR_NOW.protests) return go('/', true);
   const [pres] = await Promise.all([sb.from('protests').select('*').order('created_at', { ascending: false }).limit(100), loadPeople()]);
   const list = must(pres);
   const liftIds = list.filter(p => p.target_type === 'lift_entry').map(p => p.target_id);
@@ -754,7 +757,7 @@ VIEWS.me = async (_, tok) => {
     </form></section>
     ${first ? '' : !pro ? `<section class="sec band"><div class="secHead"><div><div class="kicker">What you're chasing</div><h2>Goals ${PRO}</h2><p class="secSub">Set a number and a date, and get a week by week plan to hit it.</p></div><a class="btn sm" href="/pro">See Pro</a></div></section>
     <section class="sec"><div><div class="kicker">Community</div><h2>Rules and <span>safety</span></h2></div>
-      <div class="tools">${tile('/rules', 'Community rules', m.terms_accepted_at ? 'You agreed on ' + fmtD(m.terms_accepted_at) + '.' : 'Agree before posting in chat.')}${tile('/blocked', 'Blocked lifters', S.blocked.size ? S.blocked.size + ' blocked' : 'Nobody blocked.')}${tile('/protests', 'Protests', 'The Commissioner\'s court.')}</div></section>
+      <div class="tools">${tile('/rules', 'Community rules', m.terms_accepted_at ? 'You agreed on ' + fmtD(m.terms_accepted_at) + '.' : 'Agree before posting in chat.')}${tile('/blocked', 'Blocked lifters', S.blocked.size ? S.blocked.size + ' blocked' : 'Nobody blocked.')}</div></section>
     <section class="sec"><div><div class="kicker">Account</div><h2>Your <span>account</span></h2></div>
       <div class="row"><span class="pill acc" style="margin:0">Member</span><a class="btn ghost sm" href="/pro">Membership</a><button class="btn ghost sm" id="so">Sign out</button><button class="btn ghost sm dangerText" id="delAcct">Delete account</button></div>
       <p class="hint">Deleting removes your profile, every lift, goal, log, message and video, and your login. It cannot be undone.</p></section>` : `<section class="sec band"><div class="secHead"><div><div class="kicker">What you're chasing</div><h2>Goals</h2>${pro ? '<p class="secSub">Pick a date and your goal plan updates.</p>' : `<p class="secSub">Add a date and get a weekly plan with <a href="/pro">DSI Pro</a>.</p>`}</div></div>
@@ -762,7 +765,7 @@ VIEWS.me = async (_, tok) => {
       <div class="row"><label class="vh" for="g-add">Add a goal for another lift</label><select id="g-add" style="max-width:280px"><option value="">Add a goal for another lift…</option>${D.ALL_LIFTS.filter(([id]) => !goalIds.includes(id)).map(([id, n]) => `<option value="${id}">${esc(n)}</option>`).join('')}</select><button class="btn ghost sm" type="button" id="g-addb">Add</button></div>
       <div class="row"><button class="btn" type="submit">Save goals</button><span class="hint">Clear a box to remove that goal.</span></div></form></section>
     <section class="sec"><div><div class="kicker">Community</div><h2>Rules and <span>safety</span></h2></div>
-      <div class="tools">${tile('/rules', 'Community rules', m.terms_accepted_at ? 'You agreed on ' + fmtD(m.terms_accepted_at) + '.' : 'Agree before posting in chat.')}${tile('/blocked', 'Blocked lifters', S.blocked.size ? S.blocked.size + ' blocked' : 'Nobody blocked.')}${S.me.gym_id ? tile('/mygym', 'My gym', 'Membership, waiver, invoices and attendance.') + tile('/classes', 'Book a class', 'Your gym\'s schedule for the week.') : ''}${S.myGyms.map(g => tile('/club/' + g.gym_id, 'Gym office', g.gym.name + ': check in, schedule, members, billing.')).join('')}${S.me.role === 'admin' ? tile('/admin', 'Management dashboard', 'Members, gyms and requests.') : ''}${isStaff() ? tile('/reports', 'Reports', 'Review reports within 24 hours.') + tile('/program', 'Import workouts', 'Post the week from a gym link or screenshots.') : ''}${tile('/protests', 'Protests', 'The Commissioner\'s court.')}</div></section>
+      <div class="tools">${tile('/rules', 'Community rules', m.terms_accepted_at ? 'You agreed on ' + fmtD(m.terms_accepted_at) + '.' : 'Agree before posting in chat.')}${tile('/blocked', 'Blocked lifters', S.blocked.size ? S.blocked.size + ' blocked' : 'Nobody blocked.')}${S.me.gym_id ? tile('/mygym', 'My gym', 'Membership, waiver, invoices and attendance.') + tile('/classes', 'Book a class', 'Your gym\'s schedule for the week.') : ''}${S.myGyms.map(g => tile('/club/' + g.gym_id, 'Gym office', g.gym.name + ': check in, schedule, members, billing.')).join('')}${S.me.role === 'admin' ? tile('/admin', 'Management dashboard', 'Members, gyms and requests.') : ''}${isStaff() ? tile('/reports', 'Reports', 'Review reports within 24 hours.') + tile('/program', 'Import workouts', 'Post the week from a gym link or screenshots.') : ''}</div></section>
     <section class="sec"><div><div class="kicker">Account</div><h2>Your <span>account</span></h2></div>
       <div class="row"><span class="pill acc" style="margin:0">${pro ? 'DSI Pro' : 'Member'}</span><a class="btn ghost sm" href="/pro">Membership</a><button class="btn ghost sm" id="so">Sign out</button><button class="btn ghost sm dangerText" id="delAcct">Delete account</button></div>
       <p class="hint">Deleting removes your profile, every lift, goal, log, message and video, and your login. It cannot be undone.</p></section>`}`)) return;
@@ -906,7 +909,7 @@ VIEWS.rules = async (_, tok) => {
   if (!paint(tok, `<section class="sec narrow"><div><div class="kicker">Before you post</div><h2>Community <span>rules</span></h2><p class="secSub">DSI has zero tolerance for abusive content or abusive users.</p></div></section>
     <section class="sec"><div class="rules">${RULES.map(([h, t], i) => `<div class="rule"><span>0${i + 1}</span><b>${h}</b><p>${t}</p></div>`).join('')}</div>
     <div class="row" style="margin-top:12px">${S.me ? (S.me.terms_accepted_at ? `<span class="pill up" style="margin:0">You agreed on ${fmtD(S.me.terms_accepted_at)}</span>` : '<button class="btn" id="agree">I agree</button>') : '<a class="btn" href="/login">Sign in to join</a>'}<a class="chip" href="/terms">Terms of use</a><a class="chip" href="/privacy">Privacy</a></div></section>`)) return;
-  const a = $('#agree'); if (a) a.onclick = async () => { if (await acceptRules()) go('/chat'); };
+  const a = $('#agree'); if (a) a.onclick = async () => { if (await acceptRules()) go('/'); };
 };
 
 /* ---------- blocked and reports ---------- */
@@ -943,7 +946,7 @@ VIEWS.reports = async (_, tok) => {
 };
 
 /* ---------- Pro ---------- */
-const PERKS = [['Readiness from your wearable', 'Connect WHOOP, Apple Health or Health Connect and get a green, yellow or red day for lifting.', '/connect'], ['Plate tracker', 'Prop up your phone and lift. It counts your reps, reads the plates and saves the set.', '/tracker'], ['Your target weights', 'Every workout turned into weights built from your own PRs.', '/week'], ['Workout logging and day boards', 'Log what you did and see how you stack up each day.', '/week'], ['Every board and filter', 'Total and single lift boards, age brackets.', '/'], ['Goals, plans and charts', 'Set a date and get a week by week path to your number.', '/plans'], ['Coach', 'Your weak link, your ratios, and what to train next.', '/coach'], ['Video on any set', 'Proof on every lift, not just PRs.', '/log'], ['Threads, groups and roast mode', 'Post in every thread, start your own groups, opt in to the roast.', '/chat'], ['Full history and imports', 'Every lift you ever logged, plus years more from a spreadsheet.', '/import']];
+const PERKS = [['Readiness from your wearable', 'Connect WHOOP, Apple Health or Health Connect and get a green, yellow or red day for lifting.', '/connect'], ['Plate tracker', 'Prop up your phone and lift. It counts your reps, reads the plates and saves the set.', '/tracker'], ['Your target weights', 'Every workout turned into weights built from your own PRs.', '/week'], ['Workout logging and day boards', 'Log what you did and see how you stack up each day.', '/week'], ['Every board and filter', 'Total and single lift boards, age brackets.', '/'], ['Goals, plans and charts', 'Set a date and get a week by week path to your number.', '/plans'], ['Coach', 'Your weak link, your ratios, and what to train next.', '/coach'], ['Video on any set', 'Proof on every lift, not just PRs.', '/log'], ['Full history and imports', 'Every lift you ever logged, plus years more from a spreadsheet.', '/import']];
 VIEWS.pro = async (_, tok) => {
   const pro = isPro();
   paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">DSI Pro</div><h2>Train with a <span>plan</span></h2><p class="secSub">Everything in Member, plus the tools that turn numbers into progress.</p></div>

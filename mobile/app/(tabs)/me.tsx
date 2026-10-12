@@ -118,7 +118,6 @@ export default function Me() {
         <Row label="Benchmarks" onPress={() => router.push('/compete/benchmarks')} />
         <Row label="Year recap" pro onPress={() => (isPro ? router.push({ pathname: '/compete/recap', params: { year } }) : router.push('/pro'))} />
         <Row label="PR wall" onPress={() => router.push('/prs')} />
-        <Row label="Protests" onPress={() => router.push('/protests')} />
       </Group>
 
       <Group title="DSI Pro">

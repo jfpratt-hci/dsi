@@ -19,7 +19,7 @@ export default function TabLayout() {
       <Tabs.Screen name="index" options={{ title: 'Board', tabBarIcon: icon({ ios: 'trophy', android: 'emoji_events', web: 'emoji_events' }) }} />
       <Tabs.Screen name="week" options={{ title: 'Week', tabBarIcon: icon({ ios: 'calendar', android: 'calendar_month', web: 'calendar_month' }) }} />
       <Tabs.Screen name="log" options={{ title: 'Log', tabBarIcon: icon({ ios: 'plus.circle.fill', android: 'add_circle', web: 'add_circle' }) }} />
-      <Tabs.Screen name="chat" options={{ title: 'Chat', tabBarIcon: icon({ ios: 'bubble.left.and.bubble.right', android: 'forum', web: 'forum' }) }} />
+      <Tabs.Screen name="chat" options={{ href: null, title: 'Chat', tabBarIcon: icon({ ios: 'bubble.left.and.bubble.right', android: 'forum', web: 'forum' }) }} />
       <Tabs.Screen name="me" options={{ title: 'Me', tabBarIcon: icon({ ios: 'person.crop.circle', android: 'account_circle', web: 'account_circle' }) }} />
     </Tabs>
   );

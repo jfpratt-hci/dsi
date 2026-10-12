@@ -1138,3 +1138,5 @@ td.nowrap{white-space:nowrap}
 .cvX{float:right;width:28px;height:28px;border:1px solid transparent;border-radius:6px;background:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;opacity:.6}
 .cvX:hover,.cvX:focus-visible{opacity:1;border-color:var(--line)}
 .cvX.danger{float:none;display:block;width:auto;padding:0 8px;font:700 12px var(--sans);opacity:1;background:var(--down);color:#141414;margin-top:4px}
+/* chat and protests switched off for now */
+.noChat [data-thread],.noProtests [data-protest]{display:none!important}

@@ -6,6 +6,7 @@ import { C } from '@/constants/Colors';
 import { colorOf, fmt, fmtD, isNew, liftName, type PR } from '@/lib/data';
 import { useSession } from '@/lib/session';
 import { sb } from '@/lib/supabase';
+import { CHAT_ON, PROTESTS_ON } from '@/lib/features';
 
 export function PRCard({ p, onChange }: { p: PR; onChange?: () => void }) {
   const { me } = useSession();
@@ -29,7 +30,7 @@ export function PRCard({ p, onChange }: { p: PR; onChange?: () => void }) {
       <Text style={{ color: C.muted, fontSize: 15 }}>{liftName(p.lift)} <Mono style={{ fontSize: 17 }}>{fmt(p.weight_lb)} lb</Mono>{p.status === 'protested' ? <Text style={{ color: C.flat }}>  Under protest</Text> : null}</Text>
       {gain > 0 ? <Mono style={{ color: C.up, fontSize: 24, marginTop: 4 }}>+{fmt(gain)} lb</Mono> : null}
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
-        <Pressable onPress={talk} style={pill}><Text style={pillT}>TALK</Text></Pressable>
+        {CHAT_ON ? <Pressable onPress={talk} style={pill}><Text style={pillT}>TALK</Text></Pressable> : null}
         {!mine && me && p.status === 'ok' ? <Pressable onPress={() => router.push({ pathname: '/report', params: { type: 'protest_lift', id: p.id, name: `${p.name} ${liftName(p.lift)} ${fmt(p.weight_lb)} lb` } })} style={pill}><Text style={pillT}>PROTEST</Text></Pressable> : null}
       </View>
     </Card>

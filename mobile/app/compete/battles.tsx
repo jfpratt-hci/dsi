@@ -12,6 +12,7 @@ import { addDays, fmt, fmtD, loadBoard, monday, today, type BoardRow } from '@/l
 import { allEntries, battleScore, battleStatus, battleWeeks, loadProIds, namer, namesFor, openThread, respondBattle, TONE, type Battle, type LiftRow } from '@/lib/compete';
 import { useSession } from '@/lib/session';
 import { sb } from '@/lib/supabase';
+import { CHAT_ON, PROTESTS_ON } from '@/lib/features';
 
 type Data = { board: BoardRow[]; battles: Battle[]; by: Map<string, LiftRow[]>; extra: Record<string, string>; pros: Set<string> };
 
@@ -109,7 +110,7 @@ export default function Battles() {
           </View>
         ) : null}
         {b.status === 'pending' && meA ? <Btn ghost label="Call it off" onPress={() => respondBattle(b.id, 'cancel', load)} style={{ marginTop: 12 }} /> : null}
-        {b.status === 'accepted' ? <Btn ghost label="Talk" onPress={() => openThread('battle', b.id, `${name(b.challenger)} vs ${name(b.opponent)}`, !!me)} style={{ marginTop: 12 }} /> : null}
+        {CHAT_ON && b.status === 'accepted' ? <Btn ghost label="Talk" onPress={() => openThread('battle', b.id, `${name(b.challenger)} vs ${name(b.opponent)}`, !!me)} style={{ marginTop: 12 }} /> : null}
       </Card>
     );
   };

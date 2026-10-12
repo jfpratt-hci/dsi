@@ -10,6 +10,7 @@ import { colorOf, fmt, fmtD, liftName, loadBoard, type BoardRow } from '@/lib/da
 import { useSession } from '@/lib/session';
 import { sb } from '@/lib/supabase';
 import { addVideo } from '@/lib/video';
+import { CHAT_ON, PROTESTS_ON } from '@/lib/features';
 
 type Entry = { id: string; profile_id: string; lift: string; weight_lb: number; prev_best: number | null; performed_on: string; status: string; is_pr: boolean; video_path: string | null };
 
@@ -103,8 +104,8 @@ export default function PRDetail() {
 
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
         <Btn ghost label="Share" onPress={share} style={{ flex: 1 }} />
-        <Btn ghost label="Talk" onPress={talk} style={{ flex: 1 }} />
-        {!mine && me && e.status === 'ok' && e.is_pr ? <Btn ghost label="Protest" onPress={() => router.push({ pathname: '/report', params: { type: 'protest_lift', id: e.id, name: `${name} ${liftName(e.lift)} ${fmt(e.weight_lb)} lb` } })} style={{ flex: 1 }} /> : null}
+        {CHAT_ON ? <Btn ghost label="Talk" onPress={talk} style={{ flex: 1 }} /> : null}
+        {PROTESTS_ON && !mine && me && e.status === 'ok' && e.is_pr ? <Btn ghost label="Protest" onPress={() => router.push({ pathname: '/report', params: { type: 'protest_lift', id: e.id, name: `${name} ${liftName(e.lift)} ${fmt(e.weight_lb)} lb` } })} style={{ flex: 1 }} /> : null}
       </View>
 
       {msgs.length ? (

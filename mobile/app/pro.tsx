@@ -14,7 +14,6 @@ const PERKS: [string, string, string][] = [
   ['Goals, plans and charts', 'Set a date and get a week by week path to your number.', '/plans'],
   ['Coach', 'Your weak links, your ratios, and what to train next.', '/coach'],
   ['Video on any set', 'Proof on every lift, not just PRs.', '/(tabs)/log'],
-  ['Threads, groups and roast mode', 'Post in every thread, start your own groups, opt in to the roast.', '/(tabs)/chat'],
   ['Full history and imports', 'Every lift you ever logged, plus years more from a spreadsheet.', '/import'],
   ['Battles and your year recap', 'Call out any lifter for a week, and share your year in PRs.', '/compete'],
   ['Training trends', 'Weekly volume and estimated maxes from every session you log.', '/training'],

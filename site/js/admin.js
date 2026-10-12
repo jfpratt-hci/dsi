@@ -77,7 +77,7 @@ export function install(X) {
         <h3 style="margin-top:28px">Gym owner <span>requests</span></h3><div class="board"><div class="tablewrap"><table class="adT"><thead><tr><th>Lifter</th><th>Gym</th><th>Their note</th><th>Asked</th><th></th></tr></thead><tbody>
         ${claims.map(c => `<tr><td><a href="/u/${c.profile_id}">${esc(nm(c.profile_id))}</a></td><td><a href="/gyms/${c.gym_id}">${esc((gymBy.get(c.gym_id) || {}).name || '')}</a></td><td>${esc(c.note || '')}</td><td>${esc(day(c.created_at))}</td><td class="r"><button class="btn sm" data-cl="${c.id}" data-ok="1">Approve</button> <button class="btn ghost sm" data-cl="${c.id}">Decline</button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">No requests waiting.</td></tr>'}
         </tbody></table></div></div>
-        <div class="tools" style="margin-top:20px"><a class="tool" href="/reports"><b>Reports · ${reps.count || 0} open</b><span>Chat and profile reports. Answer within 24 hours.</span></a><a class="tool" href="/protests"><b>Protests · ${prots.count || 0} open</b><span>Lifts and logs under protest.</span></a></div>`;
+        <div class="tools" style="margin-top:20px"><a class="tool" href="/reports"><b>Reports · ${reps.count || 0} open</b><span>Chat and profile reports. Answer within 24 hours.</span></a></div>`;
     }
 
     if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">Founder tools</div><h2>Management <span>dashboard</span></h2><p class="secSub">Members, gyms and everything waiting on you.</p></div></div>

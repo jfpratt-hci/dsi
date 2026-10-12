@@ -10,6 +10,7 @@ import { addDays, fmt, fmtD, loadBoard, type BoardRow } from '@/lib/data';
 import { allEntries, battleScore, battleStatus, daysLeft, loadProIds, namer, namesFor, openThread, respondBattle, TONE, UUID, type Battle, type Gain, type LiftRow } from '@/lib/compete';
 import { useSession } from '@/lib/session';
 import { sb } from '@/lib/supabase';
+import { CHAT_ON, PROTESTS_ON } from '@/lib/features';
 
 type Data = { b: Battle; board: BoardRow[]; by: Map<string, LiftRow[]>; extra: Record<string, string>; pros: Set<string> };
 
@@ -106,7 +107,7 @@ export default function BattleDetail() {
           </View>
         ) : null}
         {b.status === 'pending' && meA ? <Btn ghost label="Call it off" onPress={() => respondBattle(b.id, 'cancel', load)} style={{ marginTop: 14 }} /> : null}
-        {b.status === 'accepted' ? <Btn label="Talk" onPress={() => openThread('battle', b.id, title, !!me)} style={{ marginTop: 14 }} /> : null}
+        {CHAT_ON && b.status === 'accepted' ? <Btn label="Talk" onPress={() => openThread('battle', b.id, title, !!me)} style={{ marginTop: 14 }} /> : null}
 
         <Muted style={{ marginTop: 16, fontSize: 13 }}>Most DSI points gained from Monday to Sunday wins; pounds added breaks a tie. Lifts struck by the Commissioner never count.</Muted>
         <Btn ghost label="All battles" onPress={() => router.push('/compete/battles')} style={{ marginTop: 14 }} />
