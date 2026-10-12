@@ -304,7 +304,7 @@ export function install(X) {
   // Screens advance on their own every 15 seconds. Scroll, swipe, arrow keys or the dots move by hand;
   // after a minute without input the deck starts moving again.
   let tvTimers = [];
-  const clearTv = () => { tvTimers.forEach(t => clearInterval(t)); tvTimers = []; };
+  const clearTv = () => { tvTimers.forEach(t => clearInterval(t)); tvTimers = []; const f = document.getElementById('tvFocusBox'); if (f) f.remove(); };
   const SLIDE_MS = 15000, IDLE_MS = 60000, PER_TARGETS = 12;
   const secsOf = s => { const m = String(s || '').match(/^(\d+):(\d{1,2})$/); return m ? +m[1] * 60 + +m[2] : null; };
   // Parts days rank by the first thing logged (fastest time or heaviest weight); older days keep their score rules.
@@ -357,7 +357,7 @@ export function install(X) {
       const head = (k, t) => `<header class="tvHead"><div class="tvGym"><img src="/assets/mark.svg" alt="Dandy Strength" class="tvLogo"><div><b>${esc(g.name)}</b><span>${esc(k)}</span></div></div><div class="tvTitle">${t}</div><div class="tvClock">${clock()}</div></header>`;
       // 1. Workout of the day
       out.push(`${head(fmtDW(today()), 'Workout of the <em>day</em>')}<div class="tvBody tvWodS">
-        ${w ? `<h1>${esc(w.title)}</h1><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
+        ${w ? `<h1>${esc(w.title)}</h1><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div class="tvPartBtn" role="button" tabindex="0" data-part="${p.L}" aria-label="Show part ${p.L} full screen"><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
         : `<h1>Rest or not posted</h1><p class="tvEmpty">Coaches post the day at dandystrength.com/gym/${esc(g.id)}</p>`}</div>`);
       // 2. Today's targets (one screen per 12 members)
       const lifts = (w && w.lifts) || [];
@@ -396,6 +396,49 @@ export function install(X) {
       return out;
     };
 
+    // One part, full screen: tap A, B, C or D on the workout screen (or press its letter). Stays up until closed,
+    // and the screens stop rolling underneath while it is open.
+    let focus = null;
+    const focusHtml = () => {
+      const ps = st && st.w ? shownParts(st.w) : [], p = ps.find(x => x.L === focus);
+      if (!p) return '';
+      const { members, rowOf, logs } = st, l = p.lift;
+      const tg = l ? members.map(m => { const t = D.target(l, rowOf(m)), v = num((((logs.find(x => x.profile_id === m.id) || {}).entries) || {})[l.id]); return { n: m.display_name, t, v }; }).filter(x => x.t || x.v) : [];
+      return `<div class="tvFocus" role="dialog" aria-modal="true" aria-label="Part ${p.L}">
+        <header class="tvFHead"><nav class="tvFTabs">${ps.map(x => `<button type="button" data-fpart="${x.L}"${x.L === p.L ? ' aria-current="true"' : ''}><i>${x.L}</i>${esc(x.name || 'Part ' + x.L)}</button>`).join('')}</nav>
+          <div class="tvClock">${clock()}</div><button type="button" class="tvFClose" id="tvFClose" aria-label="Close (Esc)">×</button></header>
+        <div class="tvFBody${tg.length ? ' withT' : ''}">
+          <div class="tvFMain"><div class="tvFName"><i>${p.L}</i>${esc(p.name || 'Part ' + p.L)}</div>
+            <p class="tvFText" id="tvFText">${esc(p.text)}</p>
+            ${l ? `<div class="tvFLift">${esc(l.n)}${l.sch ? ` · ${esc(l.sch)}` : ''}${l.why ? `<span>${esc(l.why)}</span>` : ''}</div>` : ''}
+            ${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>
+          ${tg.length ? `<div class="tvFTargets"><h3>Your targets${l && D.unit(l) !== 'lb' ? ` <small>${esc(D.unit(l))}</small>` : ''}</h3><ol>${tg.map(x => `<li class="${x.v ? (x.t && x.v >= x.t ? 'hit' : 'did') : ''}"><span>${esc(x.n)}</span><b>${x.v || x.t}</b></li>`).join('')}</ol></div>` : ''}
+        </div></div>`;
+    };
+    // Make the part's words as big as the screen allows.
+    const fitText = () => {
+      const t = $('#tvFText'); if (!t) return;
+      let lo = 1.2, hi = 7;
+      for (let i = 0; i < 12; i++) { const m = (lo + hi) / 2; t.style.fontSize = m + 'vw'; if (t.scrollHeight > t.clientHeight + 1 || t.scrollWidth > t.clientWidth + 1) hi = m; else lo = m; }
+      t.style.fontSize = lo + 'vw';
+    };
+    const showFocus = L => {
+      focus = L;
+      let box = document.getElementById('tvFocusBox');
+      if (!L) { if (box) box.remove(); if (deck) deck.focus({ preventScroll: true }); return; }
+      if (!box) { box = document.createElement('div'); box.id = 'tvFocusBox'; document.body.appendChild(box); }
+      box.innerHTML = focusHtml();
+      if (!box.innerHTML) { focus = null; box.remove(); return; }
+      fitText();
+      box.querySelectorAll('[data-fpart]').forEach(b => b.onclick = () => showFocus(b.dataset.fpart));
+      $('#tvFClose').onclick = () => showFocus(null);
+    };
+    const bindParts = () => $$('.tvPartBtn').forEach(c => {
+      c.onclick = () => showFocus(c.dataset.part);
+      c.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); showFocus(c.dataset.part); } };
+    });
+    window.addEventListener('resize', () => { if (focus && tok === S.tok) fitText(); });
+
     let deck = null, paused = false;
     // Pause stops the auto scroll until it is pressed again; the screens still scroll by hand.
     const pauseBtn = () => `<button type="button" class="tvPause" id="tvPause" aria-pressed="${paused}" aria-label="${paused ? 'Play the screens' : 'Pause the screens'}" title="${paused ? 'Play' : 'Pause'} (P)">${paused ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>'}</button>`;
@@ -413,7 +456,8 @@ export function install(X) {
       ['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach(ev => deck.addEventListener(ev, () => { lastTouch = Date.now(); }, { passive: true }));
       $$('.tvDots button[data-go]').forEach(b => b.onclick = () => { lastTouch = Date.now(); goTo(+b.dataset.go); });
       bindPause();
-      deck.focus({ preventScroll: true });
+      bindParts();
+      if (focus) showFocus(focus); else deck.focus({ preventScroll: true });
     };
     let moving = null;
     const dots = () => $$('.tvDots button[data-go]').forEach((b, k) => b.toggleAttribute('aria-current', k === cur));
@@ -429,7 +473,16 @@ export function install(X) {
     const onVis = () => { if (tok !== S.tok) return document.removeEventListener('visibilitychange', onVis); if (!document.hidden && deck) deck.scrollTop = cur * deck.clientHeight; };
     document.addEventListener('visibilitychange', onVis);
     const onKey = e => {
-      if (tok !== S.tok) return document.removeEventListener('keydown', onKey);
+      if (tok !== S.tok) { document.removeEventListener('keydown', onKey); return showFocus(null); }
+      if (focus) {
+        const ps = shownParts(st.w).map(x => x.L), i = ps.indexOf(focus);
+        if (e.key === 'Escape') { e.preventDefault(); return showFocus(null); }
+        const step = { ArrowRight: 1, ArrowDown: 1, PageDown: 1, ' ': 1, ArrowLeft: -1, ArrowUp: -1, PageUp: -1 }[e.key];
+        if (step) { e.preventDefault(); return showFocus(ps[(i + step + ps.length) % ps.length]); }
+      }
+      const letter = (e.key || '').toUpperCase();
+      if (/^[ABCD]$/.test(letter) && st && st.w && shownParts(st.w).some(x => x.L === letter)) { e.preventDefault(); lastTouch = Date.now(); return showFocus(letter); }
+      if (focus) return;
       const k = { ArrowDown: 1, ArrowRight: 1, PageDown: 1, ' ': 1, ArrowUp: -1, ArrowLeft: -1, PageUp: -1 }[e.key];
       if (k) { e.preventDefault(); lastTouch = Date.now(); goTo(cur + k); }
       if (e.key === 'p' || e.key === 'P') setPaused(!paused);
@@ -455,7 +508,7 @@ export function install(X) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'workouts' }, () => refresh())
       .subscribe();
     S.channels.push(ch);
-    tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); if (!paused && Date.now() - lastTouch > IDLE_MS) goTo(cur + 1); }, SLIDE_MS));
+    tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); if (!paused && !focus && Date.now() - lastTouch > IDLE_MS) goTo(cur + 1); }, SLIDE_MS));
     tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); if (today() !== lastDay) { lastDay = today(); cur = 0; } refresh(); }, 5 * 60 * 1000));
     tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); $$('.tvClock').forEach(c => { c.textContent = clock(); }); }, 20000));
   };
