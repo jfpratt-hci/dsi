@@ -9,6 +9,7 @@ import { install as installHome } from './home.js';
 import { install as installTraining } from './training.js';
 import { install as installTracker } from './tracker.js';
 import { install as installConnect } from './connect.js';
+import { install as installInsights } from './insights.js';
 
 /* ---------- helpers ---------- */
 const $ = (s, el = document) => el.querySelector(s);
@@ -82,8 +83,8 @@ const boardRow = id => S.board.find(r => r.profile_id === id);
 // members of a gym get My gym; owners and coaches get Gym office; the Founder and Commissioners get Admin.
 // Each panel spans the bar with a kicker and a grid of links, each a name and one line. On phones it is a drawer.
 const nav = $('#nav'), menuBtn = $('#menuBtn');
-const OFFICE = [['today', 'Check in', 'Today\'s classes and who is here'], ['schedule', 'Schedule', 'Classes, times and coaches'], ['wod', 'Workouts', 'Write the week, Parts A to D'], ['results', 'Results', 'Enter scores for the day'], ['plan', 'Plan builder', 'AI cycles from a day to a quarter'], ['class', 'Log a class', 'Type weights live, straight to the board'], ['members', 'Members', 'Profiles, waivers and attendance'], ['billing', 'Billing', 'Plans, invoices and payments', 1], ['docs', 'Documents', 'Waiver and membership contract', 1], ['staff', 'Staff', 'Coaches, swaps, hours and pay'], ['settings', 'Settings', 'Gym details and board link']];
-const officeHref = (gid, k) => k === 'class' ? `/class/${gid}` : k === 'plan' ? `/plan/${gid}` : k === 'wod' ? `/wod/${gid}` : k === 'results' ? `/results/${gid}` : k === 'settings' ? `/gym/${gid}` : `/club/${gid}?tab=${k}`;
+const OFFICE = [['today', 'Check in', 'Today\'s classes and who is here'], ['schedule', 'Schedule', 'Classes, times and coaches'], ['wod', 'Workouts', 'Write the week, Parts A to D'], ['results', 'Results', 'Enter scores for the day'], ['plan', 'Plan builder', 'AI cycles from a day to a quarter'], ['class', 'Log a class', 'Type weights live, straight to the board'], ['members', 'Members', 'Profiles, waivers and attendance'], ['insights', 'Insights', 'Revenue, members and busiest classes', 1], ['billing', 'Billing', 'Plans, invoices and payments', 1], ['docs', 'Documents', 'Waiver and membership contract', 1], ['staff', 'Staff', 'Coaches, swaps, hours and pay'], ['settings', 'Settings', 'Gym details and board link']];
+const officeHref = (gid, k) => k === 'insights' ? `/insights/${gid}` : k === 'class' ? `/class/${gid}` : k === 'plan' ? `/plan/${gid}` : k === 'wod' ? `/wod/${gid}` : k === 'results' ? `/results/${gid}` : k === 'settings' ? `/gym/${gid}` : `/club/${gid}?tab=${k}`;
 const gyms0 = () => S.myGyms || [];
 function navGroups() {
   const me = S.me && S.me.display_name ? S.me : null, pro = isPro(), P = pro ? '' : 'Pro. ';
@@ -107,7 +108,7 @@ function navGroups() {
 }
 const ROUTE_GROUP = { '': 'home', pricing: 'home', start: 'home', boards: 'boards', prs: 'boards', pr: 'boards', compete: 'boards', season: 'boards', battles: 'boards', gyms: 'boards', benchmarks: 'boards', protests: 'boards', recap: 'boards', u: 'boards',
   week: 'train', training: 'train', log: 'train', progress: 'train', plans: 'train', coach: 'train', plates: 'train', tracker: 'train', connect: 'train', import: 'train', lift: 'train', chat: 'chat', classes: 'mygym', mygym: 'mygym', billing: 'mygym', sign: 'mygym', signed: 'mygym',
-  club: 'office', class: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office', admin: 'admin', reports: 'admin', program: 'admin', me: 'me', pro: 'me', rules: 'me', blocked: 'me' };
+  club: 'office', insights: 'office', class: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office', admin: 'admin', reports: 'admin', program: 'admin', me: 'me', pro: 'me', rules: 'me', blocked: 'me' };
 const ACCT = () => [['/me', 'Profile', 'Name, gym and lifter details'], ['/me?tab=goals', 'Goals', 'What you are chasing'], ['/me?tab=reminders', 'Reminders', 'Nudges to log'], ['/me?tab=account', 'Account and safety', 'Email, privacy and blocks'], ['/u/' + S.me.id, 'My lifter card', 'Your public page'], ['/pro', 'DSI Pro', 'Membership and perks']];
 function buildNav(r) {
   const groups = navGroups(), cur = ROUTE_GROUP[r] ?? '';
@@ -1376,6 +1377,7 @@ installClub(CTX);
 installPlan(CTX);
 installHome(CTX);
 installConnect(CTX);
+installInsights(CTX);
 installTraining(CTX);
 installTracker(CTX);
 
