@@ -557,7 +557,7 @@ main.wrap>.tvWrap,.tvWrap{position:fixed;inset:0;margin:0;background:var(--bg);d
 /* ---------- big screen deck: one full screen per section, snaps while scrolling ---------- */
 main.wrap>.tvDeck,.tvDeck{position:fixed;inset:0;margin:0;padding:0;overflow-y:auto;scroll-snap-type:y mandatory;background:var(--bg);outline:none;scrollbar-width:none}
 .tvDeck::-webkit-scrollbar{display:none}
-.tvS{height:100vh;scroll-snap-align:start;scroll-snap-stop:always;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:auto minmax(0,1fr) auto;gap:1.2vw;padding:1.6vw 2vw 1.2vw;box-sizing:border-box}
+.tvS{height:100vh;height:100%;scroll-snap-align:start;scroll-snap-stop:always;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:auto minmax(0,1fr) auto;gap:1.2vw;padding:1.6vw 2vw 1.2vw;box-sizing:border-box}
 .tvS .tvHead{grid-column:1/-1;display:grid;grid-template-columns:1fr auto 1fr;align-items:center}
 .tvS .tvClock{justify-self:end}
 .tvTitle{font:900 3.2vw/1 var(--disp);text-transform:uppercase;text-align:center}

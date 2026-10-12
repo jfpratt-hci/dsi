@@ -433,6 +433,15 @@ export function install(X) {
       box.querySelectorAll('[data-fpart]').forEach(b => b.onclick = () => showFocus(b.dataset.fpart));
       $('#tvFClose').onclick = () => showFocus(null);
     };
+    // The workout screen: one text size for every part, as big as fits. iPads mirrored to a TV are 4:3, so a fixed size runs off.
+    const fitCards = () => {
+      const ps = $$('.tvWodS .tvSecsBig p'); if (!ps.length) return;
+      const over = () => ps.some(p => p.scrollHeight > p.clientHeight + 1 || p.scrollWidth > p.clientWidth + 1);
+      let lo = 0.7, hi = 3.2;
+      for (let i = 0; i < 12; i++) { const m = (lo + hi) / 2; ps.forEach(p => { p.style.fontSize = m + 'vw'; }); if (over()) hi = m; else lo = m; }
+      ps.forEach(p => { p.style.fontSize = lo + 'vw'; });
+    };
+    window.addEventListener('resize', () => { if (tok === S.tok) fitCards(); });
     const bindParts = () => $$('.tvPartBtn').forEach(c => {
       c.onclick = () => showFocus(c.dataset.part);
       c.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); showFocus(c.dataset.part); } };
@@ -457,6 +466,9 @@ export function install(X) {
       $$('.tvDots button[data-go]').forEach(b => b.onclick = () => { lastTouch = Date.now(); goTo(+b.dataset.go); });
       bindPause();
       bindParts();
+      fitCards();
+      // Text sizes change once the display fonts finish loading; fit again then.
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (tok === S.tok) { fitCards(); if (focus) fitText(); } });
       if (focus) showFocus(focus); else deck.focus({ preventScroll: true });
     };
     let moving = null;
