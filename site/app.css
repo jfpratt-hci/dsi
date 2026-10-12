@@ -480,11 +480,6 @@ table.wkT th{padding:8px}
 .restBox.on{border-color:var(--accent)}
 .restBox b{display:block;font:600 34px/1 var(--mono)}
 .restBox.on b{color:var(--accent)}
-.plBar{display:flex;align-items:center;gap:3px;min-height:170px;padding:10px 0}
-.plBar i{display:block;border-radius:3px}
-.plBar i.sleeve{width:70px;height:16px;background:#5A6478;border-radius:2px}
-.plTxt{display:grid;gap:4px;margin:0}
-.plTxt b{font:600 26px var(--mono)}
 .recapK{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media (max-width:640px){
   .setRow{grid-template-columns:24px 1fr auto 1fr auto;}

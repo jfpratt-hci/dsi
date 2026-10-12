@@ -89,7 +89,6 @@ function Nav() {
       <Stack.Screen name="lift" options={{ title: '' }} />
       <Stack.Screen name="pr/[id]" options={{ title: 'PR' }} />
       <Stack.Screen name="newgroup" options={{ presentation: 'modal', title: 'New group' }} />
-      <Stack.Screen name="plates" options={{ title: 'Plates' }} />
     </Stack>
   );
 }

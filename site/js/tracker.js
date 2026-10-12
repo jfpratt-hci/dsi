@@ -29,7 +29,7 @@ export function install(X) {
     if (!isPro()) return paint(tok, `<section class="sec narrow"><div><div class="kicker">DSI Pro</div><h2>Plate <span>tracker</span></h2>
       <p class="secSub">Prop your phone up, hit start and lift. The camera counts every rep, reads the plates on the bar, times each rep and saves the set to your log. Part of DSI Pro.</p></div>
       <ul class="tkPitch"><li><b>Counts your reps</b>Squats, presses, pulls, cleans, curls. It calls the count out loud.</li><li><b>Reads the weight</b>Point it at the bar and it reads the plates. You confirm with one tap.</li><li><b>Times every rep</b>See when the bar slows down so you know when to stop.</li><li><b>Saves the set</b>Straight to your log, and heavy singles go to the PR wall with the clip.</li></ul>
-      <div class="row"><a class="btn" href="/pro">See DSI Pro</a><a class="btn ghost" href="/plates">Plate calculator</a></div></section>`);
+      <div class="row"><a class="btn" href="/pro">See DSI Pro</a></div></section>`);
 
     // Tracking a lift from a workout?
     const q = new URLSearchParams(location.search), wid = q.get('w'), lid = q.get('l');

@@ -131,7 +131,6 @@ export default function Me() {
 
       <Group title="Community">
         <Row first label="Invite your crew" onPress={() => inviteCrew(me?.display_name)} />
-        <Row label="Plate calculator" onPress={() => router.push('/plates')} />
         {isStaff ? <Row label="Reports" detail={openReports ? `${openReports} open` : 'None open'} onPress={() => router.push('/reports')} /> : null}
         {me?.role === 'admin' ? <Row label="Management dashboard" detail="Website" onPress={() => WebBrowser.openBrowserAsync('https://dandystrength.com/admin').catch(() => {})} /> : null}
         <Row label="Blocked lifters" onPress={() => router.push('/blocked')} />

@@ -1,6 +1,6 @@
 // Compete and grow pages for dandystrength.com:
 // compete hub, seasons, weekly battles, gym league, benchmark boards, year recap,
-// PR detail with share card, set by set logging with a rest timer, plate calculator, invite your crew.
+// PR detail with share card, set by set logging with a rest timer, invite your crew.
 // app.js calls install(ctx) with its helpers before the first route.
 
 export function install(X) {
@@ -70,7 +70,7 @@ export function install(X) {
         ${tile('/gyms', 'Gym league', 'Your gym against every gym, ranked by its top five lifters.')}
         ${tile('/benchmarks', 'Benchmark boards', 'Every time anyone has done Fran, Grace and the rest.')}
         ${tile('/recap/' + new Date().getFullYear(), 'Your year recap', 'PRs, pounds added and your best day of the year.', 1)}
-        ${tile('/plates', 'Plate calculator', 'What to load on each side, plus warmups.')}${tile('/tracker', 'Plate tracker', 'The camera counts your reps and reads the plates.', 1)}
+        ${tile('/tracker', 'Plate tracker', 'The camera counts your reps and reads the plates.', 1)}
       </div></section>`);
   };
 
@@ -360,7 +360,7 @@ export function install(X) {
     if (!paint(tok, `<section class="sec"><div class="wkNav"><div><div class="kicker">${esc(fmtD(w.day))} · ${esc(w.title)}</div><h2>${esc(L.n)}</h2><p class="secSub">${esc(L.sch)}${tgt ? ' · target ' + tgt + ' lb' : ''}${L.why ? ' · ' + esc(L.why) : ''}</p></div>
       <div class="kpi"><div><b id="setN">0/0</b><span>Sets done</span></div></div></div>
       <div class="formCard"><div id="sets" class="sets"></div>
-        <div class="row"><button class="btn ghost sm" type="button" id="addSet">+ Add set</button><button class="btn ghost sm" type="button" id="rmSet">Remove last</button>${tgt ? `<a class="btn ghost sm" href="/plates/${tgt}">Plates for ${tgt}</a>` : ''}<a class="btn ghost sm" href="/tracker?w=${w.id}&l=${encodeURIComponent(lid)}">Track with camera</a></div>
+        <div class="row"><button class="btn ghost sm" type="button" id="addSet">+ Add set</button><button class="btn ghost sm" type="button" id="rmSet">Remove last</button><a class="btn ghost sm" href="/tracker?w=${w.id}&l=${encodeURIComponent(lid)}">Track with camera</a></div>
         <div class="restBox" id="restBox"><div><span class="eyebrow">Rest</span><b id="restLeft">${Math.floor(rest / 60)}:${String(rest % 60).padStart(2, '0')}</b></div><div class="chips">${[60, 90, 120, 180].map(s => `<button class="chip" type="button" data-rest="${s}" aria-pressed="${s === rest}">${s < 120 ? s + 's' : s / 60 + ' min'}</button>`).join('')}<button class="chip" type="button" id="restGo">Start</button></div></div>
         <div class="row"><button class="btn" type="button" id="saveSets">Save sets</button><a class="btn ghost" href="/week/${w.day}">Back to the day</a><span class="hint" id="setMsg">Your top weight becomes this lift's actual on the day board.</span></div></div></section>`)) return;
     draw();
@@ -387,28 +387,5 @@ export function install(X) {
       }
       m.textContent = `Saved ${done.length} set${done.length === 1 ? '' : 's'}${top ? ', top ' + top + ' lb' : ''}.`; toast('Sets saved');
     };
-  };
-
-  /* ---------- plate calculator ---------- */
-  const PLATES = [45, 35, 25, 10, 5, 2.5], PCOL = { 45: '#EF4B5C', 35: '#F2C94C', 25: '#3DBA74', 10: '#E9EEF6', 5: '#5B93E8', 2.5: '#8E9AB0' };
-  const load = (total, bar) => { let side = Math.max(0, (total - bar) / 2); const out = []; for (const p of PLATES) while (side >= p - 1e-9) { out.push(p); side -= p; } return { plates: out, off: Math.round(side * 20) / 10 }; };
-  const r5 = x => Math.round(x / 5) * 5;
-  VIEWS.plates = async (w, tok) => {
-    let total = /^\d+(\.\d+)?$/.test(w || '') ? +w : 225, bar = 45;
-    if (!paint(tok, `<section class="sec narrow"><div><div class="kicker">Free tool</div><h2>Plate <span>calculator</span></h2><p class="secSub">What goes on each side, and how to warm up to it. Want the camera to count your reps and read the bar? Try the <a href="/tracker">Plate tracker</a>.</p></div>
-      <div class="formCard"><div class="fields"><div class="field w2"><label for="pl-w">Weight on the bar (lb)</label><input id="pl-w" type="number" inputmode="decimal" step="any" min="0" max="1499" value="${total}" style="font:600 28px var(--mono)"></div>
-      <div class="field w2"><span class="lbl">Bar</span><div class="chips">${[45, 35, 15].map(b => `<button class="chip" type="button" data-bar="${b}" aria-pressed="${b === bar}">${b} lb bar</button>`).join('')}</div></div></div>
-      <div id="plOut"></div></div></section>`)) return;
-    const draw = () => {
-      const { plates, off } = load(total, bar);
-      const warm = total > bar ? [[bar, 10], [r5(total * 0.4), 5], [r5(total * 0.6), 3], [r5(total * 0.75), 2], [r5(total * 0.85), 1]].filter(([x]) => x < total && x >= bar) : [];
-      $('#plOut').innerHTML = `<div class="plBar" aria-hidden="true"><i class="sleeve"></i>${plates.map(p => `<i style="height:${40 + Math.min(p, 45) * 2.4}px;width:${p >= 25 ? 22 : 14}px;background:${PCOL[p]}"></i>`).join('')}</div>
-        <p class="plTxt"><span class="eyebrow">Each side</span><b>${plates.length ? plates.join(' + ') : 'Just the bar'}</b></p>
-        ${off ? `<p class="hint">${off} lb can't be loaded with standard plates.</p>` : ''}
-        ${warm.length ? `<div class="tablewrap"><table><thead><tr><th>Warmup to ${total}</th><th class="r">Reps</th><th>Each side</th></tr></thead><tbody>${warm.map(([x, r]) => `<tr><td class="n">${x} lb</td><td class="r n">× ${r}</td><td class="sub">${load(x, bar).plates.join(' + ') || 'bar'}</td></tr>`).join('')}</tbody></table></div>` : ''}`;
-    };
-    draw();
-    $('#pl-w').oninput = e => { total = +e.target.value || 0; draw(); };
-    $$('[data-bar]').forEach(b => b.onclick = () => { bar = +b.dataset.bar; $$('[data-bar]').forEach(x => x.setAttribute('aria-pressed', String(+x.dataset.bar === bar))); draw(); });
   };
 }

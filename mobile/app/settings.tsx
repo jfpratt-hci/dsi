@@ -80,7 +80,6 @@ export default function Settings() {
 
       <Group title="Crew">
         <Row first label="Invite your crew" onPress={() => inviteCrew(me.display_name)} />
-        <Row label="Plate calculator" onPress={() => router.push('/plates')} />
       </Group>
 
       <Group title="Help">
