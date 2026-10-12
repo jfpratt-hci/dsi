@@ -18,6 +18,11 @@ export function install(X) {
   const hm = t => { const [h, m] = String(t).split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${ap}`; };
   const isOwner = gid => (S.me && S.me.role === 'admin') || (S.myGyms || []).some(g => g.gym_id === gid && g.role === 'owner');
   const isCoach = gid => isOwner(gid) || (S.myGyms || []).some(g => g.gym_id === gid);
+  // Two taps to do something you can't take back with one tap: the first arms the button for four seconds.
+  const twoTap = (b, ask, f) => b.onclick = async () => {
+    if (!b.dataset.armed) { b.dataset.was = b.textContent; b.dataset.armed = '1'; b.textContent = ask; b.classList.add('danger'); b._t = setTimeout(() => { delete b.dataset.armed; b.textContent = b.dataset.was; b.classList.remove('danger'); }, 4000); return; }
+    clearTimeout(b._t); b.disabled = true; try { await f(); } catch (e) { toast(e.message); b.disabled = false; delete b.dataset.armed; b.textContent = b.dataset.was; b.classList.remove('danger'); }
+  };
   const rpc = async (fn, args) => { const { data, error } = await sb.rpc(fn, args); if (error) throw new Error(error.message); return data; };
   const call = async (action, body) => {
     const { data, error } = await sb.functions.invoke('billing', { body: { action, ...body } });
@@ -116,7 +121,7 @@ export function install(X) {
       ${pick ? `<div class="cvBar"><div class="cvAdd"><label class="vh" for="cvAddIn">Add someone</label><input id="cvAddIn" list="cvPeople" placeholder="Add someone: type a name, press Enter" autocomplete="off"><datalist id="cvPeople">${members.filter(m => !ids.includes(m.id)).map(m => `<option value="${esc(m.display_name)}">`).join('')}</datalist></div>
           <span class="cvCount"><b>${here.size}</b> here of ${ids.length}</span>${w ? `<a class="btn ghost sm" href="/tv/${esc(g.slug || gid)}" target="_blank" rel="noopener">Big screen</a>` : ''}</div>
         ${ids.length ? `<div class="cvWrap"><table class="cvGrid" id="cvGrid"><thead><tr><th scope="col" class="cvWhoH">${esc(tAt(pick.starts_at, g.tz))} ${esc(pick.name)}</th><th scope="col" class="cvHereH">Here</th>${its.map(head).join('')}</tr></thead><tbody>
-          ${order.map(id => `<tr data-row="${id}"><th scope="row" class="cvWho">${esc(nameOf(id))}<span class="cvDot" data-st aria-live="polite"></span></th><td class="cvHere"><input type="checkbox" data-here="${id}"${here.has(id) ? ' checked' : ''} aria-label="${esc(nameOf(id))} is here"></td>${its.map(it => `<td>${cell(id, it)}</td>`).join('')}</tr>`).join('')}
+          ${order.map(id => `<tr data-row="${id}"><th scope="row" class="cvWho"><span class="cvName">${esc(nameOf(id))}</span><button type="button" class="cvX" data-out="${id}" aria-label="Take ${esc(nameOf(id))} off this class">×</button><span class="cvDot" data-st aria-live="polite"></span></th><td class="cvHere"><input type="checkbox" data-here="${id}"${here.has(id) ? ' checked' : ''} aria-label="${esc(nameOf(id))} is here"></td>${its.map(it => `<td>${cell(id, it)}</td>`).join('')}</tr>`).join('')}
           </tbody></table></div>
           <p class="hint">Grey numbers are each person's target. Every box saves as you leave it and shows on the board and the TV. Enter moves down the column.${its.some(i => i.lift && i.lift.max) && w.pr_lift ? ' Today is a max out day: a new best becomes a PR.' : ''}</p>`
         : '<div class="prEmpty"><b>Nobody in this class yet</b><p>Type names above as people walk in.</p></div>'}` : ''}
@@ -158,6 +163,7 @@ export function install(X) {
       if (hb) { try { await rpc('check_in', { p_session: pick.id, p_profile: hb.dataset.here, p_in: hb.checked }); hb.checked ? here.add(hb.dataset.here) : here.delete(hb.dataset.here); $('.cvCount b').textContent = here.size; } catch (err) { hb.checked = !hb.checked; toast(err.message); } return; }
       if (e.target.matches('.cvIn')) save(e.target);
     });
+    $$('[data-out]', grid).forEach(b => twoTap(b, 'Remove?', async () => { await rpc('remove_from_class', { p_session: pick.id, p_profile: b.dataset.out }); toast(`${nameOf(b.dataset.out)} is off this class`); route(); }));
     grid.addEventListener('keydown', e => {
       if (e.key !== 'Enter' || !e.target.matches('.cvIn')) return;
       e.preventDefault();
@@ -344,15 +350,20 @@ export function install(X) {
     const owed = id => inv.filter(i => i.profile_id === id).reduce((t, i) => t + i.amount_cents, 0);
     const q = (qs.get('q') || '').toLowerCase();
     const list = members.filter(m => !q || m.display_name.toLowerCase().includes(q));
-    if (!paint(tok, shell(`<div class="row adSearch"><label class="vh" for="mq">Search members</label><input id="mq" placeholder="Search members" value="${esc(qs.get('q') || '')}" style="max-width:300px"><span class="hint">${list.length} of ${members.length} members. Members join by picking ${esc(g.name)} on the Gym league page.</span></div>
+    if (!paint(tok, shell(`<div class="row adSearch"><label class="vh" for="mq">Search members</label><input id="mq" placeholder="Search members" value="${esc(qs.get('q') || '')}" style="max-width:300px"><span class="hint">${list.length} of ${members.length} members. Members join by picking ${esc(g.name)} on the Gym league page.${owner ? ' Remove takes someone off the gym and ends a desk paid membership; their account and history stay.' : ''}</span></div>
       <div class="board"><div class="tablewrap"><table class="adT"><thead><tr><th>Member</th><th>Membership</th><th>Waiver</th><th>Contract</th><th class="r">Visits 30 days</th><th>Last visit</th>${owner ? '<th class="r">Owes</th>' : ''}<th></th></tr></thead><tbody>
       ${list.map(m => { const c = cur(m.id), v = visits(m.id); return `<tr><td><b><a href="/u/${m.id}">${esc(m.display_name)}</a></b></td><td>${c ? `${esc(c.plan_name)} ${statusPill(c.status)}` : statusPill('')}</td>
         <td>${signedDoc(m.id, 'waiver') ? '<span class="pill up">Signed</span>' : '<span class="pill down">Missing</span>'}</td><td>${!docId('contract') ? '<span class="sub">none</span>' : signedDoc(m.id, 'contract') ? '<span class="pill up">Signed</span>' : '<span class="pill flat">Not yet</span>'}</td>
         <td class="r n">${v.filter(a => (a.checked_in_at || '') >= since).length}</td><td>${v[0] && v[0].checked_in_at ? esc(fmtD(v[0].checked_in_at.slice(0, 10))) : '<span class="sub">never</span>'}</td>
-        ${owner ? `<td class="r n">${owed(m.id) ? `<b style="color:var(--down)">${money(owed(m.id))}</b>` : ''}</td>` : ''}<td class="r"><button class="btn ghost sm" data-md="${m.id}">Open</button></td></tr>
+        ${owner ? `<td class="r n">${owed(m.id) ? `<b style="color:var(--down)">${money(owed(m.id))}</b>` : ''}</td>` : ''}<td class="r nowrap"><button class="btn ghost sm" data-md="${m.id}">Open</button>${owner ? ` <button class="btn ghost sm" data-rm="${m.id}" aria-label="Remove ${esc(m.display_name)} from ${esc(g.name)}">Remove</button>` : ''}</td></tr>
         <tr data-mdp="${m.id}" hidden><td colspan="${owner ? 8 : 7}"><div class="mdBox">Loading…</div></td></tr>`; }).join('') || `<tr><td colspan="8" class="empty">No members yet.</td></tr>`}
       </tbody></table></div></div>`))) return;
     $('#mq').onchange = e => go(`/club/${g.id}?tab=members&q=${encodeURIComponent(e.target.value.trim())}`);
+    $$('[data-rm]').forEach(b => twoTap(b, 'Tap again to remove', async () => {
+      const name = (members.find(m => m.id === b.dataset.rm) || {}).display_name || 'Member';
+      await rpc('remove_member', { p_gym: g.id, p_profile: b.dataset.rm });
+      toast(`${name} is off ${g.name}. Their lifts and past visits stay in your history.`); route();
+    }));
     $$('[data-md]').forEach(b => b.onclick = async () => {
       const row = $(`[data-mdp="${b.dataset.md}"]`); row.hidden = !row.hidden; if (row.hidden) return;
       await memberDetail(g, b.dataset.md, $('.mdBox', row), { owner, plans, ms: ms.filter(m => m.profile_id === b.dataset.md), sigs: sigs.filter(s => s.profile_id === b.dataset.md), docs });
