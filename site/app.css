@@ -1103,3 +1103,38 @@ main.wrap>.tvDeck,.tvDeck,.tvStageBox{position:fixed;inset:0;margin:auto;width:m
 .inHeat i.none{background:var(--panel2)}
 .inSec textarea{width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px;font:14px var(--sans)}
 @media (max-width:860px){.inKpis{grid-template-columns:repeat(2,minmax(0,1fr))}.inGrid2{grid-template-columns:1fr}}
+
+/* coach view: one grid per class */
+.cvSec{display:grid;gap:14px}
+.cvTop{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.cvTop h2{margin:0}
+.cvDay{align-items:center;gap:8px}.cvDay .btn{min-width:44px;min-height:40px;font-size:18px}.cvDay b{font:800 18px var(--disp);text-transform:uppercase;min-width:96px;text-align:center}
+.cvClasses .chip{font-size:15px;padding:9px 14px}
+.cvNew{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.cvNew[hidden]{display:none}
+.cvNew label{font-size:13px;color:var(--muted)}
+.cvNew input{height:42px;font-size:16px}.cvNew #cvT{width:120px}.cvNew #cvN{width:170px}
+.cvNew .hint{flex-basis:100%;margin:0}
+.cvNote{margin:0}
+.cvBar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.cvAdd{flex:1 1 260px}
+.cvAdd input{width:100%;height:48px;font-size:17px}
+.cvCount{color:var(--muted);font-size:15px;white-space:nowrap}.cvCount b{color:var(--ink);font:800 22px var(--disp)}
+.cvWrap{overflow:auto;max-height:calc(100vh - 230px);max-height:calc(100dvh - 230px);border:1px solid var(--line);border-radius:8px;background:var(--panel);-webkit-overflow-scrolling:touch}
+.cvGrid{border-collapse:separate;border-spacing:0;width:100%;min-width:max-content}
+.cvGrid th,.cvGrid td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.cvGrid thead th{position:sticky;top:0;z-index:2;background:var(--panel);text-align:left;font-weight:600;border-bottom:2px solid var(--line)}
+.cvGrid .cvWho,.cvGrid .cvWhoH{position:sticky;left:0;z-index:1;background:var(--panel);text-align:left;min-width:150px;max-width:200px;border-right:1px solid var(--line)}
+.cvGrid thead .cvWhoH{z-index:3;font:800 15px var(--disp);text-transform:uppercase}
+.cvWho{font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cvHereH,.cvHere{text-align:center!important;width:58px}
+.cvHere input{width:26px;height:26px;accent-color:var(--up);cursor:pointer}
+.cvH{display:block;font:800 15px var(--disp);text-transform:uppercase;white-space:nowrap}
+.cvS{display:block;color:var(--muted);font-size:12px;white-space:nowrap}
+.cvIn{width:104px;height:48px;font:700 21px var(--mono);text-align:right;padding:6px 10px}
+.cvIn::placeholder{color:var(--muted);opacity:.55;font-weight:500}
+.cvIn.bad{border-color:var(--down);box-shadow:0 0 0 2px color-mix(in srgb,var(--down) 30%,transparent)}
+.cvDot{display:block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;min-height:14px;color:var(--muted)}
+.cvDot.wait{color:var(--muted)}.cvDot.ok{color:var(--up)}.cvDot.bad{color:var(--down)}.cvDot.pr{color:var(--accent)}
+.cvGrid tbody tr:has(.cvHere input:checked) .cvWho{box-shadow:inset 4px 0 0 var(--up)}
+@media (max-width:560px){.cvGrid .cvWho,.cvGrid .cvWhoH{min-width:112px;max-width:130px}.cvWho{font-size:15px}.cvIn{width:84px;height:44px;font-size:18px}.cvWrap{max-height:none}}

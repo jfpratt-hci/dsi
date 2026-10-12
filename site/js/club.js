@@ -61,17 +61,20 @@ export function install(X) {
   }
 
 
-  /* ---------- log a class: coaches type each person's weight during class, straight to the board ---------- */
-  // /class/<gym>?s=<session>&it=<item key>. One part at a time, one box per person, each box saves on its own.
+  /* ---------- coach view: one screen per class, every person and every part ---------- */
+  // /class/<gym>?day=YYYY-MM-DD&s=<session>. Pick or start the class, add who is here, and type weights,
+  // times and reps in one grid. Every box saves on its own and goes straight to the board and the TV.
+  // Works with no schedule set up: Start a class makes the session on the spot, so attendance counts too.
   let noEnteredBy = false;
   VIEWS.class = async (gid, tok) => {
-    if (!S.me) return needLogin(tok, 'log a class');
+    if (!S.me) return needLogin(tok, 'run a class');
     if (!gid && (S.myGyms || []).length) return go('/class/' + S.myGyms[0].gym_id, true);
-    if (!isCoach(gid)) return paint(tok, '<section class="prEmpty"><b>Coaches only</b><p>Gym owners and coaches log weights for their classes here.</p></section>');
+    if (!isCoach(gid)) return paint(tok, '<section class="prEmpty"><b>Coaches only</b><p>Gym owners and coaches run classes here.</p></section>');
     const D = X.D, P = X.parts, qs = new URLSearchParams(location.search);
     const g = await gymById(gid);
     if (!g) return paint(tok, '<section class="prEmpty"><b>No gym here</b></section>');
-    const day = new Date().toLocaleDateString('en-CA', { timeZone: g.tz });
+    const tdy = new Date().toLocaleDateString('en-CA', { timeZone: g.tz });
+    const day = /^\d{4}-\d{2}-\d{2}$/.test(qs.get('day') || '') ? qs.get('day') : tdy;
     const [ss, wr, board, members] = await Promise.all([
       sessionsFor(g, day, day),
       sb.from('workouts').select('*').eq('gym_id', gid).eq('day', day).maybeSingle().then(must),
@@ -79,83 +82,124 @@ export function install(X) {
       sb.from('profiles').select('id,display_name,sex').eq('gym_id', gid).not('display_name', 'is', null).order('display_name').then(must),
     ]);
     const live = ss.filter(x => x.status !== 'canceled'), now = Date.now();
-    const pick = live.find(x => x.id === qs.get('s')) || live.find(x => Date.parse(x.starts_at) <= now && Date.parse(x.ends_at) >= now)
-      || live.find(x => Date.parse(x.starts_at) > now) || live[live.length - 1] || null;
-    const shell = inner => `${X.officeBar(g, 'class')}<section class="sec clSec">${inner}</section>`;
-    if (!wr) return paint(tok, shell(`<div class="prEmpty"><b>No workout posted for today</b><p>Post today's workout first, then log the class against it.</p><p><a class="btn" href="/wod/${gid}?day=${day}">Post the workout</a> <a class="btn ghost" href="/plan/${gid}">Plan builder</a></p></div>`));
-    const w = wr, its = P.items(w);
-    if (!its.length) return paint(tok, shell(`<div class="prEmpty"><b>Nothing to log today</b><p>Today's workout has no weight, time or reps to record. Turn one on in the workout editor.</p><p><a class="btn" href="/wod/${gid}?day=${day}">Edit the workout</a></p></div>`));
-    const it = its.find(i => i.key === qs.get('it')) || its.find(i => i.kind === 'w') || its[0];
+    const pick = live.find(x => x.id === qs.get('s')) || (day === tdy && (live.find(x => Date.parse(x.starts_at) - 15 * 60000 <= now && Date.parse(x.ends_at) >= now)
+      || live.filter(x => Date.parse(x.starts_at) <= now).pop() || live[0])) || live[0] || null;
+    const w = wr, its = w ? P.items(w) : [];
     const bk = pick ? must(await sb.from('bookings').select('profile_id,status').eq('session_id', pick.id).in('status', ['booked', 'attended']).order('created_at')) : [];
-    const ids = bk.map(b => b.profile_id);
+    const ids = bk.map(b => b.profile_id), here = new Set(bk.filter(b => b.status === 'attended').map(b => b.profile_id));
     const memberBy = new Map(members.map(m => [m.id, m]));
     const extra = await people(ids.filter(id => !memberBy.has(id)));
     const nameOf = id => (memberBy.get(id) || {}).display_name || extra.get(id) || 'Member';
-    const logs = ids.length ? must(await sb.from('workout_logs').select('profile_id,entries,score,sets').eq('workout_id', w.id).in('profile_id', ids)) : [];
+    const logs = w && ids.length ? must(await sb.from('workout_logs').select('profile_id,entries,score,sets').eq('workout_id', w.id).in('profile_id', ids)) : [];
     const logOf = new Map(logs.map(l => [l.profile_id, l]));
     const rowOf = id => board.find(r => r.profile_id === id) || { sex: (memberBy.get(id) || {}).sex };
-    const order = [...bk].sort((a, b) => (b.status === 'attended') - (a.status === 'attended') || nameOf(a.profile_id).localeCompare(nameOf(b.profile_id)));
-    const isPrDay = it.kind === 'w' && it.lift && it.lift.max && w.pr_lift && D.LIFT_BY_DB[w.pr_lift];
-    const val = id => { const v = ((logOf.get(id) || {}).entries || {})[it.key]; return it.kind === 't' ? P.fmtT(v) : (v ?? ''); };
-    const tgt = id => it.kind === 'w' && it.lift ? D.target(it.lift, rowOf(id)) : 0;
-    const href = (sid, key) => `/class/${gid}?s=${sid || ''}&it=${encodeURIComponent(key)}`;
-    const box = id => it.kind === 'r'
-      ? `<input class="clIn" type="number" inputmode="numeric" min="0" max="99999" step="1" data-p="${id}" value="${esc(val(id))}" placeholder="reps" aria-label="${esc(nameOf(id))} reps">`
+    const order = [...ids].sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
+    const itOf = key => its.find(i => i.key === key);
+    const val = (id, it) => { const v = ((logOf.get(id) || {}).entries || {})[it.key]; return it.kind === 't' ? P.fmtT(v) : (v ?? ''); };
+    const tgt = (id, it) => it.kind === 'w' && it.lift ? D.target(it.lift, rowOf(id)) : 0;
+    const href = o => { const q = new URLSearchParams({ ...(day !== tdy ? { day } : {}), ...(pick ? { s: pick.id } : {}), ...o }); [...q.entries()].forEach(([k, v]) => { if (!v) q.delete(k); }); const t = q.toString(); return `/class/${gid}${t ? '?' + t : ''}`; };
+    const cell = (id, it) => it.kind === 'r'
+      ? `<input class="cvIn" type="number" inputmode="numeric" min="0" max="99999" step="1" data-p="${id}" data-k="${esc(it.key)}" value="${esc(val(id, it))}" placeholder="reps" aria-label="${esc(nameOf(id))}, ${esc(it.label)} reps">`
       : it.kind === 't'
-      ? `<input class="clIn" inputmode="numeric" maxlength="8" data-p="${id}" value="${esc(val(id))}" placeholder="m:ss" aria-label="${esc(nameOf(id))} time">`
-      : `<input class="clIn" type="number" inputmode="decimal" min="0" max="1499" step="any" data-p="${id}" value="${esc(val(id))}" placeholder="${tgt(id) || 'lb'}" aria-label="${esc(nameOf(id))} weight in pounds">`;
-    if (!paint(tok, shell(`<div class="secHead"><div><div class="kicker">${pick ? esc(tAt(pick.starts_at, g.tz)) + ' ' + esc(pick.name) : 'Today'} · ${esc(w.title)}</div><h2>Log the <span>class</span></h2>
-        <p class="secSub">Type each person's ${it.kind === 't' ? 'time' : it.kind === 'r' ? 'total reps' : 'weight'} as they finish. Every box saves on its own and goes straight to the board and the TV.${isPrDay ? ' Today is a max out day, so a new best counts as a PR.' : ''}</p></div>
-        <div class="row"><a class="btn ghost sm" href="/tv/${esc(g.slug || gid)}" target="_blank" rel="noopener">Big screen</a><a class="btn ghost sm" href="/results/${gid}">All of today's results</a></div></div>
-      ${live.length > 1 ? `<div class="chips clPick" aria-label="Class">${live.map(x => `<a class="chip" href="${href(x.id, it.key)}" aria-pressed="${pick && x.id === pick.id}">${esc(tAt(x.starts_at, g.tz))} ${esc(x.name)}</a>`).join('')}</div>` : ''}
-      <div class="chips clPick" aria-label="Part">${its.map(i => `<a class="chip" href="${href(pick && pick.id, i.key)}" aria-pressed="${i.key === it.key}">${esc(i.label)}</a>`).join('')}</div>
-      ${it.lift ? `<p class="clRule"><b>${esc(it.lift.n)}</b> ${esc(it.sch || '')}${X.liftRule(it.lift) !== 'n/a' ? ' · ' + esc(X.liftRule(it.lift)) : ''}. The grey number is each person's target.</p>` : ''}
-      ${!pick ? `<div class="prEmpty"><b>No classes today</b><p>Set up the weekly classes on the Schedule tab, or add people below to log them anyway.</p></div>` : ''}
-      <ol class="clList" id="clList">${order.map(b => `<li data-row="${b.profile_id}"><span class="clWho"><b>${esc(nameOf(b.profile_id))}</b>${b.status === 'attended' ? '<span class="pill up">Here</span>' : '<span class="pill">Booked</span>'}</span>${box(b.profile_id)}<span class="clSt" data-st aria-live="polite">${val(b.profile_id) !== '' ? '<span class="pill up">Saved</span>' : ''}</span></li>`).join('')}</ol>
-      ${pick ? `<div class="row clAdd"><label class="vh" for="clAddSel">Add someone to this class</label><select id="clAddSel" style="max-width:280px"><option value="">Add someone to this class…</option>${members.filter(m => !ids.includes(m.id)).map(m => `<option value="${m.id}">${esc(m.display_name)}</option>`).join('')}</select></div>` : ''}`))) return;
+      ? `<input class="cvIn" inputmode="numeric" maxlength="8" data-p="${id}" data-k="${esc(it.key)}" value="${esc(val(id, it))}" placeholder="m:ss" aria-label="${esc(nameOf(id))}, ${esc(it.label)} time">`
+      : `<input class="cvIn" type="number" inputmode="decimal" min="0" max="1499" step="any" data-p="${id}" data-k="${esc(it.key)}" value="${esc(val(id, it))}" placeholder="${tgt(id, it) || 'lb'}" aria-label="${esc(nameOf(id))}, ${esc(it.label)} weight in pounds">`;
+    const roundNow = () => { const d = new Date(); d.setMinutes(d.getMinutes() < 15 ? 0 : d.getMinutes() < 45 ? 30 : 60, 0, 0); return d.toLocaleTimeString('en-GB', { timeZone: g.tz, hour: '2-digit', minute: '2-digit' }); };
+    const head = it => `<th scope="col"><span class="cvH">${esc(it.label)}</span><span class="cvS">${esc(it.kind === 't' ? 'time m:ss' : it.kind === 'r' ? 'reps' : (it.sch ? it.sch + ' · ' : '') + (it.lift ? D.unit(it.lift) : 'lb'))}</span></th>`;
+    const dayNav = `<div class="row cvDay"><a class="btn ghost sm" href="/class/${gid}?day=${addDays(day, -1)}" aria-label="Day before">‹</a><b>${esc(day === tdy ? 'Today' : dayName(day, { weekday: 'short', month: 'short', day: 'numeric' }))}</b><a class="btn ghost sm" href="/class/${gid}?day=${addDays(day, 1)}" aria-label="Day after">›</a>${day !== tdy ? `<a class="btn ghost sm" href="/class/${gid}">Today</a>` : ''}</div>`;
 
-    const parse = raw => {
+    if (!paint(tok, `${X.officeBar(g, 'class')}<section class="sec cvSec">
+      <div class="cvTop"><div><div class="kicker">${esc(dayName(day))}${w ? ' · ' + esc(w.title) : ''}</div><h2>Coach <span>view</span></h2></div>${dayNav}</div>
+      <div class="chips cvClasses" aria-label="Class">${live.map(x => `<a class="chip" href="${href({ s: x.id })}" aria-pressed="${!!pick && x.id === pick.id}">${esc(tAt(x.starts_at, g.tz))} ${esc(x.name)}</a>`).join('')}
+        <button class="chip" type="button" id="cvNewBtn">+ Start a class</button></div>
+      <form class="cvNew" id="cvNew"${live.length ? ' hidden' : ''}><label for="cvT">Time</label><input id="cvT" type="time" value="${roundNow()}" required><label for="cvN">Class</label><input id="cvN" maxlength="40" value="CrossFit" required><button class="btn sm">Start ${live.length ? 'this class' : 'today\'s class'}</button><span class="hint">No schedule needed. The class is saved so attendance counts.</span></form>
+      ${!w ? `<div class="formCard cvNote"><b>No workout posted for ${esc(day === tdy ? 'today' : dayName(day))}.</b> You can still take attendance. <a href="/wod/${gid}?day=${day}">Post the workout</a> to log weights and times.</div>` : ''}
+      ${pick ? `<div class="cvBar"><div class="cvAdd"><label class="vh" for="cvAddIn">Add someone</label><input id="cvAddIn" list="cvPeople" placeholder="Add someone: type a name, press Enter" autocomplete="off"><datalist id="cvPeople">${members.filter(m => !ids.includes(m.id)).map(m => `<option value="${esc(m.display_name)}">`).join('')}</datalist></div>
+          <span class="cvCount"><b>${here.size}</b> here of ${ids.length}</span>${w ? `<a class="btn ghost sm" href="/tv/${esc(g.slug || gid)}" target="_blank" rel="noopener">Big screen</a>` : ''}</div>
+        ${ids.length ? `<div class="cvWrap"><table class="cvGrid" id="cvGrid"><thead><tr><th scope="col" class="cvWhoH">${esc(tAt(pick.starts_at, g.tz))} ${esc(pick.name)}</th><th scope="col" class="cvHereH">Here</th>${its.map(head).join('')}</tr></thead><tbody>
+          ${order.map(id => `<tr data-row="${id}"><th scope="row" class="cvWho">${esc(nameOf(id))}<span class="cvDot" data-st aria-live="polite"></span></th><td class="cvHere"><input type="checkbox" data-here="${id}"${here.has(id) ? ' checked' : ''} aria-label="${esc(nameOf(id))} is here"></td>${its.map(it => `<td>${cell(id, it)}</td>`).join('')}</tr>`).join('')}
+          </tbody></table></div>
+          <p class="hint">Grey numbers are each person's target. Every box saves as you leave it and shows on the board and the TV. Enter moves down the column.${its.some(i => i.lift && i.lift.max) && w.pr_lift ? ' Today is a max out day: a new best becomes a PR.' : ''}</p>`
+        : '<div class="prEmpty"><b>Nobody in this class yet</b><p>Type names above as people walk in.</p></div>'}` : ''}
+    </section>`)) return;
+
+    // Start a class on the spot.
+    const nf = $('#cvNew');
+    $('#cvNewBtn').onclick = () => { nf.hidden = !nf.hidden; if (!nf.hidden) $('#cvN').focus(); };
+    nf.onsubmit = async e => {
+      e.preventDefault();
+      const [h, m] = $('#cvT').value.split(':').map(Number);
+      // The gym's time zone: build the start from the day plus the offset the browser sees for that zone.
+      const guess = Date.parse(`${day}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00Z`);
+      const pt = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: g.tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }).formatToParts(guess).map(x => [x.type, +x.value]));
+      const start = new Date(guess + (guess - Date.UTC(pt.year, pt.month - 1, pt.day, pt.hour % 24, pt.minute)));
+      const { data, error } = await sb.from('sessions').insert({ gym_id: gid, name: $('#cvN').value.trim() || 'CrossFit', starts_at: start.toISOString(), ends_at: new Date(start.getTime() + 3600000).toISOString(), coach_id: S.me.id, status: 'scheduled' }).select().single();
+      if (error) return toast(error.message);
+      go(`/class/${gid}?${day !== tdy ? 'day=' + day + '&' : ''}s=${data.id}`, true);
+    };
+
+    if (!pick) return;
+    // Add someone by name; they are checked in.
+    const addIn = $('#cvAddIn'); let adding = false;
+    addIn.addEventListener('keydown', async e => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      if (adding) return; adding = true; setTimeout(() => { adding = false; }, 1500);
+      const q = addIn.value.trim().toLowerCase(); if (!q) return;
+      const m = members.find(x => x.display_name.toLowerCase() === q) || members.filter(x => x.display_name.toLowerCase().includes(q))[0];
+      if (!m) return toast(`No member named "${addIn.value.trim()}". They need a Dandy account at ${g.name} first.`);
+      if (ids.includes(m.id)) { addIn.value = ''; return toast(`${m.display_name} is already in this class`); }
+      try { await rpc('check_in', { p_session: pick.id, p_profile: m.id, p_in: true }); route(); } catch (err) { toast(err.message); }
+    });
+    addIn.addEventListener('change', () => { if (members.some(x => x.display_name === addIn.value)) addIn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' })); });
+
+    const grid = $('#cvGrid'); if (!grid) return;
+    grid.addEventListener('change', async e => {
+      const hb = e.target.closest('[data-here]');
+      if (hb) { try { await rpc('check_in', { p_session: pick.id, p_profile: hb.dataset.here, p_in: hb.checked }); hb.checked ? here.add(hb.dataset.here) : here.delete(hb.dataset.here); $('.cvCount b').textContent = here.size; } catch (err) { hb.checked = !hb.checked; toast(err.message); } return; }
+      if (e.target.matches('.cvIn')) save(e.target);
+    });
+    grid.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' || !e.target.matches('.cvIn')) return;
+      e.preventDefault();
+      const col = $$(`.cvIn[data-k="${CSS.escape(e.target.dataset.k)}"]`, grid), i = col.indexOf(e.target);
+      e.target.blur();
+      if (col[i + 1]) col[i + 1].focus();
+    });
+
+    const parse = (it, raw) => {
       const v = String(raw).trim(); if (!v) return { empty: true };
-      if (it.kind === 't') { const x = P.parseT(v); return x > 0 ? { x } : { bad: `"${v}" is not a time. Use minutes and seconds, like 8:45.` }; }
+      // A phone number pad has no colon, so 845 means 8:45 and 1230 means 12:30. One or two digits are minutes.
+      if (it.kind === 't') { const x = /^\d{3,4}$/.test(v) ? Math.floor(+v / 100) * 60 + (+v % 100) : P.parseT(v); return x > 0 && !(/^\d{3,4}$/.test(v) && +v % 100 > 59) ? { x } : { bad: `"${v}" is not a time. Use minutes and seconds, like 8:45.` }; }
       if (it.kind === 'r') return { x: Math.max(0, Math.min(99999, Math.round(+v) || 0)) };
       const x = Math.max(0, Math.min(1499, Math.round(+v * 2) / 2 || 0));
       return x > 0 ? { x } : { bad: `"${v}" is not a weight.` };
     };
-    const save = async inp => {
-      const pid = inp.dataset.p, st = $('[data-st]', inp.closest('li')), r = parse(inp.value);
-      if (r.bad) { st.innerHTML = `<span class="pill down">Check it</span>`; toast(r.bad); return; }
+    const mark = (pid, cls, text) => { const d = $(`tr[data-row="${pid}"] [data-st]`, grid); if (d) { d.className = 'cvDot ' + cls; d.textContent = text; } };
+    async function save(inp) {
+      const pid = inp.dataset.p, it = itOf(inp.dataset.k), r = parse(it, inp.value);
+      if (r.bad) { inp.classList.add('bad'); toast(r.bad); return; }
+      inp.classList.remove('bad');
+      if (it.kind === 't' && !r.empty) inp.value = P.fmtT(r.x);
       const had = logOf.get(pid), entries = { ...((had && had.entries) || {}) };
       if (r.empty) { if (!(it.key in entries)) return; delete entries[it.key]; } else { if (entries[it.key] === r.x) return; entries[it.key] = r.x; }
-      st.innerHTML = '<span class="pill">Saving</span>';
+      mark(pid, 'wait', 'saving');
       const row = { workout_id: w.id, profile_id: pid, entries, score: (had && had.score) || null, sets: (had && had.sets) || {} };
       let { error } = await sb.from('workout_logs').upsert(noEnteredBy ? row : { ...row, entered_by: S.me.id }, { onConflict: 'workout_id,profile_id' });
       if (error && /entered_by/.test(error.message)) { noEnteredBy = true; ({ error } = await sb.from('workout_logs').upsert(row, { onConflict: 'workout_id,profile_id' })); }
-      if (error) { st.innerHTML = '<span class="pill down">Not saved</span>'; toast(/row-level security/i.test(error.message) ? `${nameOf(pid)} is not a member of ${g.name} yet, so their result can't be entered here.` : error.message); return; }
+      if (error) { mark(pid, 'bad', 'not saved'); toast(/row-level security/i.test(error.message) ? `${nameOf(pid)} is not a member of ${g.name} yet, so their result can't be entered here.` : error.message); return; }
       logOf.set(pid, row);
-      st.innerHTML = '<span class="pill up">Saved</span>';
+      mark(pid, 'ok', 'saved');
+      if (!here.has(pid)) { try { await rpc('check_in', { p_session: pick.id, p_profile: pid, p_in: true }); here.add(pid); const hb = $(`[data-here="${pid}"]`, grid); if (hb) hb.checked = true; $('.cvCount b').textContent = here.size; } catch {} }
       // Max out day: a new best becomes a PR for the DSI and the PR wall.
-      if (isPrDay && !r.empty) {
+      if (it.kind === 'w' && it.lift && it.lift.max && w.pr_lift && D.LIFT_BY_DB[w.pr_lift] && !r.empty) {
         const L = D.LIFT_BY_DB[w.pr_lift], br = rowOf(pid), best = num(br[L.k]);
         if (r.x > best) {
           const { data, error: e2 } = await sb.from('lift_entries').insert({ profile_id: pid, lift: w.pr_lift, weight_lb: r.x, performed_on: day, source: 'workout', entered_by: S.me.id, note: `Entered by ${S.me.display_name} in class` }).select().single();
-          if (!e2 && data && data.is_pr) { br[L.k] = r.x; st.innerHTML = '<span class="pill acc">PR</span>'; toast(`New ${D.liftName(w.pr_lift)} PR for ${nameOf(pid)}: ${r.x} lb`); }
+          if (!e2 && data && data.is_pr) { br[L.k] = r.x; mark(pid, 'pr', 'PR'); toast(`New ${D.liftName(w.pr_lift)} PR for ${nameOf(pid)}: ${r.x} lb`); }
           else if (e2) { console.error(e2); toast(`Saved. ${nameOf(pid)} can confirm the PR from their own log.`); }
         }
       }
-    };
-    const list = $('#clList');
-    list.addEventListener('change', e => { if (e.target.matches('.clIn')) save(e.target); });
-    list.addEventListener('keydown', e => {
-      if (e.key !== 'Enter' || !e.target.matches('.clIn')) return;
-      e.preventDefault();
-      const all = $$('.clIn', list), i = all.indexOf(e.target);
-      e.target.blur();
-      if (all[i + 1]) all[i + 1].focus();
-    });
-    const add = $('#clAddSel');
-    if (add) add.onchange = async () => { const p = add.value; if (!p) return; try { await rpc('check_in', { p_session: pick.id, p_profile: p, p_in: true }); toast('Added and checked in'); route(); } catch (err) { toast(err.message); } };
-    const first = $$('.clIn', list).find(i => !i.value); if (first && window.matchMedia('(min-width:861px)').matches) first.focus();
-    if (window.matchMedia('(max-width:860px)').matches) { const sec = $('.clSec'); if (sec) window.scrollTo(0, sec.getBoundingClientRect().top + window.scrollY - 60); }
+    }
   };
 
   /* =================================================================
