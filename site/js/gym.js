@@ -304,7 +304,7 @@ export function install(X) {
   // Screens advance on their own every 15 seconds. Scroll, swipe, arrow keys or the dots move by hand;
   // after a minute without input the deck starts moving again.
   let tvTimers = [];
-  const clearTv = () => { tvTimers.forEach(t => clearInterval(t)); tvTimers = []; const f = document.getElementById('tvFocusBox'); if (f) f.remove(); };
+  const clearTv = () => { tvTimers.forEach(t => clearInterval(t)); tvTimers = []; ['tvFocusBox', 'tvPillBox', 'tvWhoBox'].forEach(id => { const f = document.getElementById(id); if (f) f.remove(); }); };
   const SLIDE_MS = 15000, IDLE_MS = 60000, PER_TARGETS = 12;
   const secsOf = s => { const m = String(s || '').match(/^(\d+):(\d{1,2})$/); return m ? +m[1] * 60 + +m[2] : null; };
   // Parts days rank by the first thing logged (fastest time or heaviest weight); older days keep their score rules.
@@ -346,13 +346,50 @@ export function install(X) {
       const rows = base.members.map(m => ({ m, r: base.rowOf(m) })).filter(x => x.r.score);
       const from30 = addDays(d, -29);
       const lb = rows.map(x => ({ ...x, s: X.compete.gainIn(by.get(x.m.id) || [], x.r, from30, d) })).sort((a, b) => b.r.score - a.r.score);
-      st = { ...base, yday, prs, lb, q, by, from30, battles: bt.filter(b => ids.includes(b.challenger) || ids.includes(b.opponent)) };
+      // Today's classes and who booked them, so the screens can show just the class on the floor.
+      const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
+      const sess = await sb.from('sessions').select('id,name,starts_at,ends_at,status').eq('gym_id', gid).gte('starts_at', dayStart.toISOString()).lt('starts_at', new Date(dayStart.getTime() + 864e5).toISOString()).neq('status', 'canceled').order('starts_at');
+      const sessions = sess.error ? [] : sess.data || [];
+      const bk = sessions.length ? await sb.from('bookings').select('session_id,profile_id,status').in('session_id', sessions.map(x => x.id)).neq('status', 'canceled') : { data: [] };
+      st = { ...base, yday, prs, lb, q, by, from30, sessions, bookings: bk.error ? [] : bk.data || [], battles: bt.filter(b => ids.includes(b.challenger) || ids.includes(b.opponent)) };
     };
     const nameOf = id => (st.members.find(m => m.id === id) || {}).display_name || (S.board.find(r => r.profile_id === id) || {}).name || 'Someone';
     const clock = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
+    // Who is in class right now. A class running now (from 15 minutes before it starts to when it ends) uses its
+    // bookings. Otherwise the coach can tap Who's here and pick names on this screen; that list lasts 90 minutes.
+    const RKEY = 'dsi.tvRoster.' + gid;
+    const pickedRoster = () => { try { const r = JSON.parse(localStorage.getItem(RKEY) || 'null'); return r && r.until > Date.now() ? r : null; } catch { return null; } };
+    const fmtTime = t => new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const classNow = () => {
+      const now = Date.now();
+      const sNow = (st.sessions || []).find(x => Date.parse(x.starts_at) - 15 * 60000 <= now && now <= Date.parse(x.ends_at));
+      const picked = pickedRoster();
+      if (picked) return { label: picked.label || "This class", ids: picked.ids, picked: true };
+      if (sNow) { const ids = st.bookings.filter(b => b.session_id === sNow.id).map(b => b.profile_id); if (ids.length) return { label: `${fmtTime(sNow.starts_at)} ${sNow.name || 'class'}`, ids }; }
+      return null;
+    };
+    const inClass = () => { const c = classNow(); return c ? st.members.filter(m => c.ids.includes(m.id)) : st.members; };
+    const showWho = () => {
+      let box = document.getElementById('tvWhoBox');
+      if (!box) { box = document.createElement('div'); box.id = 'tvWhoBox'; box.className = 'tvStageBox'; document.body.appendChild(box); }
+      const c = classNow(), on = new Set(c ? c.ids : []);
+      const ms = [...st.members].sort((a, b) => a.display_name.localeCompare(b.display_name));
+      box.innerHTML = `<div class="tvWho" role="dialog" aria-modal="true" aria-label="Who is in this class"><header><b>Who's in this class?</b><span>Tap names. Targets show just these lifters for the next 90 minutes.</span></header>
+        <div class="tvWhoGrid">${ms.map(m => `<button type="button" data-who="${m.id}" aria-pressed="${on.has(m.id)}">${esc(m.display_name)}</button>`).join('')}</div>
+        <footer><button type="button" class="btn" id="tvWhoDone">Done</button><button type="button" class="btn ghost" id="tvWhoAll">Show everyone</button></footer></div>`;
+      box.querySelectorAll('[data-who]').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true')));
+      $('#tvWhoDone').onclick = () => {
+        const ids = [...box.querySelectorAll('[data-who][aria-pressed="true"]')].map(b => b.dataset.who);
+        try { if (ids.length) localStorage.setItem(RKEY, JSON.stringify({ ids, until: Date.now() + 90 * 60000, label: `${fmtTime(Date.now())} class` })); else localStorage.removeItem(RKEY); } catch {}
+        box.remove(); draw();
+      };
+      $('#tvWhoAll').onclick = () => { try { localStorage.removeItem(RKEY); } catch {} box.remove(); draw(); };
+    };
+
     const screens = () => {
-      const { g, w, logs, members, rowOf, lb, prs, q, battles, by, yday, from30 } = st;
+      const { g, w, logs, rowOf, lb, prs, q, battles, by, yday, from30 } = st;
+      const members = inClass(), cls = classNow();
       const out = [];
       const head = (k, t) => `<header class="tvHead"><div class="tvGym"><img src="/assets/mark.svg" alt="Dandy Strength" class="tvLogo"><div><b>${esc(g.name)}</b><span>${esc(k)}</span></div></div><div class="tvTitle">${t}</div><div class="tvClock">${clock()}</div></header>`;
       // 1. Workout of the day
@@ -365,7 +402,7 @@ export function install(X) {
         const pages = Math.max(1, Math.ceil(members.length / PER_TARGETS));
         for (let p = 0; p < pages; p++) {
           const chunk = members.slice(p * PER_TARGETS, p * PER_TARGETS + PER_TARGETS);
-          out.push(`${head(fmtDW(today()), `Today's <em>targets</em>${pages > 1 ? ` <small>${p + 1}/${pages}</small>` : ''}`)}<div class="tvBody">
+          out.push(`${head(cls ? `${cls.label} · ${members.length} lifter${members.length === 1 ? '' : 's'}` : fmtDW(today()), `Today's <em>targets</em>${pages > 1 ? ` <small>${p + 1}/${pages}</small>` : ''}`)}<div class="tvBody"><button type="button" class="tvWhoBtn" data-whobtn>${cls ? 'Change who is here' : "Who's here?"}</button>
             <table class="tvT tvBig"><thead><tr><th>Lifter</th>${lifts.map(l => `<th>${esc(liftLabel(l))}<span>${esc(l.sch)}</span></th>`).join('')}</tr></thead><tbody>
             ${chunk.map(m => { const r = rowOf(m), ent = ((logs.find(l => l.profile_id === m.id) || {}).entries) || {}; return `<tr><td>${esc(m.display_name)}</td>${lifts.map(l => { const t = D.target(l, r), v = num(ent[l.id]); return `<td class="${v ? (t && v >= t ? 'hit' : 'did') : ''}">${v || t || '·'}</td>`; }).join('')}</tr>`; }).join('') || `<tr><td colspan="${lifts.length + 1}">No members yet. Pick ${esc(g.name)} on the Gym league page.</td></tr>`}
             </tbody></table><div class="tvKey"><span class="hit">■</span> hit the target <span class="did">■</span> logged <span>■</span> your target, built from your own PRs</div></div>`);
@@ -398,51 +435,143 @@ export function install(X) {
 
     // One part, full screen: tap A, B, C or D on the workout screen (or press its letter). Stays up until closed,
     // and the screens stop rolling underneath while it is open.
+    /* ---------- part timers ---------- */
+    // Read the part's own words for the clock it needs: EMOM 15, a 10 minute cap (counts up), an AMRAP or a
+    // "(15 min)" block (counts down). Anything else is a stopwatch. One clock runs at a time and keeps going
+    // while the screens roll; a small clock shows in the corner until it is reset.
+    const suggest = text => {
+      const t = String(text || ''); let m;
+      if (/EMOM|E\.?M\.?O\.?M|every minute/i.test(t) && ((m = /EMOM[^\n]*?(\d+)\s*min/i.exec(t)) || (m = /(\d+)\s*min(?:ute)?s?\s*EMOM/i.exec(t)) || (m = /\((\d+)\s*min/i.exec(t)))) return { mode: 'emom', min: +m[1] };
+      if ((m = /(\d+)\s*min(?:ute)?s?\s*(?:time\s*)?cap/i.exec(t)) || (m = /cap[:\s]*(\d+)\s*min/i.exec(t))) return { mode: 'up', min: +m[1] };
+      if ((m = /AMRAP\s*(?:in\s*)?(\d+)/i.exec(t)) || (m = /(\d+)\s*min(?:ute)?s?\s*AMRAP/i.exec(t))) return { mode: 'down', min: +m[1] };
+      if ((m = /\((\d+)\s*min/i.exec(t)) || (m = /\b(\d+)\s*min(?:ute)?s?\b/i.exec(t))) return { mode: 'down', min: +m[1] };
+      return { mode: 'up', min: 0 };
+    };
+    const MODES = { down: 'Count down', up: 'Count up', emom: 'EMOM' };
+    let tm = null; // { L, mode, min, run, base (ms counted before the last start), at (when started), lead (ms of 10 s lead in left at start) }
+    const tmFor = L => { if (tm && tm.L === L) return tm; const p = shownParts(st.w).find(x => x.L === L); const g = suggest(p && p.text); return { L, mode: g.mode, min: g.min, run: false, base: 0, at: 0, lead: 10000, fresh: true }; };
+    const elapsed = t => t.base + (t.run ? Date.now() - t.at : 0) - t.lead; // negative while counting in
+    const mmss = x => { x = Math.max(0, Math.round(x)); return `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`; };
+    // What the clock says right now.
+    const face = t => {
+      const e = elapsed(t), tot = t.min * 60;
+      if (e < 0) return { big: String(Math.ceil(-e / 1000)), sub: 'Get ready', lead: true };
+      const sec = e / 1000;
+      if (t.mode === 'emom') { const r = Math.floor(sec / 60) + 1; if (tot && sec >= tot) return { big: 'Done', sub: `${t.min} rounds`, end: true }; return { big: mmss(60 - (sec % 60)), sub: `Round ${r}${t.min ? ` of ${t.min}` : ''}` }; }
+      if (t.mode === 'down') { if (tot && sec >= tot) return { big: 'Time', sub: `${t.min} minutes`, end: true }; return { big: mmss(tot ? tot - sec : sec), sub: tot ? `${t.min} minutes` : 'Running' }; }
+      if (tot && sec >= tot) return { big: mmss(tot), sub: 'Time cap', end: true };
+      return { big: mmss(sec), sub: tot ? `Cap ${t.min}:00` : 'Running' };
+    };
+    let ac = null, lastBeep = '';
+    const beep = (f, d) => { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), gn = ac.createGain(); o.frequency.value = f; gn.gain.value = 0.25; o.connect(gn).connect(ac.destination); o.start(); o.stop(ac.currentTime + d); } catch {} };
+    // 3, 2, 1, go into the start, the top of every EMOM minute, the last three seconds of a count down, and the cap.
+    const tick = () => {
+      if (!tm || !tm.run) return;
+      const e = elapsed(tm), sec = e / 1000, tot = tm.min * 60;
+      let key = '', f = 0, d = 0.12;
+      if (e < 0) { const n = Math.ceil(-sec); if (n <= 3) { key = 'l' + n; f = 660; } }
+      else {
+        const s = Math.floor(sec);
+        if (s === 0) { key = 'go'; f = 990; d = 0.5; }
+        else if (tot && s >= tot) { key = 'end'; f = 990; d = 0.9; }
+        else if (tm.mode === 'emom') { const left = 60 - (s % 60); if (s % 60 === 0) { key = 'm' + s; f = 990; d = 0.4; } else if (left <= 3) { key = 'c' + s; f = 660; } }
+        else if (tm.mode === 'down' && tot && tot - s <= 3) { key = 'c' + s; f = 660; }
+      }
+      if (key && key !== lastBeep) { lastBeep = key; beep(f, d); }
+      if (tot && sec >= tot + 1 && tm.mode !== 'up') { tm.base = elapsed(tm) + tm.lead; tm.run = false; }
+      if (tot && tm.mode === 'up' && sec >= tot + 1) { tm.base = tot * 1000 + tm.lead; tm.run = false; }
+    };
+    const timerCard = p => {
+      const t = tmFor(p.L), fc = face(t), other = tm && tm.L !== p.L && tm.run;
+      return `<div class="tvTimer${fc.end ? ' end' : ''}${fc.lead ? ' lead' : ''}" data-tl="${p.L}">
+        <div class="tvTmFace"><b data-tmbig>${esc(fc.big)}</b><span data-tmsub>${esc(fc.sub)}</span></div>
+        ${other ? `<p class="tvTmNote">Part ${tm.L} clock is running</p>` : ''}
+        <div class="tvTmModes">${Object.entries(MODES).map(([k, n]) => `<button type="button" data-tmmode="${k}" aria-pressed="${t.mode === k}">${n}</button>`).join('')}
+          <span class="tvTmMin"><button type="button" data-tmmin="-1" aria-label="One minute less">−</button><b>${t.min ? t.min + ' min' : 'No limit'}</b><button type="button" data-tmmin="1" aria-label="One minute more">+</button></span></div>
+        <div class="tvTmBtns"><button type="button" class="go" data-tmgo>${t.run ? 'Pause' : t.fresh ? 'Start' : 'Resume'}</button><button type="button" data-tmreset>Reset</button></div>
+      </div>`;
+    };
+    const bindTimer = () => {
+      const c = document.querySelector('.tvTimer'); if (!c) return;
+      const L = c.dataset.tl, set = ch => { const t = tmFor(L); if (tm && tm.L !== L && tm.run) return; Object.assign(t, ch); tm = t; showFocus(L); };
+      c.querySelectorAll('[data-tmmode]').forEach(b => b.onclick = () => { const t = tmFor(L); if (t.run) return; set({ mode: b.dataset.tmmode, base: 0, lead: 10000, fresh: true }); });
+      c.querySelectorAll('[data-tmmin]').forEach(b => b.onclick = () => { const t = tmFor(L); if (t.run) return; set({ min: Math.max(0, Math.min(90, t.min + +b.dataset.tmmin)), base: 0, lead: 10000, fresh: true }); });
+      c.querySelector('[data-tmgo]').onclick = () => toggleTimer(L);
+      c.querySelector('[data-tmreset]').onclick = () => { if (tm && tm.L === L) { tm = null; lastBeep = ''; pill(); } showFocus(L); };
+    };
+    const toggleTimer = L => {
+      if (tm && tm.L !== L && tm.run) return;
+      const t = tmFor(L);
+      if (t.run) { t.base += Date.now() - t.at; t.run = false; }
+      else { t.at = Date.now(); t.run = true; t.fresh = false; beep(440, 0.05); }
+      tm = t; showFocus(L); pill();
+    };
+    // The small clock over the screens while a part clock is going; tap it to open that part.
+    const pill = () => {
+      let box = document.getElementById('tvPillBox');
+      if (!tm || tm.fresh || focus) { if (box) box.remove(); return; }
+      if (!box) { box = document.createElement('div'); box.id = 'tvPillBox'; box.className = 'tvStageBox'; document.body.appendChild(box); }
+      const fc = face(tm);
+      box.innerHTML = `<button type="button" class="tvPill${fc.end ? ' end' : ''}" aria-label="Open part ${tm.L}"><i>${tm.L}</i><b>${esc(fc.big)}</b><span>${esc(fc.sub)}</span></button>`;
+      box.querySelector('button').onclick = () => showFocus(tm.L);
+    };
+    const paintClock = () => {
+      tick();
+      if (!tm) return;
+      const fc = face(tm), c = document.querySelector(`.tvTimer[data-tl="${tm.L}"]`);
+      if (c) { c.querySelector('[data-tmbig]').textContent = fc.big; c.querySelector('[data-tmsub]').textContent = fc.sub; c.classList.toggle('end', !!fc.end); c.classList.toggle('lead', !!fc.lead); const g = c.querySelector('[data-tmgo]'); if (g) g.textContent = tm.run ? 'Pause' : tm.fresh ? 'Start' : 'Resume'; }
+      if (!focus) pill();
+    };
+
     let focus = null;
     const focusHtml = () => {
       const ps = st && st.w ? shownParts(st.w) : [], p = ps.find(x => x.L === focus);
       if (!p) return '';
-      const { members, rowOf, logs } = st, l = p.lift;
+      const { rowOf, logs } = st, members = inClass(), cls = classNow(), l = p.lift;
       const tg = l ? members.map(m => { const t = D.target(l, rowOf(m)), v = num((((logs.find(x => x.profile_id === m.id) || {}).entries) || {})[l.id]); return { n: m.display_name, t, v }; }).filter(x => x.t || x.v) : [];
       return `<div class="tvFocus" role="dialog" aria-modal="true" aria-label="Part ${p.L}">
         <header class="tvFHead"><nav class="tvFTabs">${ps.map(x => `<button type="button" data-fpart="${x.L}"${x.L === p.L ? ' aria-current="true"' : ''}><i>${x.L}</i>${esc(x.name || 'Part ' + x.L)}</button>`).join('')}</nav>
           <div class="tvClock">${clock()}</div><button type="button" class="tvFClose" id="tvFClose" aria-label="Close (Esc)">×</button></header>
-        <div class="tvFBody${tg.length ? ' withT' : ''}">
+        <div class="tvFBody">
           <div class="tvFMain"><div class="tvFName"><i>${p.L}</i>${esc(p.name || 'Part ' + p.L)}</div>
             <p class="tvFText" id="tvFText">${esc(p.text)}</p>
             ${l ? `<div class="tvFLift">${esc(l.n)}${l.sch ? ` · ${esc(l.sch)}` : ''}${l.why ? `<span>${esc(l.why)}</span>` : ''}</div>` : ''}
             ${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>
-          ${tg.length ? `<div class="tvFTargets"><h3>Your targets${l && D.unit(l) !== 'lb' ? ` <small>${esc(D.unit(l))}</small>` : ''}</h3><ol>${tg.map(x => `<li class="${x.v ? (x.t && x.v >= x.t ? 'hit' : 'did') : ''}"><span>${esc(x.n)}</span><b>${x.v || x.t}</b></li>`).join('')}</ol></div>` : ''}
+          <div class="tvFSide">${timerCard(p)}
+          ${tg.length ? `<div class="tvFTargets"><h3>Your targets${l && D.unit(l) !== 'lb' ? ` <small>${esc(D.unit(l))}</small>` : ''}<button type="button" class="tvWhoBtn" data-whobtn>${cls ? esc(cls.label) : "Who's here?"}</button></h3><ol>${tg.map(x => `<li class="${x.v ? (x.t && x.v >= x.t ? 'hit' : 'did') : ''}"><span>${esc(x.n)}</span><b>${x.v || x.t}</b></li>`).join('')}</ol></div>` : ''}</div>
         </div></div>`;
     };
     // Make the part's words as big as the screen allows.
     const fitText = () => {
       const t = $('#tvFText'); if (!t) return;
       let lo = 1.2, hi = 7;
-      for (let i = 0; i < 12; i++) { const m = (lo + hi) / 2; t.style.fontSize = m + 'vw'; if (t.scrollHeight > t.clientHeight + 1 || t.scrollWidth > t.clientWidth + 1) hi = m; else lo = m; }
-      t.style.fontSize = lo + 'vw';
+      for (let i = 0; i < 12; i++) { const m = (lo + hi) / 2; t.style.fontSize = m + 'cqw'; if (t.scrollHeight > t.clientHeight + 1 || t.scrollWidth > t.clientWidth + 1) hi = m; else lo = m; }
+      t.style.fontSize = lo + 'cqw';
     };
     const showFocus = L => {
       focus = L;
       let box = document.getElementById('tvFocusBox');
-      if (!L) { if (box) box.remove(); if (deck) deck.focus({ preventScroll: true }); return; }
-      if (!box) { box = document.createElement('div'); box.id = 'tvFocusBox'; document.body.appendChild(box); }
+      if (!L) { if (box) box.remove(); pill(); if (deck) deck.focus({ preventScroll: true }); return; }
+      if (!box) { box = document.createElement('div'); box.id = 'tvFocusBox'; box.className = 'tvStageBox'; document.body.appendChild(box); }
       box.innerHTML = focusHtml();
       if (!box.innerHTML) { focus = null; box.remove(); return; }
       fitText();
       box.querySelectorAll('[data-fpart]').forEach(b => b.onclick = () => showFocus(b.dataset.fpart));
+      box.querySelectorAll('[data-whobtn]').forEach(b => b.onclick = showWho);
       $('#tvFClose').onclick = () => showFocus(null);
+      bindTimer(); pill();
     };
     // The workout screen: one text size for every part, as big as fits. iPads mirrored to a TV are 4:3, so a fixed size runs off.
     const fitCards = () => {
       const ps = $$('.tvWodS .tvSecsBig p'); if (!ps.length) return;
       const over = () => ps.some(p => p.scrollHeight > p.clientHeight + 1 || p.scrollWidth > p.clientWidth + 1);
       let lo = 0.7, hi = 3.2;
-      for (let i = 0; i < 12; i++) { const m = (lo + hi) / 2; ps.forEach(p => { p.style.fontSize = m + 'vw'; }); if (over()) hi = m; else lo = m; }
-      ps.forEach(p => { p.style.fontSize = lo + 'vw'; });
+      for (let i = 0; i < 12; i++) { const m = (lo + hi) / 2; ps.forEach(p => { p.style.fontSize = m + 'cqw'; }); if (over()) hi = m; else lo = m; }
+      ps.forEach(p => { p.style.fontSize = lo + 'cqw'; });
     };
     window.addEventListener('resize', () => { if (tok === S.tok) fitCards(); });
-    const bindParts = () => $$('.tvPartBtn').forEach(c => {
+    const bindParts = () => { $$('[data-whobtn]').forEach(b => b.onclick = showWho); bindCards(); };
+    const bindCards = () => $$('.tvPartBtn').forEach(c => {
       c.onclick = () => showFocus(c.dataset.part);
       c.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); showFocus(c.dataset.part); } };
     });
@@ -457,7 +586,7 @@ export function install(X) {
       if (tok !== S.tok || !st) return;
       const list = screens();
       main.innerHTML = `<div class="tvDeck" id="tvDeck" tabindex="0">${list.map((h, i) => `<section class="tvS" data-i="${i}">${h}<footer class="tvFoot"><span class="tvUrl">dandystrength.com</span></footer></section>`).join('')}</div>
-        <nav class="tvDots" aria-label="Screens">${list.map((_, i) => `<button type="button" data-go="${i}" aria-label="Screen ${i + 1}"${i === cur ? ' aria-current="true"' : ''}></button>`).join('')}${pauseBtn()}</nav>`;
+        <div class="tvStageBox tvDotsBox"><nav class="tvDots" aria-label="Screens">${list.map((_, i) => `<button type="button" data-go="${i}" aria-label="Screen ${i + 1}"${i === cur ? ' aria-current="true"' : ''}></button>`).join('')}${pauseBtn()}</nav></div>`;
       deck = $('#tvDeck');
       cur = Math.min(cur, list.length - 1);
       deck.scrollTop = cur * deck.clientHeight;
@@ -489,6 +618,8 @@ export function install(X) {
       if (focus) {
         const ps = shownParts(st.w).map(x => x.L), i = ps.indexOf(focus);
         if (e.key === 'Escape') { e.preventDefault(); return showFocus(null); }
+        if (e.key === 's' || e.key === 'S') { e.preventDefault(); return toggleTimer(focus); }
+        if (e.key === 'r' || e.key === 'R') { e.preventDefault(); if (tm && tm.L === focus) { tm = null; lastBeep = ''; } return showFocus(focus); }
         const step = { ArrowRight: 1, ArrowDown: 1, PageDown: 1, ' ': 1, ArrowLeft: -1, ArrowUp: -1, PageUp: -1 }[e.key];
         if (step) { e.preventDefault(); return showFocus(ps[(i + step + ps.length) % ps.length]); }
       }
@@ -523,5 +654,6 @@ export function install(X) {
     tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); if (!paused && !focus && Date.now() - lastTouch > IDLE_MS) goTo(cur + 1); }, SLIDE_MS));
     tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); if (today() !== lastDay) { lastDay = today(); cur = 0; } refresh(); }, 5 * 60 * 1000));
     tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); $$('.tvClock').forEach(c => { c.textContent = clock(); }); }, 20000));
+    tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); paintClock(); }, 200));
   };
 }
