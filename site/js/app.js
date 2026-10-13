@@ -90,11 +90,11 @@ const gyms0 = () => S.myGyms || [];
 function navGroups() {
   const me = S.me && S.me.display_name ? S.me : null, pro = isPro(), P = pro ? '' : 'Pro. ';
   const g = [
+    ...(gyms0().length ? [] : [{ k: 'home', n: 'For gyms', href: '/pricing' }]),
     { k: 'boards', n: 'Boards', sections: [{ h: 'Rankings', items: [['/boards', 'Leaderboard', 'Every lifter ranked by DSI'], ['/prs', 'PR wall', 'The newest personal records'], ['/benchmarks', 'Benchmarks', 'How strong is strong'], ['/gyms', 'Gym league', 'Gyms ranked head to head']] },
       { h: 'Competition', items: [['/compete', 'Compete', 'Seasons, battles and the league'], ['/season', 'This season', 'Standings for the current season'], ['/battles', 'Weekly battles', 'One lift, one week, one winner']] }] },
     { k: 'train', n: 'Train', sections: [{ h: 'Every day', items: [['/week', 'The week', 'This week\'s workouts by day'], ...(me && me.gym_id ? [['/classes', 'Book a class', 'Reserve your spot'], ['/mygym#attendance', 'My attendance', 'Every class you have made'], ['/shop/' + me.gym_id, 'Gym shop', 'Drinks, snacks and gear']] : []), ['/training', 'My training', 'Log your own sessions, sets and reps'], ['/log', 'Log a lift', 'Add a set and update your DSI'], ['/tracker', 'Plate tracker', P + 'The camera counts reps and reads the plates']] },
       { h: 'Get better', items: [['/progress', 'Progress', P + 'Charts for every lift'], ['/plans', 'Goal plans', P + 'A plan to hit your next number'], ['/coach', 'Coach', P + 'Ask about your training'], ['/connect', 'Connected apps', P + 'WHOOP, Apple Health, Health Connect'], ...(me ? [['/import', 'Import history', 'Bring in your old lifts']] : [])] }] },
-    ...(gyms0().length ? [] : [{ k: 'home', n: 'For gyms', href: '/pricing' }]),
   ];
   const gyms = S.myGyms || [];
   const offItems = (x, keys) => OFFICE.filter(o => keys.includes(o[0]) && (!o[3] || x.role === 'owner' || (S.me && S.me.role === 'admin'))).map(([k, n, d]) => [officeHref(x.gym_id, k), n, d]);
