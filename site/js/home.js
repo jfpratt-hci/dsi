@@ -25,7 +25,7 @@ export function install(X) {
   const OWNER = [
     ['Dandy Office', 'Check in, schedule, members, billing, waivers and contracts, staff and attendance, in one office.'],
     ['Dandy Plan', 'Tell it the goal, like Murph prep or a ten week max out, and it writes the cycle as Parts A to D.'],
-    ['Dandy Board', 'The TV in your gym shows the workout and every member\'s own target weight, live.'],
+    ['Dandy TV', 'Signage you manage for every screen: the class TV shows the workout and every member\'s own target weight, live, and the lobby TV shows your schedule, PRs and news.'],
   ];
   const MEMBER = [
     ['DSI', 'The Dandy Strength Index scores your bench, squat, deadlift and clean against lifters your age and size.'],
@@ -99,11 +99,11 @@ export function install(X) {
   /* ---------- plans: sells the gym plans and compares every feature ---------- */
   // Each card says what it adds over the one before; the table compares every feature by what owners care about.
   const CARD = {
-    base: ['The DSI boards, PR wall and gym league', 'Workouts in Parts A to D, results and Log a class', 'Dandy Board on the gym TV', 'Class booking and check in'],
+    base: ['The DSI boards, PR wall and gym league', 'Workouts in Parts A to D, results and Log a class', 'Dandy TV for classes and the lobby', 'Class booking and check in'],
     build: ['Everything in Base, for unlimited members', 'Billing, invoices and autopay on your Stripe', 'Waivers and contracts signed online', 'Staff, coach swaps, hours, attendance', 'Dandy Plan AI programming, 4 weeks a month'],
     peak: ['Everything in Build', 'Unlimited Dandy Plan AI programming', 'DSI Pro seats at $3 instead of $4', 'Payroll export and multiple locations as they ship'],
   };
-  const EVERY = ['The DSI score and leaderboards', 'Dandy Board for the gym TV', 'Workouts in Parts A to D', 'Class booking and check in', 'My training for every member', 'Month to month, no contract'];
+  const EVERY = ['The DSI score and leaderboards', 'Dandy TV signage for classes and the lobby', 'Workouts in Parts A to D', 'Class booking and check in', 'My training for every member', 'Month to month, no contract'];
   const GROUPS = [
     ['Members and the DSI', [
       ['DSI score, leaderboards, PR wall and gym league', 'y', 'y', 'y'],
@@ -114,7 +114,7 @@ export function install(X) {
     ['Running the floor', [
       ['Workouts in Parts A to D with member targets', 'y', 'y', 'y'],
       ['Log a class: coaches type weights live', 'y', 'y', 'y'],
-      ['Dandy Board on the gym TV', 'y', 'y', 'y'],
+      ['Dandy TV for classes and the lobby', 'y', 'y', 'y'],
       ['Class schedule, booking and check in', 'y', 'y', 'y'],
       ['Attendance history for every member', '', 'y', 'y'],
     ]],
@@ -178,7 +178,7 @@ export function install(X) {
           <li><b>Send us what you have</b><p>Your member list, plans and class schedule, from Kilo, Wodify, PushPress or a spreadsheet.</p></li>
           <li><b>We set up your office</b><p>Plans, classes, waiver and contract ready, with your members and their history moved over.</p></li>
           <li><b>Your members sign in</b><p>They book online, sign the waiver once and see their DSI on day one.</p></li>
-          <li><b>The TV goes on</b><p>Dandy Board shows the day's workout and every member's own target.</p></li>
+          <li><b>The TV goes on</b><p>Dandy TV shows the day's workout and every member's own target in class, and your schedule and PRs in the lobby.</p></li>
         </ol>
       </section>
       <section class="sec"><h2 class="hmH2">Questions owners ask</h2>

@@ -119,7 +119,7 @@ export default function GymBoard() {
               : <Btn label="Make this my gym" onPress={makeMine} disabled={busy} />
           ) : <Btn label="Sign in to pick your gym" onPress={() => router.push('/login')} />}
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-            <Btn ghost label="Big screen" onPress={() => WebBrowser.openBrowserAsync(`https://dandystrength.com/tv/${g.slug || g.id}`).catch(() => {})} style={{ flex: 1, paddingHorizontal: 8 }} />
+            <Btn ghost label="Dandy TV" onPress={() => WebBrowser.openBrowserAsync(`https://dandystrength.com/tv/${g.slug || g.id}`).catch(() => {})} style={{ flex: 1, paddingHorizontal: 8 }} />
             <Btn ghost label="Gym league" onPress={() => router.push('/compete/gyms')} style={{ flex: 1, paddingHorizontal: 8 }} />
           </View>
 
@@ -172,7 +172,7 @@ export default function GymBoard() {
                 <Muted style={{ fontSize: 15, marginTop: 6 }}>Your request is in. We'll confirm it soon.</Muted>
               </>) : (<>
                 <Text style={st.h3}>Own or coach here?</Text>
-                <Muted style={{ fontSize: 14, marginTop: 4 }}>Gym owners get a free gym page: post the daily workout, enter results for members, and put a live dashboard on the big screen. The DSI team confirms every owner.</Muted>
+                <Muted style={{ fontSize: 14, marginTop: 4 }}>Gym owners get a free gym page: post the daily workout, enter results for members, and put a live dashboard on Dandy TV. The DSI team confirms every owner.</Muted>
                 {asking ? (<>
                   <Eyebrow style={{ marginTop: 12, marginBottom: 6 }}>Your role at {g.name} (optional)</Eyebrow>
                   <TextInput value={note} onChangeText={setNote} maxLength={300} multiline placeholder="Owner, head coach, gym website or Instagram so we can confirm" placeholderTextColor="#5A6478"

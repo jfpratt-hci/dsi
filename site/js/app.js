@@ -98,7 +98,7 @@ function navGroups() {
   ];
   const gyms = S.myGyms || [];
   const offItems = (x, keys) => OFFICE.filter(o => keys.includes(o[0]) && (!o[3] || x.role === 'owner' || (S.me && S.me.role === 'admin'))).map(([k, n, d]) => [officeHref(x.gym_id, k), n, d]);
-  const screen = x => [`/tv/${x.gym.slug || x.gym_id}`, 'Big screen', 'The TV board, opens in a new tab', 1];
+  const screen = x => [`/tv/${x.gym.slug || x.gym_id}`, 'Dandy TV', 'Class and lobby screens, opens in a new tab', 1];
   if (gyms.length === 1) { const x = gyms[0], nm = x.gym.name || 'Gym';
     g.push({ k: 'office', n: 'Gym office', sections: [{ h: nm + ' · Run the floor', items: [...offItems(x, ['today', 'class', 'schedule', 'wod', 'plan', 'results', 'shop']), screen(x)] }, { h: 'Run the business', items: offItems(x, ['members', 'billing', 'docs', 'staff', 'settings']) }] }); }
   else if (gyms.length) g.push({ k: 'office', n: 'Gym office', sections: gyms.map(x => ({ h: (x.gym.name || 'Gym') + ' office', items: [...offItems(x, OFFICE.map(o => o[0])), screen(x)] })) });
@@ -472,7 +472,7 @@ VIEWS.week = async (day, tok) => {
     const prog = `<div class="wkProg"><div class="eyebrow">${esc(fmtDW(w.day))}${w.day === tdy ? ' · Today' : ''}${w.source ? ' · ' + esc(w.source) : ''}</div><h3>${esc(w.title)}</h3>
       ${w.rest_note ? `<p class="rest">${esc(w.rest_note)}</p>` : ''}
       ${P().shownParts(w).map(p => `<div class="wkSec"><b>${P().isParts(w) ? `<i class="wkL">${p.L}</i>` : ''}${esc(p.name)}</b><p>${esc(p.text)}</p>${P().logWords(p) ? `<div class="sub">Log your ${P().logWords(p)}</div>` : ''}</div>`).join('')}
-      <div class="row">${canEdit(w) ? `<a class="btn sm" href="/wod/${w.gym_id || 'dsi'}?day=${w.day}">Edit workout</a>` : ''}<button class="btn ghost sm" data-thread="workout" data-ref="${w.id}" data-title="${esc(fmtD(w.day) + ' · ' + w.title)}">Day thread</button>${w.benchmark ? `<a class="chip" href="/benchmarks/${encodeURIComponent(w.benchmark)}">Benchmark: ${esc(w.benchmark)}</a>` : ''}${w.gym_id && S.myGyms.some(g => g.gym_id === w.gym_id) ? `<a class="btn sm" href="/results/${w.gym_id}?day=${w.day}">Enter results</a><a class="btn ghost sm" href="/tv/${w.gym_id}">Big screen</a>` : ''}</div>
+      <div class="row">${canEdit(w) ? `<a class="btn sm" href="/wod/${w.gym_id || 'dsi'}?day=${w.day}">Edit workout</a>` : ''}<button class="btn ghost sm" data-thread="workout" data-ref="${w.id}" data-title="${esc(fmtD(w.day) + ' · ' + w.title)}">Day thread</button>${w.benchmark ? `<a class="chip" href="/benchmarks/${encodeURIComponent(w.benchmark)}">Benchmark: ${esc(w.benchmark)}</a>` : ''}${w.gym_id && S.myGyms.some(g => g.gym_id === w.gym_id) ? `<a class="btn sm" href="/results/${w.gym_id}?day=${w.day}">Enter results</a><a class="btn ghost sm" href="/tv/${w.gym_id}">Dandy TV</a>` : ''}</div>
       ${isStaff() ? `<form class="row" id="bmF"><label class="vh" for="bm-n">Benchmark name</label><input id="bm-n" maxlength="40" value="${esc(w.benchmark || '')}" placeholder="Name it as a benchmark, like Fran" style="max-width:260px"><button class="btn ghost sm">Save</button></form>` : ''}</div>`;
     let mine = '';
     const its = P().items(w);

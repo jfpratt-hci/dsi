@@ -82,7 +82,7 @@ export function install(X) {
       const mine = must(await sb.from('gym_claims').select('*').eq('gym_id', gid).eq('profile_id', S.me.id).order('created_at', { ascending: false }).limit(1));
       const pend = mine[0] && mine[0].status === 'pending';
       if (!paint(tok, `<section class="sec narrow"><div><div class="kicker">${esc(g.name)}</div><h2>Run this <span>gym</span></h2>
-        <p class="secSub">Gym owners get a free gym page: post the daily workout, enter results for members, and put a live dashboard on the big screen. The DSI team confirms every owner.</p></div>
+        <p class="secSub">Gym owners get a free gym page: post the daily workout, enter results for members, and put a live dashboard on Dandy TV. The DSI team confirms every owner.</p></div>
         ${pend ? `<div class="formCard"><p class="lede" style="margin:0">Your request is in. We'll confirm it soon.</p></div>` : `<form class="formCard" id="clF"><div class="fields"><div class="field w4"><label for="cl-n">Your role at ${esc(g.name)}</label><input id="cl-n" maxlength="300" required placeholder="Owner, head coach, gym website or Instagram so we can confirm"></div></div>
         <div class="row"><button class="btn">Ask to run this gym</button><span class="hint" id="cl-msg">Coaches: ask your owner to add you instead.</span></div></form>`}</section>`)) return;
       const f = $('#clF');
@@ -100,8 +100,8 @@ export function install(X) {
     const claimNames = claims.length ? new Map(must(await sb.from('profiles').select('id,display_name').in('id', claims.map(c => c.profile_id))).map(p => [p.id, p.display_name])) : new Map();
     const claimGyms = claims.length ? new Map(must(await sb.from('gyms').select('id,name').in('id', claims.map(c => c.gym_id))).map(x => [x.id, x.name])) : new Map();
     const tvUrl = location.origin + '/tv/' + (g.slug || gid);
-    if (!paint(tok, `${X.officeBar(g, 'settings')}<section class="sec"><h3>Gym <span>settings</span></h3><p class="secSub">${members.length} lifters. Big screen link, coaches and gym details.</p>
-      <div class="formCard"><div class="formH">Big screen link<span class="sub">Open it in the TV's browser, a Fire Stick or a laptop on HDMI, then go full screen. No login needed.</span></div>
+    if (!paint(tok, `${X.officeBar(g, 'settings')}<section class="sec"><h3>Gym <span>settings</span></h3><p class="secSub">${members.length} lifters. Dandy TV link, coaches and gym details.</p>
+      <div class="formCard"><div class="formH">Dandy TV link<span class="sub">Open it in the TV's browser, a Fire Stick or a laptop on HDMI, then go full screen. No login needed.</span></div>
         <div class="row"><input id="tvUrl" readonly value="${esc(tvUrl)}" style="max-width:420px"><button class="btn ghost sm" type="button" id="tvCopy">Copy link</button></div>
         ${owns(gid) ? `<form class="row" id="slF"><label for="sl-v" class="sub">Change it: ${esc(location.host)}/tv/</label><input id="sl-v" maxlength="40" value="${esc(g.slug || '')}" placeholder="yourgym" autocapitalize="none" spellcheck="false" style="max-width:220px"><button class="btn sm">Save link</button><span class="hint" id="sl-msg">Letters, numbers and dashes. The old link stops working.</span></form>` : ''}</div></section>
     <section class="sec"><h2>Coaches</h2>
@@ -123,7 +123,7 @@ export function install(X) {
       if (v && (!SLUG.test(v) || UUID.test(v))) { m.textContent = 'Use 3 to 40 letters, numbers or dashes, starting and ending with a letter or number.'; return; }
       const { error } = await sb.from('gyms').update({ slug: v || null }).eq('id', gid);
       if (error) { m.textContent = /gyms_slug_key|duplicate/.test(error.message) ? 'Another gym already has that link. Try another.' : error.message; return; }
-      toast(v ? 'Big screen link is now /tv/' + v : 'Big screen link reset'); route();
+      toast(v ? 'Dandy TV link is now /tv/' + v : 'Dandy TV link reset'); route();
     };
     $('#tvCopy').onclick = async () => { try { await navigator.clipboard.writeText(tvUrl); toast('Link copied'); } catch { $('#tvUrl').select(); } };
     $$('[data-rmc]').forEach(b => b.onclick = async () => { const { error } = await sb.from('gym_staff').delete().eq('gym_id', gid).eq('profile_id', b.dataset.rmc); if (error) return toast(error.message); toast('Coach removed'); route(); });
@@ -184,7 +184,7 @@ export function install(X) {
         ${old ? '<p class="hint" style="color:var(--flat)">This day still has the old lift list. Saving switches it to Parts, so pick the weight each part logs.</p>' : ''}
         <div class="wodGrid">${ps.map(box).join('')}</div>
         <button type="button" class="btn ghost sm" id="addD"${ps[3].text || ps[3].lift || ps[3].time || ps[3].reps ? ' hidden' : ''}>+ Add Part D</button>
-        <div class="row" style="margin-top:16px"><button class="btn" type="submit">${w ? 'Save changes' : 'Post the workout'}</button><a class="btn ghost" href="${dest}">See it on the week</a>${dsi ? '' : `<a class="btn ghost" href="/results/${gid}?day=${day}">Enter results</a><a class="btn ghost" href="/tv/${gid}" target="_blank">Big screen</a>`}<span class="hint" id="wd-msg">${nLogs ? `${nLogs} logged already. Their weights stay with each part letter.` : ''}</span></div>
+        <div class="row" style="margin-top:16px"><button class="btn" type="submit">${w ? 'Save changes' : 'Post the workout'}</button><a class="btn ghost" href="${dest}">See it on the week</a>${dsi ? '' : `<a class="btn ghost" href="/results/${gid}?day=${day}">Enter results</a><a class="btn ghost" href="/tv/${gid}" target="_blank">Dandy TV</a>`}<span class="hint" id="wd-msg">${nLogs ? `${nLogs} logged already. Their weights stay with each part letter.` : ''}</span></div>
       </form></section>`)) return;
     $('#wd-day').onchange = e => { if (e.target.value) go(`/wod/${gid}?day=${e.target.value}`); };
     const build = a => {
@@ -272,7 +272,7 @@ export function install(X) {
         ${its.map(it => `<td class="r">${inp(it, m, ent, r)}</td>`).join('')}
         ${w.score_label ? `<td class="r"><input class="wkIn wkScore" maxlength="40" data-score value="${esc((lg && lg.score) || '')}" placeholder="${w.score_type === 'time' ? '12:34' : ''}" aria-label="${esc(m.display_name + ' ' + w.score_label)}"></td>` : ''}</tr>`; }).join('') || `<tr><td class="empty" colspan="${its.length + 2}">No members yet. Members pick ${esc(g.name)} on the Gym league page.</td></tr>`}
       </tbody></table></div></div>
-      <div class="row" style="margin-top:14px"><button class="btn" type="submit">Save results</button><a class="btn ghost" href="/tv/${g.slug || gid}" target="_blank">Big screen</a><span class="hint" id="rs-msg"></span></div></form></section>`)) return;
+      <div class="row" style="margin-top:14px"><button class="btn" type="submit">Save results</button><a class="btn ghost" href="/tv/${g.slug || gid}" target="_blank">Dandy TV</a><span class="hint" id="rs-msg"></span></div></form></section>`)) return;
     $('#rsF').onsubmit = async e => {
       e.preventDefault();
       const msg = $('#rs-msg'), rows = [];

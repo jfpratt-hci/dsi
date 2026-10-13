@@ -234,7 +234,7 @@ function GymOffice({ g, owner, many, onSwitch }: { g: Gym; owner: boolean; many:
         <Row first label="Log a class" detail="Weights live" onPress={() => router.push({ pathname: '/office/class', params: { gym: g.id } })} />
         <Row label="Enter results" detail="Scores for the day" onPress={() => router.push({ pathname: '/office/results', params: { gym: g.id } })} />
         {(['schedule', 'wod', 'plan'] as OfficeKey[]).filter(has).map(k => <Row key={k} label={label(k)} detail="Website" onPress={() => go(k)} />)}
-        <Row label="Big screen" detail="Website" onPress={() => openWeb(tvHref(g))} />
+        <Row label="Dandy TV" detail="Website" onPress={() => openWeb(tvHref(g))} />
       </Group>
       <Group title="Run the business">
         {(['members', 'billing', 'docs', 'staff', 'settings'] as OfficeKey[]).filter(has).map((k, i) => <Row key={k} first={i === 0} label={label(k)} detail="Website" onPress={() => go(k)} />)}
