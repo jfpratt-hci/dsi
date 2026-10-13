@@ -258,7 +258,7 @@ export function install(X) {
       ${missing ? '<div class="formCard cvNote"><b>Dandy TV settings are being set up.</b> The boards work with their starting slides until then.</div>' : ''}
       <div class="dtvLinks">${linkCard('cls', 'Class TV', 'For the floor. The workout, every member\'s targets, part timers and the day board.', L.cls)}${linkCard('lobby', 'Lobby TV', 'For the front. Your schedule, PRs, events and offers, each with a QR code.', L.lobby)}</div>
       <div class="dtvGrid">
-        <div class="formCard dtvSlides"><div class="formH">Lobby slides <span class="sub">Each shows for <select id="dtvLs">${[8, 10, 12, 15, 20, 30].map(n => `<option${n === lobbySecs ? ' selected' : ''}>${n}</option>`).join('')}</select> seconds</span></div>
+        <div class="formCard dtvSlides"><div class="formH">Lobby slides <span class="sub">Each shows for <select id="dtvLs">${[3, 5, 8, 10, 12, 15, 20, 30].map(n => `<option${n === lobbySecs ? ' selected' : ''}>${n}</option>`).join('')}</select> seconds</span></div>
           <ol class="dtvList" id="dtvList"></ol>
           <div class="row"><select id="dtvAddT">${Object.entries(TYPES).map(([k, t]) => `<option value="${k}">${esc(t.n)}</option>`).join('')}</select><button type="button" class="btn ghost sm" id="dtvAdd">Add slide</button></div></div>
         <div class="formCard dtvEdit" id="dtvEdit"></div>
