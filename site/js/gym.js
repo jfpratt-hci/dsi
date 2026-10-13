@@ -351,7 +351,8 @@ export function install(X) {
       const sess = await sb.from('sessions').select('id,name,starts_at,ends_at,status').eq('gym_id', gid).gte('starts_at', dayStart.toISOString()).lt('starts_at', new Date(dayStart.getTime() + 864e5).toISOString()).neq('status', 'canceled').order('starts_at');
       const sessions = sess.error ? [] : sess.data || [];
       const bk = sessions.length ? await sb.from('bookings').select('session_id,profile_id,status').in('session_id', sessions.map(x => x.id)).neq('status', 'canceled') : { data: [] };
-      st = { ...base, yday, prs, lb, q, by, from30, sessions, bookings: bk.error ? [] : bk.data || [], battles: bt.filter(b => ids.includes(b.challenger) || ids.includes(b.opponent)) };
+      const tv = X.tvConfig ? await X.tvConfig(gid).catch(() => null) : null;
+      st = { ...base, tv, yday, prs, lb, q, by, from30, sessions, bookings: bk.error ? [] : bk.data || [], battles: bt.filter(b => ids.includes(b.challenger) || ids.includes(b.opponent)) };
     };
     const nameOf = id => (st.members.find(m => m.id === id) || {}).display_name || (S.board.find(r => r.profile_id === id) || {}).name || 'Someone';
     const clock = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -390,15 +391,15 @@ export function install(X) {
     const screens = () => {
       const { g, w, logs, rowOf, lb, prs, q, battles, by, yday, from30 } = st;
       const members = inClass(), cls = classNow();
-      const out = [];
+      const out = [], cs = (st.tv && st.tv.class_screens) || {}, on = k => cs[k] !== false;
       const head = (k, t) => `<header class="tvHead"><div class="tvGym"><img src="/assets/mark.svg" alt="Dandy Strength" class="tvLogo"><div><b>${esc(g.name)}</b><span>${esc(k)}</span></div></div><div class="tvTitle">${t}</div><div class="tvClock">${clock()}</div></header>`;
       // 1. Workout of the day
-      out.push(`${head(fmtDW(today()), 'Workout of the <em>day</em>')}<div class="tvBody tvWodS">
+      if (on('wod')) out.push(`${head(fmtDW(today()), 'Workout of the <em>day</em>')}<div class="tvBody tvWodS">
         ${w ? `<h1>${esc(w.title)}</h1><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div class="tvPartBtn" role="button" tabindex="0" data-part="${p.L}" aria-label="Show part ${p.L} full screen"><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
         : `<h1>Rest or not posted</h1><p class="tvEmpty">Coaches post the day at dandystrength.com/gym/${esc(g.id)}</p>`}</div>`);
       // 2. Today's targets (one screen per 12 members)
       const lifts = (w && w.lifts) || [];
-      if (lifts.length) {
+      if (lifts.length && on('targets')) {
         const pages = Math.max(1, Math.ceil(members.length / PER_TARGETS));
         for (let p = 0; p < pages; p++) {
           const chunk = members.slice(p * PER_TARGETS, p * PER_TARGETS + PER_TARGETS);
@@ -413,11 +414,11 @@ export function install(X) {
         return rk.length ? `<table class="tvT tvBig tvRank"><thead><tr><th>#</th><th>Lifter</th>${show.map(it => `<th>${esc(it.label)}</th>`).join('')}${wk && wk.score_label ? `<th>${esc(wk.score_label)}</th>` : ''}</tr></thead><tbody>
           ${rk.map((l, i) => `<tr class="${i === 0 ? 'top' : ''}"><td>${i + 1}</td><td>${esc(nameOf(l.profile_id))}</td>${show.map(it => `<td${it.kind === 't' ? ' class="sc"' : ''}>${cell(it, (l.entries || {})[it.key]) || '·'}</td>`).join('')}${wk && wk.score_label ? `<td class="sc">${esc(l.score || '·')}</td>` : ''}</tr>`).join('')}</tbody></table>`
           : '<p class="tvEmpty">Nobody has logged yet. Be first.</p>'; };
-      out.push(`${head(fmtDW(today()), `Today's <em>board</em>`)}<div class="tvBody">${w ? `<div class="tvSub">${esc(w.title)} · ${logs.length} of ${members.length} logged</div>` : ''}${board(w, logs, 12)}</div>`);
+      if (on('today')) out.push(`${head(fmtDW(today()), `Today's <em>board</em>`)}<div class="tvBody">${w ? `<div class="tvSub">${esc(w.title)} · ${logs.length} of ${members.length} logged</div>` : ''}${board(w, logs, 12)}</div>`);
       // 4. Yesterday's results
-      out.push(`${head(fmtDW(yday.day), `Yesterday's <em>results</em>`)}<div class="tvBody">${yday.w ? `<div class="tvSub">${esc(yday.w.title)} · ${yday.logs.length} logged</div>${board(yday.w, yday.logs, 12)}` : '<p class="tvEmpty">No workout yesterday.</p>'}</div>`);
+      if (on('yesterday')) out.push(`${head(fmtDW(yday.day), `Yesterday's <em>results</em>`)}<div class="tvBody">${yday.w ? `<div class="tvSub">${esc(yday.w.title)} · ${yday.logs.length} logged</div>${board(yday.w, yday.logs, 12)}` : '<p class="tvEmpty">No workout yesterday.</p>'}</div>`);
       // 5 and 6. Men's and women's leaderboards for the major lifts
-      for (const [sex, label] of [['male', "Men's"], ['female', "Women's"]]) {
+      for (const [sex, label] of on('leaders') ? [['male', "Men's"], ['female', "Women's"]] : []) {
         const rs = lb.filter(x => (x.r.sex || '') === sex);
         if (sex === 'female' && !rs.length) continue; // no women's screen until the gym has a woman on the board
         const col = (t, key, unit) => { const top = [...rs].filter(x => num(x.r[key])).sort((a, b) => num(b.r[key]) - num(a.r[key])).slice(0, 8);
@@ -426,7 +427,7 @@ export function install(X) {
           : `<p class="tvEmpty">No ${label.toLowerCase().replace("'s", '')} on the ${esc(g.name)} board yet. Get your DSI at dandystrength.com/join</p>`}</div>`);
       }
       // 7. The last 30 days: DSI gained, battles and PRs
-      out.push(`${head(fmtD(from30) + ' to ' + fmtD(today()), `Last 30 <em>days</em>`)}<div class="tvBody tvGrid2">
+      if (on('last30') || !out.length) out.push(`${head(fmtD(from30) + ' to ' + fmtD(today()), `Last 30 <em>days</em>`)}<div class="tvBody tvGrid2">
         <div><h3 class="tvH3">Most DSI gained</h3><table class="tvT tvRank"><thead><tr><th></th><th>Lifter</th><th>Pounds added</th><th>DSI</th></tr></thead><tbody>${[...lb].sort((a, b) => b.s.pts - a.s.pts || b.s.lb - a.s.lb).filter(x => x.s.pts || x.s.lb).slice(0, 8).map((x, i) => `<tr class="${i === 0 ? 'top' : ''}"><td>${i + 1}</td><td>${esc(x.m.display_name)}</td><td>+${fmt(x.s.lb)} lb</td><td class="sc">+${x.s.pts}</td></tr>`).join('') || '<tr><td>Nobody has gained in the last 30 days.</td></tr>'}</tbody></table>
           ${battles.length ? `<h3 class="tvH3">Battles this week</h3>${battles.slice(0, 4).map(b => { const a = X.compete.gainIn(by.get(b.challenger) || [], S.board.find(r => r.profile_id === b.challenger) || {}, b.week_start, today()), o = X.compete.gainIn(by.get(b.opponent) || [], S.board.find(r => r.profile_id === b.opponent) || {}, b.week_start, today()); return `<div class="tvBt"><span>${esc(nameOf(b.challenger))} <b>+${a.pts}</b></span><i>vs</i><span><b>+${o.pts}</b> ${esc(nameOf(b.opponent))}</span></div>`; }).join('')}` : ''}</div>
         <div><h3 class="tvH3">Latest PRs</h3><ol class="tvPRs">${prs.map(p => `<li><b>${esc(nameOf(p.profile_id))}</b><span>${esc(D.liftName(p.lift))} ${fmt(p.weight_lb)} lb</span><em>+${fmt(num(p.weight_lb) - num(p.prev_best))}</em><small>${fmtD(p.performed_on)}</small></li>`).join('') || '<li class="none">No PRs in the last 30 days. Somebody fix that.</li>'}</ol></div></div>`);
@@ -651,7 +652,10 @@ export function install(X) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'workouts' }, () => refresh())
       .subscribe();
     S.channels.push(ch);
-    tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); if (!paused && !focus && Date.now() - lastTouch > IDLE_MS) goTo(cur + 1); }, SLIDE_MS));
+    // Each screen shows for the time set in Dandy TV setup (15 seconds unless changed).
+    let lastAdv = Date.now();
+    tvTimers.push(setInterval(async () => { if (tok !== S.tok || !st || !X.tvConfig) return; const c = await X.tvConfig(gid).catch(() => null); if (JSON.stringify(c) !== JSON.stringify(st.tv)) { st.tv = c; cur = 0; draw(); } }, 60000));
+    tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); const ms = ((st && st.tv && st.tv.class_secs) || SLIDE_MS / 1000) * 1000; if (!paused && !focus && Date.now() - lastTouch > IDLE_MS && Date.now() - lastAdv >= ms) { lastAdv = Date.now(); goTo(cur + 1); } }, 1000));
     tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); if (today() !== lastDay) { lastDay = today(); cur = 0; } refresh(); }, 5 * 60 * 1000));
     tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); $$('.tvClock').forEach(c => { c.textContent = clock(); }); }, 20000));
     tvTimers.push(setInterval(() => { if (tok !== S.tok) return clearTv(); paintClock(); }, 200));
