@@ -392,9 +392,10 @@ export function install(X) {
       const { g, w, logs, rowOf, lb, prs, q, battles, by, yday, from30 } = st;
       const members = inClass(), cls = classNow();
       const out = [], cs = (st.tv && st.tv.class_screens) || {}, on = k => cs[k] !== false;
-      const head = (k, t) => `<header class="tvHead"><div class="tvGym"><img src="/assets/mark.svg" alt="Dandy Strength" class="tvLogo"><div><b>${esc(g.name)}</b><span>${esc(k)}</span></div></div><div class="tvTitle">${t}</div><div class="tvClock">${clock()}</div></header>`;
+      const head = (k, t) => `<header class="tvHead"><div class="tvGym"><img src="/assets/mark.svg" alt="Dandy Strength" class="tvLogo"><div><b>${esc(g.name)}</b><span>${esc(k)}</span></div></div><div class="tvTitle">${t}</div><div></div></header>`;
       // 1. Workout of the day
-      if (on('wod')) out.push(`${head(fmtDW(today()), 'Workout of the <em>day</em>')}<div class="tvBody tvWodS">
+      // No header here: the workout's name leads the screen; the logo, date and time sit in the footer.
+      if (on('wod')) out.push(`<div class="tvBody tvWodS">
         ${w ? `<h1>${esc(w.title)}</h1><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div class="tvPartBtn" role="button" tabindex="0" data-part="${p.L}" aria-label="Show part ${p.L} full screen"><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
         : `<h1>Rest or not posted</h1><p class="tvEmpty">Coaches post the day at dandystrength.com/gym/${esc(g.id)}</p>`}</div>`);
       // 2. Today's targets (one screen per 12 members)
@@ -586,7 +587,7 @@ export function install(X) {
     const draw = () => {
       if (tok !== S.tok || !st) return;
       const list = screens();
-      main.innerHTML = `<div class="tvDeck" id="tvDeck" tabindex="0">${list.map((h, i) => `<section class="tvS" data-i="${i}">${h}<footer class="tvFoot"><span class="tvUrl">dandystrength.com</span></footer></section>`).join('')}</div>
+      main.innerHTML = `<div class="tvDeck" id="tvDeck" tabindex="0">${list.map((h, i) => `<section class="tvS" data-i="${i}">${h}<footer class="tvFoot"><img src="/assets/mark.svg" alt="Dandy Strength" class="tvFootLogo"><span class="tvFootTime"><span class="tvDate">${esc(new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }))}</span><b class="tvClock">${clock()}</b></span></footer></section>`).join('')}</div>
         <div class="tvStageBox tvDotsBox"><nav class="tvDots" aria-label="Screens">${list.map((_, i) => `<button type="button" data-go="${i}" aria-label="Screen ${i + 1}"${i === cur ? ' aria-current="true"' : ''}></button>`).join('')}${pauseBtn()}</nav></div>`;
       deck = $('#tvDeck');
       cur = Math.min(cur, list.length - 1);
