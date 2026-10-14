@@ -18,11 +18,23 @@ export function install(X) {
   const isParts = w => !!w && ((w.sections || []).some(s => s.part) || (w.lifts || []).some(l => l.part));
   function partsOf(w, withD) {
     const secs = (w && w.sections) || [], lifts = (w && w.lifts) || [], np = isParts(w);
-    return LET.map((L, i) => { const s = (np ? secs.find(x => x.part === L) : secs[i]) || {}; return { L, name: s.name || '', text: s.text || '', time: !!s.time, reps: !!s.reps, lift: lifts.find(l => l.part === L) || null }; })
+    return LET.map((L, i) => { const s = (np ? secs.find(x => x.part === L) : secs[i]) || {}; return { L, name: s.name || '', text: s.text || '', clock: s.clock || null, gap: s.gap ?? null, time: !!s.time, reps: !!s.reps, lift: lifts.find(l => l.part === L) || null }; })
       .filter(p => p.L !== 'D' || withD || p.text || p.lift || p.time || p.reps);
   }
   // What a screen shows: the parts with something in them. Older days keep every section they had.
   const shownParts = w => isParts(w) ? partsOf(w).filter(p => p.text || p.lift || p.time || p.reps) : ((w && w.sections) || []).map((s, i) => ({ L: String.fromCharCode(65 + i), name: s.name, text: s.text, lift: null, time: false, reps: false }));
+  // The clock a part needs, read from its own words: EMOM 15, a 10 minute cap (counts up), an AMRAP or a
+  // "(15 min)" block (counts down). Anything else is a stopwatch. The workout editor saves the coach's pick on the part.
+  const suggestClock = text => {
+    const t = String(text || ''); let m;
+    if (/EMOM|E\.?M\.?O\.?M|every minute/i.test(t) && ((m = /EMOM[^\n]*?(\d+)\s*min/i.exec(t)) || (m = /(\d+)\s*min(?:ute)?s?\s*EMOM/i.exec(t)) || (m = /\((\d+)\s*min/i.exec(t)))) return { mode: 'emom', min: +m[1] };
+    if ((m = /(\d+)\s*min(?:ute)?s?\s*(?:time\s*)?cap/i.exec(t)) || (m = /cap[:\s]*(\d+)\s*min/i.exec(t))) return { mode: 'up', min: +m[1] };
+    if ((m = /AMRAP\s*(?:in\s*)?(\d+)/i.exec(t)) || (m = /(\d+)\s*min(?:ute)?s?\s*AMRAP/i.exec(t))) return { mode: 'down', min: +m[1] };
+    if ((m = /\((\d+)\s*min/i.exec(t)) || (m = /\b(\d+)\s*min(?:ute)?s?\b/i.exec(t))) return { mode: 'down', min: +m[1] };
+    return { mode: 'up', min: 0 };
+  };
+  const clockOf = p => (p && p.clock && p.clock.mode ? p.clock : suggestClock(p && p.text));
+  const GAP = 3;
   const liftLabel = l => l.part ? `${l.part} · ${l.n}` : l.n;
   // Everything a member logs for a day, in part order. Weights are kept under the lift id ('b'),
   // times in seconds under '<part>_t' ('b_t'). Older days log their lift list.
@@ -149,6 +161,9 @@ export function install(X) {
     const w = ws[0] || null;
     const nLogs = w ? ((await sb.from('workout_logs').select('id', { count: 'exact', head: true }).eq('workout_id', w.id)).count || 0) : 0;
     const old = w && !isParts(w) && (w.lifts || []).length;
+    // The usual class length at this gym, for the class plan (60 minutes when no classes are set up).
+    const lens = dsi ? [] : ((await sb.from('classes').select('duration_min').eq('gym_id', gid)).data || []).map(c => c.duration_min).filter(Boolean);
+    const classLen = lens.length ? +Object.entries(lens.reduce((m, x) => (m[x] = (m[x] || 0) + 1, m), {})).sort((a, b) => b[1] - a[1])[0][0] : 60;
     const me = X.boardRow(S.me.id) || { sex: S.me.sex };
     const ps = partsOf(w, true);
     const box = p => {
@@ -156,6 +171,7 @@ export function install(X) {
       return `<article class="wodPart" data-p="${p.L}"${p.L === 'D' && !p.text && !p.lift && !p.time && !p.reps ? ' hidden' : ''}>
         <div class="wodPH"><i>${p.L}</i><label class="vh" for="wp-${p.L}">Part ${p.L} name</label><input id="wp-${p.L}" data-name maxlength="40" value="${esc(p.name)}" placeholder="${PH[p.L]}">${p.L === 'D' ? '<button type="button" class="btn ghost sm" data-rmd>Remove</button>' : ''}</div>
         <label class="vh" for="wt-${p.L}">Part ${p.L} workout</label><textarea id="wt-${p.L}" data-text rows="7" maxlength="2000" placeholder="${p.L === 'A' ? 'Warmup, skill or mobility' : 'Sets, reps and movements'}">${esc(p.text)}</textarea>
+        ${(() => { const c = p.clock && p.clock.mode ? p.clock : suggestClock(p.text); return `<div class="wodClock" role="group" aria-label="Part ${p.L} clock"${p.clock && p.clock.mode ? '' : ' data-auto'}><span>Clock</span><label class="vh" for="wcm-${p.L}">Part ${p.L} clock type</label><select id="wcm-${p.L}" data-cm>${[['down', 'Count down'], ['up', 'Count up'], ['emom', 'EMOM'], ['none', 'No clock']].map(([v, n]) => `<option value="${v}"${c.mode === v ? ' selected' : ''}>${n}</option>`).join('')}</select><label class="vh" for="wcn-${p.L}">Part ${p.L} minutes</label><input id="wcn-${p.L}" data-cmin type="number" inputmode="numeric" min="0" max="90" value="${c.min || ''}" placeholder="min"${c.mode === 'none' ? ' disabled' : ''}><span>min</span></div>`; })()}
         ${p.L === 'A' ? '<p class="hint">Part A is not logged.</p>' : `
         <div class="wodTog" role="group" aria-label="What members log for Part ${p.L}"><span>Members log</span>
           <label class="tog"><input type="checkbox" data-trk${p.lift ? ' checked' : ''}><span>Weight</span></label>
@@ -183,6 +199,7 @@ export function install(X) {
         <div class="field"><label for="wd-t">Title</label><input id="wd-t" maxlength="80" value="${esc((w && w.title) || '')}" placeholder="Front squat + Grace"></div>
         ${old ? '<p class="hint" style="color:var(--flat)">This day still has the old lift list. Saving switches it to Parts, so pick the weight each part logs.</p>' : ''}
         <div class="wodGrid">${ps.map(box).join('')}</div>
+        <div class="formCard wodPlan" id="wodPlan"><div class="wodPlanH"><b>Class plan</b><label for="wd-gap">Between parts</label><input id="wd-gap" type="number" inputmode="numeric" min="0" max="15" value="${(ps.find(x => x.gap != null) || {}).gap ?? GAP}"><span>min</span><label for="wd-len">Class</label><input id="wd-len" type="number" inputmode="numeric" min="15" max="180" value="${classLen}"><span>min</span></div><div class="wodBar" id="wodBar"></div><p class="hint" id="wodPlanMsg"></p></div>
         <button type="button" class="btn ghost sm" id="addD"${ps[3].text || ps[3].lift || ps[3].time || ps[3].reps ? ' hidden' : ''}>+ Add Part D</button>
         <div class="row" style="margin-top:16px"><button class="btn" type="submit">${w ? 'Save changes' : 'Post the workout'}</button><a class="btn ghost" href="${dest}">See it on the week</a>${dsi ? '' : `<a class="btn ghost" href="/results/${gid}?day=${day}">Enter results</a><a class="btn ghost" href="/tv/${gid}" target="_blank">Dandy TV</a>`}<span class="hint" id="wd-msg">${nLogs ? `${nLogs} logged already. Their weights stay with each part letter.` : ''}</span></div>
       </form></section>`)) return;
@@ -230,6 +247,27 @@ export function install(X) {
     const dBox = $('.wodPart[data-p="D"]');
     $('#addD').onclick = e => { dBox.hidden = false; e.target.hidden = true; $('[data-text]', dBox).focus(); };
     $('[data-rmd]', dBox).onclick = () => { dBox.hidden = true; $('#addD').hidden = false; $('[data-text]', dBox).value = ''; $('[data-name]', dBox).value = ''; $('[data-time]', dBox).checked = false; $('[data-reps]', dBox).checked = false; const t = $('[data-trk]', dBox); t.checked = false; t.dispatchEvent(new Event('change')); };
+    // Class plan: each part's clock plus the changeover between parts, against the class length.
+    const clockIn = a => { const m = $('[data-cm]', a).value, n = Math.max(0, Math.min(90, parseInt($('[data-cmin]', a).value, 10) || 0)); return { mode: m, min: m === 'none' ? 0 : n }; };
+    const drawPlan = () => {
+      const parts = $$('.wodPart').filter(a => !a.hidden && $('[data-text]', a).value.trim()), gap = Math.max(0, Math.min(15, parseInt($('#wd-gap').value, 10) || 0)), len = Math.max(15, parseInt($('#wd-len').value, 10) || 60);
+      const segs = []; parts.forEach((a, i) => { if (i && gap) segs.push({ k: 'gap', m: gap, t: `${gap} min change` }); const c = clockIn(a), nm = $('[data-name]', a).value.trim() || PH[a.dataset.p]; segs.push({ k: c.min ? 'part' : 'open', L: a.dataset.p, m: c.min, t: `${a.dataset.p} · ${nm}` }); });
+      const used = segs.reduce((t, x) => t + x.m, 0), left = len - used, untimed = segs.filter(x => x.k === 'open');
+      const all = left > 0 ? segs.concat([{ k: 'left', m: left, t: `${left} min open` }]) : segs, tot = Math.max(len, used) || 1;
+      $('#wodBar').innerHTML = all.map(x => `<div class="wb ${x.k}" style="flex:${Math.max(x.m, x.k === 'open' ? 3 : 0.0001)} 1 0" title="${esc(x.t)}">${x.L ? `<i>${x.L}</i>` : ''}<span>${x.k === 'part' ? x.m + ' min' : x.k === 'gap' ? x.m + '′' : x.k === 'open' ? 'no time' : x.m + ' min open'}</span></div>`).join('') || '<p class="hint">Write a part to plan the class.</p>';
+      $('#wodPlanMsg').textContent = !parts.length ? '' : `${used} of ${len} minutes planned${left > 0 ? `, ${left} left for the intro, setup and cooldown` : left < 0 ? `. That runs ${-left} min over the class` : ', no time to spare'}${untimed.length ? `. Part ${untimed.map(x => x.L).join(' and ')} has no time yet` : ''}. The TV runs these clocks and a ${gap} min changeover between parts.`;
+      $('#wodPlanMsg').style.color = left < 0 ? 'var(--down)' : '';
+    };
+    $$('.wodPart').forEach(a => {
+      const box = $('.wodClock', a), cm = $('[data-cm]', a), cn = $('[data-cmin]', a), tx = $('[data-text]', a);
+      cm.onchange = () => { delete box.dataset.auto; cn.disabled = cm.value === 'none'; drawPlan(); };
+      cn.oninput = () => { delete box.dataset.auto; drawPlan(); };
+      tx.addEventListener('input', () => { if (box.dataset.auto !== undefined) { const c = suggestClock(tx.value); cm.value = c.mode; cn.value = c.min || ''; cn.disabled = false; } drawPlan(); });
+      $('[data-name]', a).addEventListener('input', drawPlan);
+    });
+    ['#wd-gap', '#wd-len'].forEach(id => { $(id).oninput = drawPlan; });
+    $('#addD').addEventListener('click', drawPlan); $('[data-rmd]', dBox).addEventListener('click', drawPlan);
+    drawPlan();
     $('#wodF').onsubmit = async e => {
       e.preventDefault();
       const msg = $('#wd-msg'), sections = [], lifts = [];
@@ -238,7 +276,8 @@ export function install(X) {
         const L = a.dataset.p, text = $('[data-text]', a).value.trim(), name = $('[data-name]', a).value.trim(), l = build(a);
         if (l && !l.n) { msg.textContent = `Part ${L} logs a weight. Name the movement.`; $('[data-n]', a).focus(); return; }
         const tm = !!($('[data-time]', a) || {}).checked, rp = !!($('[data-reps]', a) || {}).checked;
-        if (text || l || tm || rp) sections.push({ part: L, name: name || PH[L], text, ...(tm ? { time: true } : {}), ...(rp ? { reps: true } : {}) });
+        const ck = clockIn(a), gp = Math.max(0, Math.min(15, parseInt($('#wd-gap').value, 10) || 0));
+        if (text || l || tm || rp) sections.push({ part: L, name: name || PH[L], text, clock: ck, ...(sections.length ? { gap: gp } : {}), ...(tm ? { time: true } : {}), ...(rp ? { reps: true } : {}) });
         if (l) lifts.push(l);
       }
       if (!sections.length) { msg.textContent = 'Write at least one part.'; return; }
@@ -304,7 +343,7 @@ export function install(X) {
   // Screens advance on their own every 15 seconds. Scroll, swipe, arrow keys or the dots move by hand;
   // after a minute without input the deck starts moving again.
   let tvTimers = [];
-  const clearTv = () => { tvTimers.forEach(t => clearInterval(t)); tvTimers = []; ['tvFocusBox', 'tvPillBox', 'tvWhoBox'].forEach(id => { const f = document.getElementById(id); if (f) f.remove(); }); };
+  const clearTv = () => { tvTimers.forEach(t => clearInterval(t)); tvTimers = []; ['tvFocusBox', 'tvPillBox', 'tvWhoBox', 'tvChgBox'].forEach(id => { const f = document.getElementById(id); if (f) f.remove(); }); };
   const SLIDE_MS = 15000, IDLE_MS = 60000, PER_TARGETS = 12;
   const secsOf = s => { const m = String(s || '').match(/^(\d+):(\d{1,2})$/); return m ? +m[1] * 60 + +m[2] : null; };
   // Parts days rank by the first thing logged (fastest time or heaviest weight); older days keep their score rules.
@@ -441,17 +480,9 @@ export function install(X) {
     // Read the part's own words for the clock it needs: EMOM 15, a 10 minute cap (counts up), an AMRAP or a
     // "(15 min)" block (counts down). Anything else is a stopwatch. One clock runs at a time and keeps going
     // while the screens roll; a small clock shows in the corner until it is reset.
-    const suggest = text => {
-      const t = String(text || ''); let m;
-      if (/EMOM|E\.?M\.?O\.?M|every minute/i.test(t) && ((m = /EMOM[^\n]*?(\d+)\s*min/i.exec(t)) || (m = /(\d+)\s*min(?:ute)?s?\s*EMOM/i.exec(t)) || (m = /\((\d+)\s*min/i.exec(t)))) return { mode: 'emom', min: +m[1] };
-      if ((m = /(\d+)\s*min(?:ute)?s?\s*(?:time\s*)?cap/i.exec(t)) || (m = /cap[:\s]*(\d+)\s*min/i.exec(t))) return { mode: 'up', min: +m[1] };
-      if ((m = /AMRAP\s*(?:in\s*)?(\d+)/i.exec(t)) || (m = /(\d+)\s*min(?:ute)?s?\s*AMRAP/i.exec(t))) return { mode: 'down', min: +m[1] };
-      if ((m = /\((\d+)\s*min/i.exec(t)) || (m = /\b(\d+)\s*min(?:ute)?s?\b/i.exec(t))) return { mode: 'down', min: +m[1] };
-      return { mode: 'up', min: 0 };
-    };
     const MODES = { down: 'Count down', up: 'Count up', emom: 'EMOM' };
     let tm = null; // { L, mode, min, run, base (ms counted before the last start), at (when started), lead (ms of 10 s lead in left at start) }
-    const tmFor = L => { if (tm && tm.L === L) return tm; const p = shownParts(st.w).find(x => x.L === L); const g = suggest(p && p.text); return { L, mode: g.mode, min: g.min, run: false, base: 0, at: 0, lead: 10000, fresh: true }; };
+    const tmFor = L => { if (tm && tm.L === L) return tm; const p = shownParts(st.w).find(x => x.L === L); const g = clockOf(p), none = g.mode === 'none'; return { L, mode: none ? 'up' : g.mode, min: none ? 0 : g.min, run: false, base: 0, at: 0, lead: 10000, fresh: true }; };
     const elapsed = t => t.base + (t.run ? Date.now() - t.at : 0) - t.lead; // negative while counting in
     const mmss = x => { x = Math.max(0, Math.round(x)); return `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`; };
     // What the clock says right now.
@@ -460,7 +491,7 @@ export function install(X) {
       if (e < 0) return { big: String(Math.ceil(-e / 1000)), sub: 'Get ready', lead: true };
       const sec = e / 1000;
       if (t.mode === 'emom') { const r = Math.floor(sec / 60) + 1; if (tot && sec >= tot) return { big: 'Done', sub: `${t.min} rounds`, end: true }; return { big: mmss(60 - (sec % 60)), sub: `Round ${r}${t.min ? ` of ${t.min}` : ''}` }; }
-      if (t.mode === 'down') { if (tot && sec >= tot) return { big: 'Time', sub: `${t.min} minutes`, end: true }; return { big: mmss(tot ? tot - sec : sec), sub: tot ? `${t.min} minutes` : 'Running' }; }
+      if (t.mode === 'down') { if (tot && sec >= tot) return { big: 'Time', sub: `${t.min} minute${t.min === 1 ? "" : "s"}`, end: true }; return { big: mmss(tot ? tot - sec : sec), sub: tot ? `${t.min} minute${t.min === 1 ? "" : "s"}` : 'Running' }; }
       if (tot && sec >= tot) return { big: mmss(tot), sub: 'Time cap', end: true };
       return { big: mmss(sec), sub: tot ? `Cap ${t.min}:00` : 'Running' };
     };
@@ -480,8 +511,28 @@ export function install(X) {
         else if (tm.mode === 'down' && tot && tot - s <= 3) { key = 'c' + s; f = 660; }
       }
       if (key && key !== lastBeep) { lastBeep = key; beep(f, d); }
-      if (tot && sec >= tot + 1 && tm.mode !== 'up') { tm.base = elapsed(tm) + tm.lead; tm.run = false; }
-      if (tot && tm.mode === 'up' && sec >= tot + 1) { tm.base = tot * 1000 + tm.lead; tm.run = false; }
+      if (tot && sec >= tot + 1 && tm.mode !== 'up') { tm.base = elapsed(tm) + tm.lead; tm.run = false; startChange(tm.L); }
+      if (tot && tm.mode === 'up' && sec >= tot + 1) { tm.base = tot * 1000 + tm.lead; tm.run = false; startChange(tm.L); }
+    };
+    // Changeover: when a part's clock runs out, the next part starts counting in (3 minutes unless the workout
+    // editor set another time). The screen shows it in the corner, then opens the next part ready to start.
+    let chg = null;
+    const startChange = L => {
+      if (!st || !st.w) return;
+      const ps = shownParts(st.w), i = ps.findIndex(x => x.L === L), nx = ps[i + 1];
+      if (!nx) return;
+      const gap = nx.gap != null ? nx.gap : GAP;
+      if (gap > 0) chg = { L: nx.L, name: nx.name || 'Part ' + nx.L, until: Date.now() + gap * 60000 };
+    };
+    const changeBox = () => {
+      let box = document.getElementById('tvChgBox');
+      if (!chg) { if (box) box.remove(); return; }
+      const left = chg.until - Date.now();
+      if (left <= 0) { const L = chg.L; chg = null; if (box) box.remove(); beep(990, 0.6); tm = null; lastBeep = ''; showFocus(L); return; }
+      if (left <= 3000 && lastBeep !== 'g' + Math.ceil(left / 1000)) { lastBeep = 'g' + Math.ceil(left / 1000); beep(660, 0.12); }
+      if (!box) { box = document.createElement('div'); box.id = 'tvChgBox'; box.className = 'tvStageBox'; document.body.appendChild(box); }
+      box.innerHTML = `<button type="button" class="tvChg" aria-label="Skip the changeover and open part ${chg.L}"><span>Change over</span><b>${mmss(left / 1000)}</b><em>Next: <i>${chg.L}</i> ${esc(chg.name)}</em><small>Tap to start now</small></button>`;
+      box.querySelector('button').onclick = () => { chg = { ...chg, until: Date.now() }; };
     };
     const timerCard = p => {
       const t = tmFor(p.L), fc = face(t), other = tm && tm.L !== p.L && tm.run;
@@ -499,7 +550,7 @@ export function install(X) {
       c.querySelectorAll('[data-tmmode]').forEach(b => b.onclick = () => { const t = tmFor(L); if (t.run) return; set({ mode: b.dataset.tmmode, base: 0, lead: 10000, fresh: true }); });
       c.querySelectorAll('[data-tmmin]').forEach(b => b.onclick = () => { const t = tmFor(L); if (t.run) return; set({ min: Math.max(0, Math.min(90, t.min + +b.dataset.tmmin)), base: 0, lead: 10000, fresh: true }); });
       c.querySelector('[data-tmgo]').onclick = () => toggleTimer(L);
-      c.querySelector('[data-tmreset]').onclick = () => { if (tm && tm.L === L) { tm = null; lastBeep = ''; pill(); } showFocus(L); };
+      c.querySelector('[data-tmreset]').onclick = () => { if (tm && tm.L === L) { tm = null; lastBeep = ''; pill(); } chg = null; changeBox(); showFocus(L); };
     };
     const toggleTimer = L => {
       if (tm && tm.L !== L && tm.run) return;
@@ -518,7 +569,7 @@ export function install(X) {
       box.querySelector('button').onclick = () => showFocus(tm.L);
     };
     const paintClock = () => {
-      tick();
+      tick(); changeBox();
       if (!tm) return;
       const fc = face(tm), c = document.querySelector(`.tvTimer[data-tl="${tm.L}"]`);
       if (c) { c.querySelector('[data-tmbig]').textContent = fc.big; c.querySelector('[data-tmsub]').textContent = fc.sub; c.classList.toggle('end', !!fc.end); c.classList.toggle('lead', !!fc.lead); const g = c.querySelector('[data-tmgo]'); if (g) g.textContent = tm.run ? 'Pause' : tm.fresh ? 'Start' : 'Resume'; }
