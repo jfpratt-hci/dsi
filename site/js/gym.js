@@ -435,7 +435,7 @@ export function install(X) {
       // 1. Workout of the day
       // No header here: the workout's name leads the screen; the logo, date and time sit in the footer.
       if (on('wod')) out.push(`<div class="tvBody tvWodS">
-        ${w ? `<h1>${esc(w.title)}</h1><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div class="tvPartBtn" role="button" tabindex="0" data-part="${p.L}" aria-label="Show part ${p.L} full screen"><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
+        ${w ? `<div class="tvTop"><div class="tvTitleRow"><h1>${esc(w.title)}</h1><div class="tvNow" data-now></div></div><div data-tl><div class="tvRule"></div></div></div><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div class="tvPartBtn" role="button" tabindex="0" data-part="${p.L}" aria-label="Show part ${p.L} full screen"><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
         : `<h1>Rest or not posted</h1><p class="tvEmpty">Coaches post the day at dandystrength.com/gym/${esc(g.id)}</p>`}</div>`);
       // 2. Today's targets (one screen per 12 members)
       const lifts = (w && w.lifts) || [];
@@ -568,8 +568,69 @@ export function install(X) {
       box.innerHTML = `<button type="button" class="tvPill${fc.end ? ' end' : ''}" aria-label="Open part ${tm.L}"><i>${tm.L}</i><b>${esc(fc.big)}</b><span>${esc(fc.sub)}</span></button>`;
       box.querySelector('button').onclick = () => showFocus(tm.L);
     };
+    /* ---------- class timer in the top bar ---------- */
+    // The workout's clocks laid end to end with a changeover between parts, against the class on now. It starts by
+    // itself at the class's start time from the schedule; a gym without a schedule taps Start class. The bar fills as
+    // the class runs and the big clock shows the part on now, the changeover, or the time left.
+    const CKEY = 'dsi.tvClass.' + gid;
+    const classPlan = () => {
+      const ps = st && st.w ? shownParts(st.w).map(p => ({ p, c: clockOf(p) })).filter(x => x.c.mode !== 'none' && x.c.min > 0) : [];
+      const segs = []; let t = 0;
+      ps.forEach((x, i) => { if (i) { const gp = x.p.gap != null ? x.p.gap : GAP; if (gp > 0) { segs.push({ k: 'gap', a: t, b: t + gp, next: x.p }); t += gp; } } segs.push({ k: 'part', a: t, b: t + x.c.min, p: x.p, c: x.c }); t += x.c.min; });
+      return { segs, used: t };
+    };
+    const classWin = () => {
+      const now = Date.now(); let man = null;
+      try { man = JSON.parse(localStorage.getItem(CKEY) || 'null'); } catch {}
+      if (man && now >= man.at && now < man.at + man.len * 60000) return { at: man.at, len: man.len, manual: true };
+      const ss = (st && st.sessions) || [], len = x => Math.round((Date.parse(x.ends_at) - Date.parse(x.starts_at)) / 60000) || 60;
+      const cur = ss.find(x => Date.parse(x.starts_at) <= now && now < Date.parse(x.ends_at));
+      if (cur) return { at: Date.parse(cur.starts_at), len: len(cur), label: `${fmtTime(cur.starts_at)} ${cur.name || 'class'}` };
+      const nx = ss.find(x => Date.parse(x.starts_at) > now);
+      return nx ? { next: true, at: Date.parse(nx.starts_at), len: len(nx), label: `${fmtTime(nx.starts_at)} ${nx.name || 'class'}` } : null;
+    };
+    let lastSeg = '';
+    const classBar = () => {
+      const box = document.querySelector('.tvWodS [data-tl]'), nowEl = document.querySelector('.tvWodS [data-now]');
+      if (!box || !nowEl) return;
+      const { segs, used } = classPlan();
+      if (!segs.length) { if (!box.querySelector('.tvRule')) box.innerHTML = '<div class="tvRule"></div>'; nowEl.innerHTML = ''; return; }
+      const win = classWin(), live = win && !win.next, len = Math.max(live ? win.len : 60, used);
+      const all = used < len ? segs.concat([{ k: 'open', a: used, b: len }]) : segs;
+      const m = live ? (Date.now() - win.at) / 60000 : -1, seg = live ? all.find(x => m >= x.a && m < x.b) : null;
+      const barHtml = `<div class="tvTL">${all.map(x => {
+        const f = Math.max(0, Math.min(1, (m - x.a) / (x.b - x.a))), cur = x === seg, done = live && m >= x.b;
+        const inner = x.k === 'part' ? `<i>${x.p.L}</i><span>${esc(x.p.name || 'Part ' + x.p.L)} · ${x.c.min} min</span>` : x.k === 'gap' ? `<span>${x.b - x.a}′</span>` : `<span>Open · ${Math.round(x.b - x.a)} min</span>`;
+        return `<div class="tvSeg ${x.k}${cur ? ' cur' : ''}${done ? ' done' : ''}" style="flex:${x.b - x.a} 1 0"><b style="width:${f * 100}%"></b>${inner}</div>`;
+      }).join('')}${live ? `<em class="tvMark" style="left:${Math.min(100, (m / len) * 100)}%"></em>` : ''}</div>
+        <div class="tvEnds"><span>${live ? `${fmtTime(win.at)} start` : 'Class plan'}</span>${live && win.manual ? '<button type="button" data-classoff>End class timer</button>' : ''}<span>${live ? `${fmtTime(win.at + len * 60000)} end` : `${used} of ${len} min`}</span></div>`;
+      if (box.innerHTML !== barHtml) box.innerHTML = barHtml;
+      // The big clock beside the title.
+      let html = '';
+      if (!win) html = `<button type="button" class="tvStartC" data-classgo>Start class</button>`;
+      else if (win.next) { const s = (win.at - Date.now()) / 1000; html = `<div class="lbl">Next class</div><b>${s < 3600 ? mmss(s) : fmtTime(win.at)}</b><small>${esc(win.label)} · <button type="button" class="tvStartL" data-classgo>Start now</button></small>`; }
+      else if (seg && seg.k === 'part') {
+        const into = (m - seg.a) * 60, left = (seg.b - m) * 60, c = seg.c;
+        const big = c.mode === 'emom' ? mmss(60 - (into % 60)) : c.mode === 'up' ? mmss(into) : mmss(left);
+        const sub = c.mode === 'emom' ? `Round ${Math.floor(into / 60) + 1} of ${c.min}` : c.mode === 'up' ? `Cap ${c.min}:00` : `${c.min} minute${c.min === 1 ? '' : 's'}`;
+        html = `<div class="lbl"><i>${seg.p.L}</i>${esc(seg.p.name || 'Part ' + seg.p.L)}</div><b>${big}</b><small>${sub}</small>`;
+      } else if (seg && seg.k === 'gap') html = `<div class="lbl chg">Change over</div><b class="chg">${mmss((seg.b - m) * 60)}</b><small>Next: ${seg.next.L} ${esc(seg.next.name || '')}</small>`;
+      else if (seg) html = `<div class="lbl">Cooldown</div><b>${mmss((seg.b - m) * 60)}</b><small>Class ends ${fmtTime(win.at + len * 60000)}</small>`;
+      if (nowEl.innerHTML !== html) nowEl.innerHTML = html;
+      // Light up the card on now, and beep as each part and changeover begins.
+      const onL = seg && seg.k === 'part' ? seg.p.L : '';
+      document.querySelectorAll('.tvWodS .tvPartBtn').forEach(c => c.classList.toggle('on', c.dataset.part === onL));
+      const key = seg ? seg.k + seg.a : '';
+      if (live && key && lastSeg && key !== lastSeg) beep(990, 0.5);
+      lastSeg = key;
+    };
+    document.addEventListener('click', function onClassTap(e) {
+      if (tok !== S.tok) return document.removeEventListener('click', onClassTap);
+      if (e.target.closest('[data-classgo]')) { const w0 = classWin(); try { localStorage.setItem(CKEY, JSON.stringify({ at: Date.now(), len: (w0 && w0.len) || 60 })); } catch {} lastSeg = ''; classBar(); }
+      if (e.target.closest('[data-classoff]')) { try { localStorage.removeItem(CKEY); } catch {} classBar(); }
+    });
     const paintClock = () => {
-      tick(); changeBox();
+      tick(); changeBox(); classBar();
       if (!tm) return;
       const fc = face(tm), c = document.querySelector(`.tvTimer[data-tl="${tm.L}"]`);
       if (c) { c.querySelector('[data-tmbig]').textContent = fc.big; c.querySelector('[data-tmsub]').textContent = fc.sub; c.classList.toggle('end', !!fc.end); c.classList.toggle('lead', !!fc.lead); const g = c.querySelector('[data-tmgo]'); if (g) g.textContent = tm.run ? 'Pause' : tm.fresh ? 'Start' : 'Resume'; }

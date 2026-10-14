@@ -1246,3 +1246,34 @@ td.nowrap{white-space:nowrap}
 /* Screen dots and pause: bottom center, in the footer line between the logo and the clock. */
 .tvStageBox .tvDots,main.wrap .tvDots{top:auto;right:auto;left:50%;bottom:1.2cqw;transform:translateX(-50%);grid-auto-flow:column;align-items:center;gap:.9cqw}
 .tvStageBox .tvDots .tvPause{margin-top:0;margin-left:.4cqw}
+
+/* Class TV: the class timer in the top bar of the workout screen (sizes are shares of the 16:9 picture's width) */
+.tvTop{display:grid;gap:.5cqw}
+.tvTitleRow{display:flex;justify-content:space-between;align-items:flex-end;gap:2cqw}
+.tvTop .tvTitleRow h1,.tvWodS .tvTop h1{border-bottom:0;padding-bottom:0;margin:0;min-width:0}
+.tvRule{height:.3cqw;background:var(--ink)}
+.tvNow{display:grid;justify-items:end;gap:.2cqw;flex:none;text-align:right}
+.tvNow:empty{display:none}
+.tvNow .lbl{display:flex;align-items:center;gap:.6cqw;font:700 1.15cqw var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.tvNow .lbl i{font:900 1.6cqw/1 var(--disp);font-style:normal;background:var(--accent);color:#111;border-radius:.4cqw;padding:.2cqw .6cqw}
+.tvNow .lbl.chg{color:var(--accent)}
+.tvNow b{font:700 5.6cqw/.9 var(--mono);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.tvNow b.chg{color:var(--accent)}
+.tvNow small{font:600 1.15cqw var(--sans);color:var(--muted)}
+.tvStartC{font:800 1.6cqw var(--disp);text-transform:uppercase;letter-spacing:.04em;background:var(--accent);color:#111;border:0;border-radius:.5cqw;padding:.7cqw 1.6cqw;cursor:pointer}
+.tvStartL{font:inherit;color:var(--accent);background:none;border:0;padding:0;text-decoration:underline;cursor:pointer}
+.tvTL{position:relative;display:flex;gap:.2cqw;height:2.3cqw}
+.tvSeg{position:relative;min-width:0;border-radius:.3cqw;background:var(--panel2);overflow:hidden;display:flex;align-items:center;gap:.5cqw;padding:0 .6cqw;font:700 1.05cqw var(--sans);color:var(--muted);white-space:nowrap}
+.tvSeg>b{position:absolute;inset:0 auto 0 0;background:color-mix(in srgb,var(--accent) 16%,transparent)}
+.tvSeg i{font:900 1.35cqw/1 var(--disp);font-style:normal;color:var(--ink);position:relative}
+.tvSeg span{position:relative;overflow:hidden;text-overflow:ellipsis}
+.tvSeg.gap{background:repeating-linear-gradient(135deg,var(--panel2),var(--panel2) .4cqw,var(--line) .4cqw,var(--line) .8cqw);justify-content:center;padding:0;font-family:var(--mono);font-size:.85cqw}
+.tvSeg.open{background:transparent;border:.12cqw dashed var(--line)}
+.tvSeg.done i,.tvSeg.done span{color:var(--muted)}
+.tvSeg.cur{background:color-mix(in srgb,var(--accent) 14%,var(--panel2));box-shadow:inset 0 0 0 .16cqw var(--accent)}
+.tvSeg.cur>b{background:color-mix(in srgb,var(--accent) 55%,transparent)}
+.tvSeg.cur i,.tvSeg.cur span{color:var(--ink);text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.tvMark{position:absolute;top:-.5cqw;bottom:-.5cqw;width:.2cqw;background:var(--ink);border-radius:.1cqw;transform:translateX(-50%);box-shadow:0 0 0 .15cqw var(--bg)}
+.tvEnds{display:flex;justify-content:space-between;align-items:center;gap:1cqw;font:600 .95cqw var(--mono);color:var(--muted);letter-spacing:.06em}
+.tvEnds button{font:inherit;color:var(--muted);background:none;border:0;text-decoration:underline;cursor:pointer;padding:0}
+.tvWodS .tvPartBtn.on{border-color:var(--accent);box-shadow:0 0 0 .12cqw var(--accent)}
