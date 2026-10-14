@@ -1298,3 +1298,7 @@ td.nowrap{white-space:nowrap}
 .wodPH .wodMv{order:2;margin-left:auto}
 .wodPH input[data-name]{order:3;flex:1 1 100%}
 .wodClock select{font-size:14px;padding:0 8px;line-height:1}
+/* Part view: the part tabs are the title, a little bigger */
+.tvFTabs{gap:1cqw}
+.tvFTabs button{font-size:2.2cqw;padding:.7cqw 1.4cqw;gap:.8cqw;border-radius:.6cqw}
+.tvFTabs button i{width:2.8cqw;height:2.8cqw;font-size:1.9cqw;border-radius:.4cqw}

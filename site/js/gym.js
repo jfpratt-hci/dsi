@@ -698,7 +698,7 @@ export function install(X) {
         <header class="tvFHead"><nav class="tvFTabs">${ps.map(x => `<button type="button" data-fpart="${x.L}"${x.L === p.L ? ' aria-current="true"' : ''}><i>${x.L}</i>${esc(x.name || 'Part ' + x.L)}</button>`).join('')}</nav>
           <div class="tvClock">${clock()}</div><button type="button" class="tvFClose" id="tvFClose" aria-label="Close (Esc)">×</button></header>
         <div class="tvFBody">
-          <div class="tvFMain"><div class="tvFName"><i>${p.L}</i>${esc(p.name || 'Part ' + p.L)}</div>
+          <div class="tvFMain">
             <p class="tvFText" id="tvFText">${esc(p.text)}</p>
             ${l ? `<div class="tvFLift">${esc(l.n)}${l.sch ? ` · ${esc(l.sch)}` : ''}${l.why ? `<span>${esc(l.why)}</span>` : ''}</div>` : ''}
             ${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>
