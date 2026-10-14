@@ -1238,3 +1238,8 @@ td.nowrap{white-space:nowrap}
 .tvChg b{font:600 6cqw/1 var(--mono)}
 .tvChg em{font:800 2cqw var(--disp);font-style:normal;text-transform:uppercase}.tvChg em i{font-style:normal;color:var(--accent)}
 .tvChg small{font-size:1cqw;color:var(--muted)}
+/* One rule under the top line of every TV screen: same weight, same space above and below as the part view. */
+.tvS{gap:1.4cqw}
+.tvHead,.tvS .tvHead,.tvFHead{border-bottom:.3cqw solid var(--ink);padding-bottom:.9cqw}
+.tvS>.tvWodS:first-child{gap:1.4cqw}
+.tvWodS h1{margin:0;padding-bottom:.9cqw;border-bottom:.3cqw solid var(--ink)}
