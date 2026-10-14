@@ -1277,3 +1277,8 @@ td.nowrap{white-space:nowrap}
 .tvEnds{display:flex;justify-content:space-between;align-items:center;gap:1cqw;font:600 .95cqw var(--mono);color:var(--muted);letter-spacing:.06em}
 .tvEnds button{font:inherit;color:var(--muted);background:none;border:0;text-decoration:underline;cursor:pointer;padding:0}
 .tvWodS .tvPartBtn.on{border-color:var(--accent);box-shadow:0 0 0 .12cqw var(--accent)}
+.tvTop .tvTitleRow h1{white-space:nowrap;overflow:hidden;flex:1 1 auto;line-height:1}
+.tvTitleRow{align-items:center}
+.tvTop{min-width:0;grid-template-columns:minmax(0,1fr)}
+.tvTitleRow{min-width:0}
+.tvTop .tvTitleRow h1{flex:1 1 0;min-width:0}
