@@ -1243,3 +1243,6 @@ td.nowrap{white-space:nowrap}
 .tvHead,.tvS .tvHead,.tvFHead{border-bottom:.3cqw solid var(--ink);padding-bottom:.9cqw}
 .tvS>.tvWodS:first-child{gap:1.4cqw}
 .tvWodS h1{margin:0;padding-bottom:.9cqw;border-bottom:.3cqw solid var(--ink)}
+/* Screen dots and pause: bottom center, in the footer line between the logo and the clock. */
+.tvStageBox .tvDots,main.wrap .tvDots{top:auto;right:auto;left:50%;bottom:1.2cqw;transform:translateX(-50%);grid-auto-flow:column;align-items:center;gap:.9cqw}
+.tvStageBox .tvDots .tvPause{margin-top:0;margin-left:.4cqw}
