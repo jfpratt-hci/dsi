@@ -665,13 +665,12 @@ export function install(X) {
       let html = '';
       if (!win) html = '';
       else if (win.next) { const s = (win.at - Date.now()) / 1000; html = `<div class="lbl">Next class</div><b>${s < 3600 ? mmss(s) : fmtTime(win.at)}</b>${s < 3600 ? `<small>Starts ${fmtTime(win.at)}</small>` : ''}`; }
-      else if (seg && seg.k === 'part') {
-        const into = (m - seg.a) * 60, left = (seg.b - m) * 60, c = seg.c;
-        const big = c.mode === 'emom' ? mmss(60 - (into % 60)) : c.mode === 'up' ? mmss(into) : mmss(left);
-        const sub = c.mode === 'emom' ? `Round ${Math.floor(into / 60) + 1} of ${c.min}` : c.mode === 'up' ? `Cap ${c.min}:00` : `${c.min} minute${c.min === 1 ? '' : 's'}`;
-        html = `<div class="lbl"><i>${seg.p.L}</i>${esc(seg.p.name || 'Part ' + seg.p.L)}</div><b>${big}</b><small>${sub}</small>`;
-      } else if (seg && seg.k === 'gap') html = `<div class="lbl chg">Change over</div><b class="chg">${mmss((seg.b - m) * 60)}</b><small>Next: ${seg.next.L} ${esc(seg.next.name || '')}</small>`;
-      else if (seg) html = `<div class="lbl">Cooldown</div><b>${mmss((seg.b - m) * 60)}</b><small>Class ends ${fmtTime(win.at + len * 60000)}</small>`;
+      else if (live) {
+        // The main screen tracks the whole class; each part's own clock lives in the part view.
+        const el = m * 60, leftMin = Math.max(0, Math.ceil(len - m));
+        const what = !seg ? '' : seg.k === 'part' ? `${seg.p.L} ${esc(seg.p.name || 'Part ' + seg.p.L)} now` : seg.k === 'gap' ? `Change over, next ${seg.next.L}` : 'Cooldown';
+        html = `<div class="lbl">Class time</div><b>${mmss(el)}</b><small>${leftMin} min left${what ? ' · ' + what : ''}</small>`;
+      }
       if (nowEl.innerHTML !== html) { nowEl.innerHTML = html; fitTitle(); }
       // Light up the card on now, and beep as each part and changeover begins.
       const onL = seg && seg.k === 'part' ? seg.p.L : '';
