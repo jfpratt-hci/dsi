@@ -168,11 +168,12 @@ export function install(X) {
     const ps = partsOf(w, true);
     const box = p => {
       const l = p.lift || {}, tt = l.rx && l.rx.length ? 'rx' : l.f ? 'f' : '';
-      return `<article class="wodPart" data-p="${p.L}"${p.L === 'D' && !p.text && !p.lift && !p.time && !p.reps ? ' hidden' : ''}>
-        <div class="wodPH"><i>${p.L}</i><label class="vh" for="wp-${p.L}">Part ${p.L} name</label><input id="wp-${p.L}" data-name maxlength="40" value="${esc(p.name)}" placeholder="${PH[p.L]}">${p.L === 'D' ? '<button type="button" class="btn ghost sm" data-rmd>Remove</button>' : ''}</div>
+      return `<article class="wodPart" data-p="${p.L}" data-orig="${p.L}"${p.L === 'D' && !p.text && !p.lift && !p.time && !p.reps ? ' hidden' : ''}>
+        <div class="wodPH"><span class="wodDrag" title="Drag to move this part" aria-hidden="true">⠿</span><i>${p.L}</i><label class="vh" for="wp-${p.L}">Part ${p.L} name</label><input id="wp-${p.L}" data-name maxlength="40" value="${esc(p.name)}" placeholder="${PH[p.L]}">
+          <span class="wodMv"><button type="button" class="btn ghost sm" data-mv="-1" aria-label="Move this part earlier">◀</button><button type="button" class="btn ghost sm" data-mv="1" aria-label="Move this part later">▶</button><button type="button" class="btn ghost sm" data-rm aria-label="Remove this part">✕</button></span></div>
         <label class="vh" for="wt-${p.L}">Part ${p.L} workout</label><textarea id="wt-${p.L}" data-text rows="7" maxlength="2000" placeholder="${p.L === 'A' ? 'Warmup, skill or mobility' : 'Sets, reps and movements'}">${esc(p.text)}</textarea>
         ${(() => { const c = p.clock && p.clock.mode ? p.clock : suggestClock(p.text); return `<div class="wodClock" role="group" aria-label="Part ${p.L} clock"${p.clock && p.clock.mode ? '' : ' data-auto'}><span>Clock</span><label class="vh" for="wcm-${p.L}">Part ${p.L} clock type</label><select id="wcm-${p.L}" data-cm>${[['down', 'Count down'], ['up', 'Count up'], ['emom', 'EMOM'], ['none', 'No clock']].map(([v, n]) => `<option value="${v}"${c.mode === v ? ' selected' : ''}>${n}</option>`).join('')}</select><label class="vh" for="wcn-${p.L}">Part ${p.L} minutes</label><input id="wcn-${p.L}" data-cmin type="number" inputmode="numeric" min="0" max="90" value="${c.min || ''}" placeholder="min"${c.mode === 'none' ? ' disabled' : ''}><span>min</span></div>`; })()}
-        ${p.L === 'A' ? '<p class="hint">Part A is not logged.</p>' : `
+        ${`
         <div class="wodTog" role="group" aria-label="What members log for Part ${p.L}"><span>Members log</span>
           <label class="tog"><input type="checkbox" data-trk${p.lift ? ' checked' : ''}><span>Weight</span></label>
           <label class="tog"><input type="checkbox" data-time${p.time ? ' checked' : ''}><span>Time</span></label>
@@ -193,14 +194,14 @@ export function install(X) {
     };
     const dest = dsi ? '/week/' + day + (S.me.gym_id ? '?src=dsi' : '') : '/week/' + day;
     if (!paint(tok, `${dsi ? '' : X.officeBar(g, 'wod')}<section class="sec"><div class="secHead"><div><div class="kicker">${esc(g.name)} · ${esc(fmtDW(day))}</div><h2>${w ? 'Edit the' : 'Post the'} <span>workout</span></h2>
-        <p class="secSub">Part A is the warmup and is never logged. Parts B, C and D can each log a weight, a time, total reps, or any mix. Everyone is assumed to do all the reps.</p></div>
+        <p class="secSub">Drag a part by its handle, or use the arrows, to change the order; the letters follow the order. Each part can log a weight, a time, total reps, or any mix. Everyone is assumed to do all the reps.</p></div>
         <div class="row"><a class="btn ghost sm" href="/wod/${gid}?day=${addDays(day, -1)}">← Day before</a><input type="date" id="wd-day" value="${day}" aria-label="Pick a day" style="max-width:170px"><a class="btn ghost sm" href="/wod/${gid}?day=${addDays(day, 1)}">Next day →</a><a class="btn ghost sm" href="/program${dsi ? '' : '?gym=' + gid}">Import a week</a></div></div></section>
       <section class="sec"><form id="wodF" class="wodEd">
         <div class="field"><label for="wd-t">Title</label><input id="wd-t" maxlength="80" value="${esc((w && w.title) || '')}" placeholder="Front squat + Grace"></div>
         ${old ? '<p class="hint" style="color:var(--flat)">This day still has the old lift list. Saving switches it to Parts, so pick the weight each part logs.</p>' : ''}
         <div class="wodGrid">${ps.map(box).join('')}</div>
         <div class="formCard wodPlan" id="wodPlan"><div class="wodPlanH"><b>Class plan</b><label for="wd-gap">Between parts</label><input id="wd-gap" type="number" inputmode="numeric" min="0" max="15" value="${(ps.find(x => x.gap != null) || {}).gap ?? GAP}"><span>min</span><label for="wd-len">Class</label><input id="wd-len" type="number" inputmode="numeric" min="15" max="180" value="${classLen}"><span>min</span></div><div class="wodBar" id="wodBar"></div><p class="hint" id="wodPlanMsg"></p></div>
-        <button type="button" class="btn ghost sm" id="addD"${ps[3].text || ps[3].lift || ps[3].time || ps[3].reps ? ' hidden' : ''}>+ Add Part D</button>
+        <div class="row wodAdd"><button type="button" class="btn ghost sm" id="addFirst">+ Add a part at the start</button><button type="button" class="btn ghost sm" id="addD">+ Add a part at the end</button><span class="hint" id="addMsg"></span></div>
         <div class="row" style="margin-top:16px"><button class="btn" type="submit">${w ? 'Save changes' : 'Post the workout'}</button><a class="btn ghost" href="${dest}">See it on the week</a>${dsi ? '' : `<a class="btn ghost" href="/results/${gid}?day=${day}">Enter results</a><a class="btn ghost" href="/tv/${gid}" target="_blank">Dandy TV</a>`}<span class="hint" id="wd-msg">${nLogs ? `${nLogs} logged already. Their weights stay with each part letter.` : ''}</span></div>
       </form></section>`)) return;
     $('#wd-day').onchange = e => { if (e.target.value) go(`/wod/${gid}?day=${e.target.value}`); };
@@ -208,7 +209,7 @@ export function install(X) {
       const L = a.dataset.p, trk = $('[data-trk]', a);
       if (!trk || !trk.checked) return null;
       const n = $('[data-n]', a).value.trim(), imp = $('[data-imp]', a).value, tt = imp && $('[data-tt]', a).value === 'f' ? 'rx' : $('[data-tt]', a).value, b = $('[data-b]', a).value;
-      const prev = (ps.find(p => p.L === L) || {}).lift || {};
+      const prev = (ps.find(p => p.L === a.dataset.orig) || {}).lift || {};
       const l = { id: L.toLowerCase(), part: L, n, sch: $('[data-sch]', a).value.trim() };
       const bn = (BASE_OPTS.find(x => x[0] === b) || [, ''])[1].toLowerCase();
       if (tt === 'f') { const f = +$('[data-f]', a).value; if (f > 0) { l.b = b; l.f = Math.round(f) / 100; l.why = `${Math.round(f)}% of your ${bn}`; } }
@@ -244,9 +245,66 @@ export function install(X) {
       };
       if (trk) { trk.onchange = sync; a.addEventListener('input', sync); a.addEventListener('change', sync); sync(); }
     });
-    const dBox = $('.wodPart[data-p="D"]');
-    $('#addD').onclick = e => { dBox.hidden = false; e.target.hidden = true; $('[data-text]', dBox).focus(); };
-    $('[data-rmd]', dBox).onclick = () => { dBox.hidden = true; $('#addD').hidden = false; $('[data-text]', dBox).value = ''; $('[data-name]', dBox).value = ''; $('[data-time]', dBox).checked = false; $('[data-reps]', dBox).checked = false; const t = $('[data-trk]', dBox); t.checked = false; t.dispatchEvent(new Event('change')); };
+    /* ---------- order: drag, arrows, add at the start or the end, remove ---------- */
+    // Parts are A to D in the order they stand. Moving a part takes everything in it along and the letters follow.
+    const grid = $('.wodGrid');
+    const clearPart = a => {
+      $('[data-text]', a).value = ''; $('[data-name]', a).value = '';
+      ['[data-time]', '[data-reps]'].forEach(q => { const c = $(q, a); if (c) c.checked = false; });
+      const t = $('[data-trk]', a); if (t) { t.checked = false; t.dispatchEvent(new Event('change')); }
+      const ck = $('.wodClock', a); ck.dataset.auto = ''; $('[data-cm]', a).value = 'up'; $('[data-cmin]', a).value = ''; $('[data-cmin]', a).disabled = false;
+    };
+    let warned = false;
+    const relabel = () => {
+      const all = $$('.wodPart', grid), shown = all.filter(a => !a.hidden);
+      all.filter(a => a.hidden).forEach(a => grid.appendChild(a));
+      $$('.wodPart', grid).forEach((a, i) => {
+        const L = LET[i], old = a.dataset.p; if (old === L) return;
+        a.dataset.p = L; $('.wodPH i', a).textContent = L;
+        $$('[id]', a).forEach(el => { el.id = el.id.replace(new RegExp('-' + old + '$'), '-' + L); });
+        $$('label[for]', a).forEach(el => { el.htmlFor = el.htmlFor.replace(new RegExp('-' + old + '$'), '-' + L); });
+        $$('[aria-label]', a).forEach(el => { el.setAttribute('aria-label', el.getAttribute('aria-label').replace('Part ' + old, 'Part ' + L)); });
+        $$('label.vh', a).forEach(el => { el.textContent = el.textContent.replace('Part ' + old, 'Part ' + L); });
+        $('[data-name]', a).placeholder = PH[L];
+      });
+      shown.forEach((a, i) => { $('[data-mv="-1"]', a).disabled = i === 0; $('[data-mv="1"]', a).disabled = i === shown.length - 1; $('[data-rm]', a).disabled = shown.length < 2; });
+      const free = all.some(a => a.hidden);
+      $('#addD').disabled = $('#addFirst').disabled = !free;
+      $('#addMsg').textContent = free ? '' : 'Four parts is the most a day holds.';
+      if (nLogs && !warned && all.some(a => a.dataset.p !== a.dataset.orig)) { warned = true; $('#wd-msg').textContent = `${nLogs} already logged. Results stay with the part letter, so check them after you save.`; }
+      drawPlan();
+    };
+    const moveTo = (a, i) => { const shown = $$('.wodPart', grid).filter(x => !x.hidden && x !== a); grid.insertBefore(a, shown[i] || shown[shown.length - 1].nextSibling); relabel(); };
+    const addPart = first => {
+      const a = $$('.wodPart', grid).find(x => x.hidden); if (!a) return;
+      clearPart(a); a.hidden = false; if (first) grid.insertBefore(a, grid.firstChild);
+      relabel(); $('[data-name]', a).focus();
+    };
+    $('#addFirst').onclick = () => addPart(true);
+    $('#addD').onclick = () => addPart(false);
+    grid.addEventListener('click', e => {
+      const b = e.target.closest('[data-mv],[data-rm]'); if (!b) return;
+      const a = b.closest('.wodPart'), shown = $$('.wodPart', grid).filter(x => !x.hidden), i = shown.indexOf(a);
+      if (b.dataset.rm !== undefined) { if (shown.length < 2) return; clearPart(a); a.hidden = true; relabel(); return; }
+      const j = i + +b.dataset.mv; if (j < 0 || j >= shown.length) return;
+      moveTo(a, j); b.focus();
+    });
+    // Drag by the handle (mouse, trackpad, or a finger on an iPad).
+    let dragA = null;
+    grid.addEventListener('pointerdown', e => { const h = e.target.closest('.wodDrag'); if (h) { const a = h.closest('.wodPart'); a.draggable = true; } });
+    grid.addEventListener('dragstart', e => { dragA = e.target.closest('.wodPart'); if (!dragA) return; dragA.classList.add('dragging'); try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragA.dataset.p); } catch {} });
+    const marks = () => $$('.wodPart', grid).forEach(x => x.classList.remove('dropB', 'dropA'));
+    grid.addEventListener('dragover', e => {
+      if (!dragA) return; const a = e.target.closest('.wodPart'); if (!a || a === dragA || a.hidden) return;
+      e.preventDefault(); const r = a.getBoundingClientRect(), before = e.clientX < r.left + r.width / 2;
+      marks(); a.classList.add(before ? 'dropB' : 'dropA');
+    });
+    grid.addEventListener('drop', e => {
+      if (!dragA) return; e.preventDefault();
+      const a = e.target.closest('.wodPart'); marks();
+      if (a && a !== dragA && !a.hidden) { const r = a.getBoundingClientRect(); grid.insertBefore(dragA, e.clientX < r.left + r.width / 2 ? a : a.nextSibling); relabel(); }
+    });
+    grid.addEventListener('dragend', () => { if (dragA) { dragA.classList.remove('dragging'); dragA.draggable = false; } dragA = null; marks(); });
     // Class plan: each part's clock plus the changeover between parts, against the class length.
     const clockIn = a => { const m = $('[data-cm]', a).value, n = Math.max(0, Math.min(90, parseInt($('[data-cmin]', a).value, 10) || 0)); return { mode: m, min: m === 'none' ? 0 : n }; };
     const drawPlan = () => {
@@ -266,8 +324,7 @@ export function install(X) {
       $('[data-name]', a).addEventListener('input', drawPlan);
     });
     ['#wd-gap', '#wd-len'].forEach(id => { $(id).oninput = drawPlan; });
-    $('#addD').addEventListener('click', drawPlan); $('[data-rmd]', dBox).addEventListener('click', drawPlan);
-    drawPlan();
+    relabel();
     $('#wodF').onsubmit = async e => {
       e.preventDefault();
       const msg = $('#wd-msg'), sections = [], lifts = [];

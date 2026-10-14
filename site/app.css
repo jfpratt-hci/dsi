@@ -1282,3 +1282,19 @@ td.nowrap{white-space:nowrap}
 .tvTop{min-width:0;grid-template-columns:minmax(0,1fr)}
 .tvTitleRow{min-width:0}
 .tvTop .tvTitleRow h1{flex:1 1 0;min-width:0}
+/* Workout editor: move parts */
+.wodPH{display:flex;align-items:center;gap:8px}
+.wodPH input{flex:1 1 auto;min-width:0}
+.wodDrag{cursor:grab;color:var(--muted);font-size:20px;line-height:1;padding:4px 2px;user-select:none;touch-action:none}
+.wodDrag:active{cursor:grabbing}
+.wodMv{display:flex;gap:4px;flex:none}
+.wodMv .btn{min-width:30px;padding:4px 0}
+.wodMv .btn:disabled{opacity:.3}
+.wodPart.dragging{opacity:.4}
+.wodPart.dropB{box-shadow:-5px 0 0 var(--accent)}
+.wodPart.dropA{box-shadow:5px 0 0 var(--accent)}
+.wodAdd{gap:8px;align-items:center}
+.wodPH{flex-wrap:wrap;row-gap:8px}
+.wodPH .wodMv{order:2;margin-left:auto}
+.wodPH input[data-name]{order:3;flex:1 1 100%}
+.wodClock select{font-size:14px;padding:0 8px;line-height:1}
