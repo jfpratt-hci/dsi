@@ -333,7 +333,7 @@ export default function LogClass() {
       <View style={{ height: 18 }} />
       <Group>
         <Row first label="All of today's results" onPress={() => { Keyboard.dismiss(); flush(); router.push({ pathname: '/office/results', params: { gym: g.id } }); }} />
-        <Row label="Big screen" detail="Website" onPress={() => openWeb(tvHref(g))} />
+        <Row label="Dandy TV" detail="Website" onPress={() => openWeb(tvHref(g))} />
       </Group>
     </OfficeScreen>
   );

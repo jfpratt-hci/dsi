@@ -119,7 +119,7 @@ export function install(X) {
       <form class="cvNew" id="cvNew"${live.length ? ' hidden' : ''}><label for="cvT">Time</label><input id="cvT" type="time" value="${roundNow()}" required><label for="cvN">Class</label><input id="cvN" maxlength="40" value="CrossFit" required><button class="btn sm">Start ${live.length ? 'this class' : 'today\'s class'}</button><span class="hint">No schedule needed. The class is saved so attendance counts.</span></form>
       ${!w ? `<div class="formCard cvNote"><b>No workout posted for ${esc(day === tdy ? 'today' : dayName(day))}.</b> You can still take attendance. <a href="/wod/${gid}?day=${day}">Post the workout</a> to log weights and times.</div>` : ''}
       ${pick ? `<div class="cvBar"><div class="cvAdd"><label class="vh" for="cvAddIn">Add someone</label><input id="cvAddIn" list="cvPeople" placeholder="Add someone: type a name, press Enter" autocomplete="off"><datalist id="cvPeople">${members.filter(m => !ids.includes(m.id)).map(m => `<option value="${esc(m.display_name)}">`).join('')}</datalist></div>
-          <span class="cvCount"><b>${here.size}</b> here of ${ids.length}</span>${w ? `<a class="btn ghost sm" href="/tv/${esc(g.slug || gid)}" target="_blank" rel="noopener">Big screen</a>` : ''}</div>
+          <span class="cvCount"><b>${here.size}</b> here of ${ids.length}</span>${w ? `<a class="btn ghost sm" href="/tv/${esc(g.slug || gid)}" target="_blank" rel="noopener">Dandy TV</a>` : ''}</div>
         ${ids.length ? `<div class="cvWrap"><table class="cvGrid" id="cvGrid"><thead><tr><th scope="col" class="cvWhoH">${esc(tAt(pick.starts_at, g.tz))} ${esc(pick.name)}</th><th scope="col" class="cvHereH">Here</th>${its.map(head).join('')}</tr></thead><tbody>
           ${order.map(id => `<tr data-row="${id}"><th scope="row" class="cvWho"><span class="cvName">${esc(nameOf(id))}</span><button type="button" class="cvX" data-out="${id}" aria-label="Take ${esc(nameOf(id))} off this class">×</button><span class="cvDot" data-st aria-live="polite"></span></th><td class="cvHere"><input type="checkbox" data-here="${id}"${here.has(id) ? ' checked' : ''} aria-label="${esc(nameOf(id))} is here"></td>${its.map(it => `<td>${cell(id, it)}</td>`).join('')}</tr>`).join('')}
           </tbody></table></div>
@@ -218,7 +218,7 @@ export function install(X) {
     const owner = isOwner(g.id);
     const tabs = X.OFFICE.filter(o => !o[3] || owner);
     return `<section class="sec offHead"><div class="secHead"><div><div class="kicker">${esc(g.city || 'Gym')} · Gym office</div><h2>${esc(g.name)}</h2></div>
-        <div class="row"><a class="btn ghost sm" href="/tv/${esc(g.slug || g.id)}" target="_blank">Big screen</a><a class="btn ghost sm" href="/gyms/${g.id}">Gym board</a></div></div>
+        <div class="row"><a class="btn ghost sm" href="/tv/${esc(g.slug || g.id)}" target="_blank">Dandy TV</a><a class="btn ghost sm" href="/gyms/${g.id}">Gym board</a></div></div>
       <nav class="tabs offTabs" aria-label="Gym office">${tabs.map(([k, n]) => `<a class="tab" href="${X.officeHref(g.id, k)}"${k === active ? ' aria-current="page" aria-selected="true"' : ''}>${esc(n)}</a>`).join('')}</nav></section>`;
   }
   X.officeBar = officeBar;

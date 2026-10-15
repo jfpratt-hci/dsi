@@ -25,7 +25,7 @@ export function install(X) {
   const OWNER = [
     ['Dandy Office', 'Check in, schedule, members, billing, waivers and contracts, staff and attendance, in one office.'],
     ['Dandy Plan', 'Tell it the goal, like Murph prep or a ten week max out, and it writes the cycle as Parts A to D.'],
-    ['Dandy TV', 'Every TV in the gym, run for you. The gym board shows the workout and every member\'s own target weight. The lobby board sells events, the free class and gear with QR sign ups.'],
+    ['Dandy TV', 'Signage you manage for every screen: the class TV shows the workout and every member\'s own target weight, live, and the lobby TV shows your schedule, PRs and news.'],
   ];
   // The two screens, shown on the homepage as mini TVs. Decorative mocks; the real ones run at /tv and on the lobby player.
   const TV_ROWS = [['Sam', 225, 'var(--squat)'], ['Alex', 185, 'var(--bench)'], ['Jordan', 205, 'var(--dead)'], ['Riley', 155, 'var(--clean)']];
@@ -36,12 +36,12 @@ export function install(X) {
     let r = ''; for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (on(x, y) && !(fin(x, y) && !on(x, y))) r += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
     return `<svg viewBox="-2 -2 25 25" aria-hidden="true" shape-rendering="crispEdges"><rect x="-2" y="-2" width="25" height="25" fill="#fff"/><g fill="#0E1420">${r}</g></svg>`; };
   const VIEWS_TV = [
-    { k: 'gym', n: 'Gym board', h: 'The class runs itself',
-      p: 'Today\'s workout in Parts A to D, every member\'s own target weight from their PRs, and the PR bell when someone hits one.',
-      t: ['Shows only the people in the class that is on', 'Coaches enter weights live from their phone', 'Pick the parts, the timer and the layout'] },
-    { k: 'lobby', n: 'Lobby board', h: 'The front door sells the gym', soon: 1,
-      p: 'Events, the free class, new gear, reviews and this week\'s PRs rotate on their own, built from what is already in your office.',
-      t: ['A QR code on every slide: book, register, order or text the gym', 'See which slide brought in each sign up', 'Pick the slides, the order and how long each one stays up'] }
+    { k: 'gym', n: 'Class TV', h: 'The class runs itself',
+      p: 'Today\'s workout in Parts A to D, every member\'s own target weight from their PRs, and the class clock right on the screen.',
+      t: ['Every member\'s target, worked out from their PRs', 'Part timers and the class clock run from your schedule', 'Coaches enter weights live from their phone'] },
+    { k: 'lobby', n: 'Lobby TV', h: 'The front door sells the gym',
+      p: 'Your schedule, this week\'s PRs, events and offers rotate on their own, built from what is already in your office.',
+      t: ['A QR code on every slide: book, register or order', 'Pick the slides and the order', 'Set how long each slide stays up'] }
   ];
   const tvMock = k => k === 'gym'
     ? `<div class="hmTv" aria-hidden="true"><div class="hmTvTop"><b>Part B · Back squat</b><span>5 x 3 at 85%</span></div>
@@ -52,11 +52,11 @@ export function install(X) {
   const SCREENS = () => `
       <section class="hmScreens" aria-labelledby="hmScreensH">
         <div class="hmScreensHead"><h2 class="hmH2" id="hmScreensH">Dandy TV</h2>
-          <p class="hmSideSub">One product for every screen in the gym. Plug in a TV, pick a board, make it yours. Run the gym board in the box and the lobby board at the door, or flip one TV between them.</p></div>
-        <div class="hmTvTabs" role="tablist" aria-label="Dandy TV boards">${VIEWS_TV.map((v, i) => `<button type="button" role="tab" id="tvtab-${v.k}" aria-controls="tvpanel-${v.k}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" data-tvtab="${v.k}">${v.n}${v.soon ? ' <span class="hmNew">Coming soon</span>' : ''}</button>`).join('')}</div>
+          <p class="hmSideSub">One product for every screen in the gym. Plug in a TV and make it yours. Run the class TV on the floor and the lobby TV at the front door.</p></div>
+        <div class="hmTvTabs" role="tablist" aria-label="Dandy TV screens">${VIEWS_TV.map((v, i) => `<button type="button" role="tab" id="tvtab-${v.k}" aria-controls="tvpanel-${v.k}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" data-tvtab="${v.k}">${v.n}${v.soon ? ' <span class="hmNew">Coming soon</span>' : ''}</button>`).join('')}</div>
         ${VIEWS_TV.map((v, i) => `<div class="hmScreen" role="tabpanel" id="tvpanel-${v.k}" aria-labelledby="tvtab-${v.k}"${i ? ' hidden' : ''}>${tvMock(v.k)}
           <div class="hmScreenTx"><h3 class="hmH3">${v.h}</h3><p>${v.p}</p><ul class="hmTicks">${v.t.map(x => `<li>${x}</li>`).join('')}</ul>
-            <p class="hmFine">Both boards run on any smart TV, laptop or iPad on HDMI, and you customize each one from your office.</p></div></div>`).join('')}
+            <p class="hmFine">Both screens run on any smart TV, laptop or iPad on HDMI, and you customize each one from your office.</p></div></div>`).join('')}
       </section>`;
   const wireTvTabs = () => {
     const tabs = [...document.querySelectorAll('[data-tvtab]')]; if (!tabs.length) return;
@@ -137,11 +137,11 @@ ${SCREENS()}
   /* ---------- plans: sells the gym plans and compares every feature ---------- */
   // Each card says what it adds over the one before; the table compares every feature by what owners care about.
   const CARD = {
-    base: ['The DSI boards, PR wall and gym league', 'Workouts in Parts A to D, results and Log a class', 'Dandy TV gym board for every class', 'Class booking and check in'],
+    base: ['The DSI boards, PR wall and gym league', 'Workouts in Parts A to D, results and Log a class', 'Dandy TV for classes and the lobby', 'Class booking and check in'],
     build: ['Everything in Base, for unlimited members', 'Billing, invoices and autopay on your Stripe', 'Waivers and contracts signed online', 'Staff, coach swaps, hours, attendance', 'Dandy Plan AI programming, 4 weeks a month'],
     peak: ['Everything in Build', 'Unlimited Dandy Plan AI programming', 'DSI Pro seats at $3 instead of $4', 'Payroll export and multiple locations as they ship'],
   };
-  const EVERY = ['The DSI score and leaderboards', 'Dandy TV gym board', 'Workouts in Parts A to D', 'Class booking and check in', 'My training for every member', 'Month to month, no contract'];
+  const EVERY = ['The DSI score and leaderboards', 'Dandy TV signage for classes and the lobby', 'Workouts in Parts A to D', 'Class booking and check in', 'My training for every member', 'Month to month, no contract'];
   const GROUPS = [
     ['Members and the DSI', [
       ['DSI score, leaderboards, PR wall and gym league', 'y', 'y', 'y'],
@@ -152,8 +152,7 @@ ${SCREENS()}
     ['Running the floor', [
       ['Workouts in Parts A to D with member targets', 'y', 'y', 'y'],
       ['Log a class: coaches type weights live', 'y', 'y', 'y'],
-      ['Dandy TV gym board: workout and member targets', 'y', 'y', 'y'],
-      ['Dandy TV lobby board: events and offers with QR sign ups', 'Coming soon', 'Coming soon', 'Coming soon'],
+      ['Dandy TV for classes and the lobby', 'y', 'y', 'y'],
       ['Class schedule, booking and check in', 'y', 'y', 'y'],
       ['Attendance history for every member', '', 'y', 'y'],
     ]],
@@ -217,7 +216,7 @@ ${SCREENS()}
           <li><b>Send us what you have</b><p>Your member list, plans and class schedule, from Kilo, Wodify, PushPress or a spreadsheet.</p></li>
           <li><b>We set up your office</b><p>Plans, classes, waiver and contract ready, with your members and their history moved over.</p></li>
           <li><b>Your members sign in</b><p>They book online, sign the waiver once and see their DSI on day one.</p></li>
-          <li><b>The TV goes on</b><p>The Dandy TV gym board shows the day's workout and every member's own target.</p></li>
+          <li><b>The TV goes on</b><p>Dandy TV shows the day's workout and every member's own target in class, and your schedule and PRs in the lobby.</p></li>
         </ol>
       </section>
       <section class="sec"><h2 class="hmH2">Questions owners ask</h2>

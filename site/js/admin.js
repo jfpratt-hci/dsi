@@ -1,6 +1,6 @@
 // Management dashboard for the Founder: /admin?tab=members|gyms|requests
 // Members: find anyone, fix their profile, set their gym, role and plan.
-// Gyms: create gyms, edit name, city and big screen link, assign owners and coaches.
+// Gyms: create gyms, edit name, city and Dandy TV link, assign owners and coaches.
 // Requests: gym owner requests, plus counts and links for reports and protests.
 
 export function install(X) {
@@ -50,7 +50,7 @@ export function install(X) {
       const members = id => profiles.filter(p => p.gym_id === id && p.display_name).length;
       const lastDay = id => (ws.find(w => w.gym_id === id) || {}).day;
       const named = profiles.filter(p => p.display_name).sort((a, b) => a.display_name.localeCompare(b.display_name));
-      body = `<div class="board"><div class="tablewrap"><table class="adT"><thead><tr><th>Gym</th><th>City</th><th>Big screen</th><th class="r">Members</th><th>Owners</th><th>Coaches</th><th>Last workout</th><th></th></tr></thead><tbody>
+      body = `<div class="board"><div class="tablewrap"><table class="adT"><thead><tr><th>Gym</th><th>City</th><th>Dandy TV</th><th class="r">Members</th><th>Owners</th><th>Coaches</th><th>Last workout</th><th></th></tr></thead><tbody>
         ${gyms.map(g => { const st = staff.filter(s => s.gym_id === g.id), own = st.filter(s => s.role === 'owner'), co = st.filter(s => s.role === 'coach');
           return `<tr><td><b><a href="/gyms/${g.id}">${esc(g.name)}</a></b></td><td>${esc(g.city || '')}</td><td>${g.slug ? `<a href="/tv/${esc(g.slug)}" target="_blank">/tv/${esc(g.slug)}</a>` : '<span class="sub">not set</span>'}</td><td class="r n">${members(g.id)}</td>
             <td>${own.map(s => esc(nm(s.profile_id))).join(', ') || '<span class="pill flat">None</span>'}</td><td>${co.map(s => esc(nm(s.profile_id))).join(', ') || '<span class="sub">none</span>'}</td><td>${lastDay(g.id) ? esc(fmtD(lastDay(g.id))) : '<span class="sub">never</span>'}</td>
@@ -58,7 +58,7 @@ export function install(X) {
             <tr class="adEdit" data-egf="${g.id}" hidden><td colspan="8"><form class="adForm" data-gf="${g.id}"><div class="fields">
               <div class="field w2"><label>Name</label><input data-k="name" maxlength="60" required value="${esc(g.name)}"></div>
               <div class="field"><label>City</label><input data-k="city" maxlength="60" value="${esc(g.city || '')}"></div>
-              <div class="field"><label>Big screen link /tv/</label><input data-k="slug" maxlength="40" value="${esc(g.slug || '')}" autocapitalize="none" spellcheck="false"></div></div>
+              <div class="field"><label>Dandy TV link /tv/</label><input data-k="slug" maxlength="40" value="${esc(g.slug || '')}" autocapitalize="none" spellcheck="false"></div></div>
               <div class="row"><button class="btn sm">Save gym</button><a class="btn sm" href="/club/${g.id}">Open gym office</a><a class="btn ghost sm" href="/gym/${g.id}">Gym settings</a><a class="btn ghost sm" href="/wod/${g.id}">Edit workouts</a><a class="btn ghost sm" href="/results/${g.id}">Enter results</a><span class="hint" data-msg></span></div></form>
               <div class="adStaff"><div class="formH">Owners and coaches</div>
                 ${st.map(s => `<div class="row"><b>${esc(nm(s.profile_id))}</b><span class="pill${s.role === 'owner' ? ' acc' : ''}">${s.role === 'owner' ? 'Owner' : 'Coach'}</span><button class="btn ghost sm" data-rms="${g.id}|${s.profile_id}">Remove</button></div>`).join('') || '<p class="hint">Nobody runs this gym yet.</p>'}
@@ -67,7 +67,7 @@ export function install(X) {
         <form class="formCard" id="ng" style="margin-top:20px"><div class="formH">New gym</div><div class="fields">
           <div class="field w2"><label for="ng-n">Name</label><input id="ng-n" maxlength="60" minlength="3" required></div>
           <div class="field"><label for="ng-c">City</label><input id="ng-c" maxlength="60" placeholder="Milford, OH"></div>
-          <div class="field"><label for="ng-s">Big screen link /tv/</label><input id="ng-s" maxlength="40" autocapitalize="none" spellcheck="false"></div>
+          <div class="field"><label for="ng-s">Dandy TV link /tv/</label><input id="ng-s" maxlength="40" autocapitalize="none" spellcheck="false"></div>
           <div class="field w2"><label for="ng-o">Owner (optional)</label><select id="ng-o"><option value="">No owner yet</option>${named.map(p => `<option value="${p.id}">${esc(p.display_name)}</option>`).join('')}</select></div></div>
           <div class="row"><button class="btn">Create gym</button><span class="hint" id="ng-msg"></span></div></form>`;
     } else {
@@ -130,7 +130,7 @@ export function install(X) {
 
     if (tab === 'gyms') {
       const slugOk = (s, m) => { if (s && !SLUG.test(s)) { m.textContent = 'Link: 3 to 40 letters, numbers or dashes.'; return false; } return true; };
-      const errMsg = e => /gyms_slug_key/.test(e.message) ? 'Another gym has that big screen link.' : /gyms_name/.test(e.message) ? 'Another gym has that name.' : e.message;
+      const errMsg = e => /gyms_slug_key/.test(e.message) ? 'Another gym has that Dandy TV link.' : /gyms_name/.test(e.message) ? 'Another gym has that name.' : e.message;
       $$('[data-eg]').forEach(b => b.onclick = () => { const r = $(`[data-egf="${b.dataset.eg}"]`); r.hidden = !r.hidden; });
       $$('[data-gf]').forEach(f => f.onsubmit = async e => {
         e.preventDefault();

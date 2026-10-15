@@ -10,6 +10,8 @@ import { install as installTraining } from './training.js';
 import { install as installTracker } from './tracker.js';
 import { install as installConnect } from './connect.js';
 import { install as installInsights } from './insights.js';
+import { install as installShop } from './shop.js';
+import { install as installTv } from './tv.js';
 
 /* ---------- helpers ---------- */
 const $ = (s, el = document) => el.querySelector(s);
@@ -83,30 +85,29 @@ const boardRow = id => S.board.find(r => r.profile_id === id);
 // members of a gym get My gym; owners and coaches get Gym office; the Founder and Commissioners get Admin.
 // Each panel spans the bar with a kicker and a grid of links, each a name and one line. On phones it is a drawer.
 const nav = $('#nav'), menuBtn = $('#menuBtn');
-const OFFICE = [['today', 'Check in', 'Today\'s classes and who is here'], ['schedule', 'Schedule', 'Classes, times and coaches'], ['wod', 'Workouts', 'Write the week, Parts A to D'], ['results', 'Results', 'Enter scores for the day'], ['plan', 'Plan builder', 'AI cycles from a day to a quarter'], ['class', 'Log a class', 'Type weights live, straight to the board'], ['members', 'Members', 'Profiles, waivers and attendance'], ['insights', 'Insights', 'Revenue, members and busiest classes', 1], ['billing', 'Billing', 'Plans, invoices and payments', 1], ['docs', 'Documents', 'Waiver and membership contract', 1], ['staff', 'Staff', 'Coaches, swaps, hours and pay'], ['settings', 'Settings', 'Gym details and board link']];
-const officeHref = (gid, k) => k === 'insights' ? `/insights/${gid}` : k === 'class' ? `/class/${gid}` : k === 'plan' ? `/plan/${gid}` : k === 'wod' ? `/wod/${gid}` : k === 'results' ? `/results/${gid}` : k === 'settings' ? `/gym/${gid}` : `/club/${gid}?tab=${k}`;
+const OFFICE = [['today', 'Check in', 'Today\'s classes and who is here'], ['schedule', 'Schedule', 'Classes, times and coaches'], ['wod', 'Workouts', 'Write the week, Parts A to D'], ['results', 'Results', 'Enter scores for the day'], ['plan', 'Plan builder', 'AI cycles from a day to a quarter'], ['class', 'Log a class', 'Type weights live, straight to the board'], ['shop', 'Shop', 'Drinks, snacks and gear'], ['tv', 'Dandy TV', 'Class and lobby screens, QR codes'], ['members', 'Members', 'Profiles, waivers and attendance'], ['insights', 'Insights', 'Revenue, members and busiest classes', 1], ['billing', 'Billing', 'Plans, invoices and payments', 1], ['docs', 'Documents', 'Waiver and membership contract', 1], ['staff', 'Staff', 'Coaches, swaps, hours and pay'], ['settings', 'Settings', 'Gym details and board link']];
+const officeHref = (gid, k) => k === 'tv' ? `/dandytv/${gid}` : k === 'shop' ? `/shop/${gid}` : k === 'insights' ? `/insights/${gid}` : k === 'class' ? `/class/${gid}` : k === 'plan' ? `/plan/${gid}` : k === 'wod' ? `/wod/${gid}` : k === 'results' ? `/results/${gid}` : k === 'settings' ? `/gym/${gid}` : `/club/${gid}?tab=${k}`;
 const gyms0 = () => S.myGyms || [];
 function navGroups() {
   const me = S.me && S.me.display_name ? S.me : null, pro = isPro(), P = pro ? '' : 'Pro. ';
   const g = [
+    ...(gyms0().length ? [] : [{ k: 'home', n: 'For gyms', href: '/pricing' }]),
     { k: 'boards', n: 'Boards', sections: [{ h: 'Rankings', items: [['/boards', 'Leaderboard', 'Every lifter ranked by DSI'], ['/prs', 'PR wall', 'The newest personal records'], ['/benchmarks', 'Benchmarks', 'How strong is strong'], ['/gyms', 'Gym league', 'Gyms ranked head to head']] },
       { h: 'Competition', items: [['/compete', 'Compete', 'Seasons, battles and the league'], ['/season', 'This season', 'Standings for the current season'], ['/battles', 'Weekly battles', 'One lift, one week, one winner']] }] },
-    { k: 'train', n: 'Train', sections: [{ h: 'Every day', items: [['/week', 'The week', 'This week\'s workouts by day'], ...(me && me.gym_id ? [['/classes', 'Book a class', 'Reserve your spot'], ['/mygym#attendance', 'My attendance', 'Every class you have made']] : []), ['/training', 'My training', 'Log your own sessions, sets and reps'], ['/log', 'Log a lift', 'Add a set and update your DSI'], ['/tracker', 'Plate tracker', P + 'The camera counts reps and reads the plates']] },
+    { k: 'train', n: 'Train', sections: [{ h: 'Every day', items: [['/week', 'The week', 'This week\'s workouts by day'], ...(me && me.gym_id ? [['/classes', 'Book a class', 'Reserve your spot'], ['/mygym#attendance', 'My attendance', 'Every class you have made'], ['/shop/' + me.gym_id, 'Gym shop', 'Drinks, snacks and gear']] : []), ['/training', 'My training', 'Log your own sessions, sets and reps'], ['/log', 'Log a lift', 'Add a set and update your DSI'], ['/tracker', 'Plate tracker', P + 'The camera counts reps and reads the plates']] },
       { h: 'Get better', items: [['/progress', 'Progress', P + 'Charts for every lift'], ['/plans', 'Goal plans', P + 'A plan to hit your next number'], ['/coach', 'Coach', P + 'Ask about your training'], ['/connect', 'Connected apps', P + 'WHOOP, Apple Health, Health Connect'], ...(me ? [['/import', 'Import history', 'Bring in your old lifts']] : [])] }] },
-    ...(gyms0().length ? [] : [{ k: 'home', n: 'For gyms', href: '/pricing' }]),
   ];
   const gyms = S.myGyms || [];
   const offItems = (x, keys) => OFFICE.filter(o => keys.includes(o[0]) && (!o[3] || x.role === 'owner' || (S.me && S.me.role === 'admin'))).map(([k, n, d]) => [officeHref(x.gym_id, k), n, d]);
-  const screen = x => [`/tv/${x.gym.slug || x.gym_id}`, 'Big screen', 'The TV board, opens in a new tab', 1];
   if (gyms.length === 1) { const x = gyms[0], nm = x.gym.name || 'Gym';
-    g.push({ k: 'office', n: 'Gym office', sections: [{ h: nm + ' · Run the floor', items: [...offItems(x, ['today', 'class', 'schedule', 'wod', 'plan', 'results']), screen(x)] }, { h: 'Run the business', items: offItems(x, ['members', 'billing', 'docs', 'staff', 'settings']) }] }); }
-  else if (gyms.length) g.push({ k: 'office', n: 'Gym office', sections: gyms.map(x => ({ h: (x.gym.name || 'Gym') + ' office', items: [...offItems(x, OFFICE.map(o => o[0])), screen(x)] })) });
+    g.push({ k: 'office', n: 'Gym office', sections: [{ h: nm + ' · Run the floor', items: [...offItems(x, ['today', 'class', 'schedule', 'wod', 'plan', 'results', 'shop', 'tv'])] }, { h: 'Run the business', items: offItems(x, ['members', 'billing', 'docs', 'staff', 'settings']) }] }); }
+  else if (gyms.length) g.push({ k: 'office', n: 'Gym office', sections: gyms.map(x => ({ h: (x.gym.name || 'Gym') + ' office', items: offItems(x, OFFICE.map(o => o[0])) })) });
   if (me && (me.role === 'admin' || me.role === 'commissioner')) g.push({ k: 'admin', n: 'Admin', sections: [{ h: me.role === 'admin' ? 'Management' : 'Commissioner', items: [...(me.role === 'admin' ? [['/admin', 'Management dashboard', 'Members, gyms and stats'], ['/admin?tab=gyms', 'All gyms', 'Edit gyms and open any office'], ['/admin?tab=requests', 'Requests', 'Gym claims and approvals']] : []), ['/reports', 'Reports', 'Flagged lifts and people'], ['/program', 'Import workouts', 'Load a program for a gym']] }] });
   return g;
 }
 const ROUTE_GROUP = { '': 'home', pricing: 'home', start: 'home', boards: 'boards', prs: 'boards', pr: 'boards', compete: 'boards', season: 'boards', battles: 'boards', gyms: 'boards', benchmarks: 'boards', protests: 'boards', recap: 'boards', u: 'boards',
   week: 'train', training: 'train', log: 'train', progress: 'train', plans: 'train', coach: 'train', tracker: 'train', connect: 'train', import: 'train', lift: 'train', classes: 'train', mygym: 'me', billing: 'me', sign: 'me', signed: 'me',
-  club: 'office', insights: 'office', class: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office', admin: 'admin', reports: 'admin', program: 'admin', me: 'me', pro: 'me', rules: 'me', blocked: 'me' };
+  club: 'office', insights: 'office', dandytv: 'office', shop: 'train', class: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office', admin: 'admin', reports: 'admin', program: 'admin', me: 'me', pro: 'me', rules: 'me', blocked: 'me' };
 const ACCT = () => [['/me', 'Profile', 'Name, gym and lifter details'], ...(S.me.gym_id ? [['/mygym', 'Membership and billing', 'Plan, payments and documents']] : []), ['/me?tab=goals', 'Goals', 'What you are chasing'], ['/me?tab=reminders', 'Reminders', 'Nudges to log'], ['/me?tab=account', 'Account and safety', 'Email, privacy and blocks'], ['/u/' + S.me.id, 'My lifter card', 'Your public page'], ['/pro', 'DSI Pro', 'Membership and perks']];
 function buildNav(r) {
   const groups = navGroups(), cur = ROUTE_GROUP[r] ?? '';
@@ -176,7 +177,7 @@ async function route() {
   S.channels = [];
   if (S.me && !S.me.display_name && !['join', 'login', 'privacy', 'terms', 'support', 'rules'].includes(r)) { go('/join', true); return; }
   if (!VIEWS[r]) r = '';
-  document.body.classList.toggle('tvMode', r === 'tv');
+  document.body.classList.toggle('tvMode', r === 'tv' || r === 'lobby');
   updateChrome(r);
   const tok = ++S.tok;
   main.innerHTML = '<p class="empty">Loading…</p>';
@@ -471,7 +472,7 @@ VIEWS.week = async (day, tok) => {
     const prog = `<div class="wkProg"><div class="eyebrow">${esc(fmtDW(w.day))}${w.day === tdy ? ' · Today' : ''}${w.source ? ' · ' + esc(w.source) : ''}</div><h3>${esc(w.title)}</h3>
       ${w.rest_note ? `<p class="rest">${esc(w.rest_note)}</p>` : ''}
       ${P().shownParts(w).map(p => `<div class="wkSec"><b>${P().isParts(w) ? `<i class="wkL">${p.L}</i>` : ''}${esc(p.name)}</b><p>${esc(p.text)}</p>${P().logWords(p) ? `<div class="sub">Log your ${P().logWords(p)}</div>` : ''}</div>`).join('')}
-      <div class="row">${canEdit(w) ? `<a class="btn sm" href="/wod/${w.gym_id || 'dsi'}?day=${w.day}">Edit workout</a>` : ''}<button class="btn ghost sm" data-thread="workout" data-ref="${w.id}" data-title="${esc(fmtD(w.day) + ' · ' + w.title)}">Day thread</button>${w.benchmark ? `<a class="chip" href="/benchmarks/${encodeURIComponent(w.benchmark)}">Benchmark: ${esc(w.benchmark)}</a>` : ''}${w.gym_id && S.myGyms.some(g => g.gym_id === w.gym_id) ? `<a class="btn sm" href="/results/${w.gym_id}?day=${w.day}">Enter results</a><a class="btn ghost sm" href="/tv/${w.gym_id}">Big screen</a>` : ''}</div>
+      <div class="row">${canEdit(w) ? `<a class="btn sm" href="/wod/${w.gym_id || 'dsi'}?day=${w.day}">Edit workout</a>` : ''}<button class="btn ghost sm" data-thread="workout" data-ref="${w.id}" data-title="${esc(fmtD(w.day) + ' · ' + w.title)}">Day thread</button>${w.benchmark ? `<a class="chip" href="/benchmarks/${encodeURIComponent(w.benchmark)}">Benchmark: ${esc(w.benchmark)}</a>` : ''}${w.gym_id && S.myGyms.some(g => g.gym_id === w.gym_id) ? `<a class="btn sm" href="/results/${w.gym_id}?day=${w.day}">Enter results</a><a class="btn ghost sm" href="/tv/${w.gym_id}">Dandy TV</a>` : ''}</div>
       ${isStaff() ? `<form class="row" id="bmF"><label class="vh" for="bm-n">Benchmark name</label><input id="bm-n" maxlength="40" value="${esc(w.benchmark || '')}" placeholder="Name it as a benchmark, like Fran" style="max-width:260px"><button class="btn ghost sm">Save</button></form>` : ''}</div>`;
     let mine = '';
     const its = P().items(w);
@@ -1381,6 +1382,8 @@ installPlan(CTX);
 installHome(CTX);
 installConnect(CTX);
 installInsights(CTX);
+installShop(CTX);
+installTv(CTX);
 installTraining(CTX);
 installTracker(CTX);
 

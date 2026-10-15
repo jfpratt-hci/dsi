@@ -253,7 +253,7 @@ export default function Results() {
       <View style={{ height: 18 }} />
       <Group>
         <Row first label="Edit this workout" detail="Website" onPress={() => openWeb(`/wod/${g.id}?day=${d.day}`)} />
-        <Row label="Big screen" detail="Website" onPress={() => openWeb(tvHref(g))} />
+        <Row label="Dandy TV" detail="Website" onPress={() => openWeb(tvHref(g))} />
       </Group>
     </OfficeScreen>
   );
