@@ -10,7 +10,7 @@ import { useSession } from '@/lib/session';
 
 const WHAT = [
   ['Workout reminders', 'A nudge at the time you pick on days with programming. Skipped once you have logged.'],
-  ['New PRs', 'When someone in the index hits a PR. Protest it or top it.'],
+  ['New PRs', 'When someone in the index hits a PR. Top it.'],
   ['New programming', 'When the week goes up with your target weights.'],
 ];
 
