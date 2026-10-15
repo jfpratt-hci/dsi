@@ -27,6 +27,42 @@ export function install(X) {
     ['Dandy Plan', 'Tell it the goal, like Murph prep or a ten week max out, and it writes the cycle as Parts A to D.'],
     ['Dandy TV', 'Signage you manage for every screen: the class TV shows the workout and every member\'s own target weight, live, and the lobby TV shows your schedule, PRs and news.'],
   ];
+  // The two screens, shown on the homepage as mini TVs. Decorative mocks; the real ones run at /tv and on the lobby player.
+  const TV_ROWS = [['Sam', 225, 'var(--squat)'], ['Alex', 185, 'var(--bench)'], ['Jordan', 205, 'var(--dead)'], ['Riley', 155, 'var(--clean)']];
+  // Decorative QR look for the mock: three finder squares plus a fixed scatter. It is not a real code.
+  const fakeQr = () => { const n = 21, fin = (x, y) => [[0,0],[14,0],[0,14]].some(([a, b]) => x >= a && x < a + 7 && y >= b && y < b + 7);
+    const on = (x, y) => { for (const [a, b] of [[0,0],[14,0],[0,14]]) if (x >= a && x < a + 7 && y >= b && y < b + 7) { const dx = x - a, dy = y - b; return dx === 0 || dy === 0 || dx === 6 || dy === 6 || (dx > 1 && dx < 5 && dy > 1 && dy < 5); }
+      return ((x * 7 + y * 13 + x * y * 3) % 5) < 2; };
+    let r = ''; for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (on(x, y) && !(fin(x, y) && !on(x, y))) r += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
+    return `<svg viewBox="-2 -2 25 25" aria-hidden="true" shape-rendering="crispEdges"><rect x="-2" y="-2" width="25" height="25" fill="#fff"/><g fill="#0E1420">${r}</g></svg>`; };
+  const VIEWS_TV = [
+    { k: 'gym', n: 'Class TV', h: 'The class runs itself',
+      p: 'Today\'s workout in Parts A to D, every member\'s own target weight from their PRs, and the class clock right on the screen.',
+      t: ['Every member\'s target, worked out from their PRs', 'Part timers and the class clock run from your schedule', 'Coaches enter weights live from their phone'] },
+    { k: 'lobby', n: 'Lobby TV', h: 'The front door sells the gym',
+      p: 'Your schedule, this week\'s PRs, events and offers rotate on their own, built from what is already in your office.',
+      t: ['A QR code on every slide: book, register or order', 'Pick the slides and the order', 'Set how long each slide stays up'] }
+  ];
+  const tvMock = k => k === 'gym'
+    ? `<div class="hmTv" aria-hidden="true"><div class="hmTvTop"><b>Part B · Back squat</b><span>5 x 3 at 85%</span></div>
+        <ol class="hmTvRows">${TV_ROWS.map(([n, w, c]) => `<li><i style="--c:${c}"></i><span>${n}</span><b>${w}</b></li>`).join('')}</ol>
+        <div class="hmTvFoot"><span>6:30am class</span><span>Coach Jesse</span></div></div>`
+    : `<div class="hmTv hmSign" aria-hidden="true"><div class="hmSignL"><span class="hmSignK">Event · Memorial Day</span><b>Murph</b><span class="hmSignN">46 spots left</span><span class="hmSignBar"><i></i></span></div>
+        <div class="hmSignQ">${fakeQr()}<span>Scan to sign up</span></div></div>`;
+  const SCREENS = () => `
+      <section class="hmScreens" aria-labelledby="hmScreensH">
+        <div class="hmScreensHead"><h2 class="hmH2" id="hmScreensH">Dandy TV</h2>
+          <p class="hmSideSub">One product for every screen in the gym. Plug in a TV and make it yours. Run the class TV on the floor and the lobby TV at the front door.</p></div>
+        <div class="hmTvTabs" role="tablist" aria-label="Dandy TV screens">${VIEWS_TV.map((v, i) => `<button type="button" role="tab" id="tvtab-${v.k}" aria-controls="tvpanel-${v.k}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" data-tvtab="${v.k}">${v.n}${v.soon ? ' <span class="hmNew">Coming soon</span>' : ''}</button>`).join('')}</div>
+        ${VIEWS_TV.map((v, i) => `<div class="hmScreen" role="tabpanel" id="tvpanel-${v.k}" aria-labelledby="tvtab-${v.k}"${i ? ' hidden' : ''}>${tvMock(v.k)}
+          <div class="hmScreenTx"><h3 class="hmH3">${v.h}</h3><p>${v.p}</p><ul class="hmTicks">${v.t.map(x => `<li>${x}</li>`).join('')}</ul>
+            <p class="hmFine">Both screens run on any smart TV, laptop or iPad on HDMI, and you customize each one from your office.</p></div></div>`).join('')}
+      </section>`;
+  const wireTvTabs = () => {
+    const tabs = [...document.querySelectorAll('[data-tvtab]')]; if (!tabs.length) return;
+    const pick = b => tabs.forEach(t => { const on = t === b; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; document.getElementById('tvpanel-' + t.dataset.tvtab).hidden = !on; });
+    tabs.forEach((b, i) => { b.addEventListener('click', () => pick(b)); b.addEventListener('keydown', e => { const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0; if (!d) return; const n = tabs[(i + d + tabs.length) % tabs.length]; pick(n); n.focus(); }); });
+  };
   const MEMBER = [
     ['DSI', 'The Dandy Strength Index scores your bench, squat, deadlift and clean against lifters your age and size.'],
     ['The Dandy app', 'Log your lifts, see your target for today and watch your DSI move. Coming to the App Store.'],
@@ -75,6 +111,7 @@ export function install(X) {
           <dl class="hmParts">${MEMBER.map(([n, d]) => `<div><dt>${esc(n)}</dt><dd>${esc(d)}</dd></div>`).join('')}</dl>
           <a class="btn ghost" href="${m ? '/boards' : '/join'}">${m ? 'See where you rank' : 'Get your DSI free'}</a></div>
       </section>
+${SCREENS()}
 
       <section class="hmDay">
         <h2 class="hmH2">How a class day runs on Dandy Strength</h2>
@@ -94,6 +131,7 @@ export function install(X) {
         <p class="hmSideSub">We move your members, schedule and plans over for you, and your members keep their history. The difference they notice on day one: a score worth chasing, and their own number on the TV.</p></div>
         <a class="btn" href="/start">Talk to us about switching</a>
       </section>`)) return;
+    wireTvTabs();
   };
 
   /* ---------- plans: sells the gym plans and compares every feature ---------- */
