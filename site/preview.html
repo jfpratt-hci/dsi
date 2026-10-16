@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Your new gym website · Dandy Strength</title>
+<link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: the Dandy gym template website (12 column grid, 1160px), themed only by the gym's brand block, with a slim Dandy preview bar on top. Data comes from the prospect's preview record. */
+:root{
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --b-bg:#0A1430; --b-fg:#EEF2F8; --b-primary:#2F6BFF; --b-accent:#F7C531; --b-accent-fg:#0A1430; --b-primary-fg:#FFFFFF;
+  --s-display:"Big Shoulders Display","Arial Narrow",Arial,sans-serif; --s-body:"Archivo",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--b-bg);overflow-x:clip}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--b-accent);outline-offset:2px;border-radius:4px}
+h1,h2,h3{margin:0;line-height:1;text-wrap:balance}
+p{margin:0}
+.pv{background:#0E1420;color:#E9EEF6;font:500 .9rem/1.4 "Archivo",system-ui,sans-serif;border-bottom:1px solid #26324A}
+.pv .in{max-width:1160px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pv img{height:22px;width:auto;display:block}
+.pv .t{flex:1;min-width:220px}
+.pv .t b{color:#F2C94C}
+.pv a{display:inline-flex;align-items:center;min-height:36px;padding:6px 14px;border-radius:999px;border:1px solid #26324A;color:#E9EEF6;text-decoration:none;font-weight:700;font-size:.85rem}
+.pv a.go{background:#F2C94C;border-color:#F2C94C;color:#141414}
+.state{max-width:1160px;margin:0 auto;padding:80px 20px;color:var(--b-fg);font-family:var(--s-body);display:grid;gap:12px}
+.state h1{font:900 2.6rem var(--s-display);text-transform:uppercase}
+/* website */
+.site{background:var(--b-bg);color:var(--b-fg);font:16px/1.55 var(--s-body);overflow:auto;min-height:0}
+.site a{color:inherit}
+.s-wrap{max-width:1160px;margin:0 auto;padding-inline:20px}
+.s-ann{background:var(--b-accent);color:var(--b-accent-fg);text-align:center;font-weight:600;font-size:.9rem;padding:8px 16px}
+.s-head{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--b-bg) 90%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid color-mix(in srgb,var(--b-fg) 12%,transparent)}
+.s-head .s-wrap{display:flex;align-items:center;gap:18px;padding-block:12px;flex-wrap:wrap}
+.s-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.s-logo i{font:900 1.15rem var(--s-display);font-style:normal;background:var(--b-primary);color:var(--b-primary-fg);padding:5px 9px;border-radius:6px;letter-spacing:.04em}
+.s-logo b{font:800 1.2rem var(--s-display);text-transform:uppercase;letter-spacing:.03em}
+.s-nav{display:flex;gap:16px;flex-wrap:wrap;flex:1}
+.s-nav a{text-decoration:none;font-weight:600;font-size:.92rem;opacity:.8}
+.s-nav a:hover{opacity:1}
+.s-btn{display:inline-flex;align-items:center;gap:8px;font:700 .95rem var(--s-body);padding:11px 18px;border-radius:999px;border:1px solid color-mix(in srgb,var(--b-fg) 25%,transparent);background:transparent;color:var(--b-fg);cursor:pointer;text-decoration:none}
+.s-btn.pri{background:var(--b-accent);color:var(--b-accent-fg);border-color:var(--b-accent)}
+.s-btn.alt{background:var(--b-primary);color:var(--b-primary-fg);border-color:var(--b-primary)}
+.s-btn:disabled{opacity:.45;cursor:not-allowed}
+.s-hero{padding-block:56px 48px}
+.s-hero .s-wrap{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px;align-items:center}
+.s-hero h1{grid-column:span 7;font:900 clamp(3rem,7vw,5.6rem)/.9 var(--s-display);text-transform:uppercase;letter-spacing:.005em}
+.s-hero h1 em{font-style:normal;color:var(--b-accent)}
+.s-hero .tx{grid-column:span 7;display:grid;gap:18px}
+.s-hero .tx p{font-size:1.1rem;opacity:.8;max-width:56ch}
+.s-today{grid-column:8 / span 5;grid-row:1 / span 2;background:color-mix(in srgb,var(--b-fg) 5%,var(--b-bg));border:1px solid color-mix(in srgb,var(--b-fg) 12%,transparent);border-radius:12px;padding:18px;display:grid;gap:8px}
+.s-today h3{font:800 1.4rem var(--s-display);text-transform:uppercase}
+.s-today .r{display:grid;grid-template-columns:76px minmax(0,1fr);gap:10px;padding:7px 0;border-top:1px solid color-mix(in srgb,var(--b-fg) 10%,transparent);font-size:.92rem}
+.s-today .r span:first-child{font-family:var(--f-mono);font-weight:600}
+.s-sec{padding-block:52px;border-top:1px solid color-mix(in srgb,var(--b-fg) 12%,transparent)}
+.s-sec h2{font:900 clamp(2.2rem,4.4vw,3.2rem)/.95 var(--s-display);text-transform:uppercase;margin-bottom:6px}
+.s-sec .d{opacity:.75;margin-bottom:22px;max-width:60ch}
+.s-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px}
+.s-tabs button{padding:8px 14px;border-radius:999px;border:1px solid color-mix(in srgb,var(--b-fg) 20%,transparent);background:transparent;color:var(--b-fg);font-weight:600;cursor:pointer}
+.s-tabs button[aria-pressed="true"]{background:var(--b-fg);color:var(--b-bg)}
+.s-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+.s-card{background:color-mix(in srgb,var(--b-fg) 5%,var(--b-bg));border:1px solid color-mix(in srgb,var(--b-fg) 12%,transparent);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.s-card>.s-btn:last-child{margin-top:auto;justify-content:center}
+.s-card .s-chip{align-self:flex-start}
+.s-card.feat{border-color:var(--b-accent);box-shadow:0 0 0 1px var(--b-accent) inset}
+.s-card h3{font:800 1.5rem var(--s-display);text-transform:uppercase}
+.s-price{font:900 2.6rem/1 var(--s-display)}
+.s-price small{font:600 .95rem var(--s-body);opacity:.7}
+.s-card ul{margin:0;padding-left:18px;display:grid;gap:4px;opacity:.85;font-size:.94rem}
+.s-chip{display:inline-flex;font:600 .68rem var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid currentColor;justify-self:start}
+.s-chip.free{color:#3DBE7A}
+.s-chip.acc{color:var(--b-accent)}
+.s-strip{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(260px,300px);gap:16px;overflow-x:auto;padding-bottom:10px;scroll-snap-type:x mandatory}
+.s-strip>*{scroll-snap-align:start}
+.s-date{font:700 .78rem var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--b-accent)}
+.s-sched{display:grid;gap:0}
+.s-sched .r{display:grid;grid-template-columns:100px minmax(0,1fr) minmax(0,1fr) auto;gap:12px;padding:12px 0;border-top:1px solid color-mix(in srgb,var(--b-fg) 10%,transparent);align-items:center}
+.s-sched .r span:first-child{font-family:var(--f-mono);font-weight:600}
+.s-visit{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px}
+.s-visit>div{grid-column:span 4;display:grid;gap:6px;align-content:start}
+.s-band{background:color-mix(in srgb,var(--b-fg) 6%,var(--b-bg))}
+.s-bandIn{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+.s-foot{padding-block:28px;border-top:1px solid color-mix(in srgb,var(--b-fg) 12%,transparent);font-size:.85rem;opacity:.75}
+.s-foot .s-wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.s-empty{opacity:.6;font-size:.95rem}
+
+/* modal and text widget (shared, brand themed) */
+.ovl{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:40;display:grid;place-items:center;padding:16px}
+.mdl{width:min(460px,100%);max-height:calc(100dvh - 32px);overflow:auto;background:var(--b-bg);color:var(--b-fg);border:1px solid color-mix(in srgb,var(--b-fg) 18%,transparent);border-radius:14px;padding:20px;display:grid;gap:12px;font-family:var(--s-body)}
+.mdl h3{font:800 1.6rem var(--s-display);text-transform:uppercase}
+.mdl .in{width:100%;padding:10px 12px;border-radius:10px;border:1px solid color-mix(in srgb,var(--b-fg) 22%,transparent);background:color-mix(in srgb,var(--b-fg) 5%,var(--b-bg));color:var(--b-fg)}
+.mdl .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mdl .chips{display:flex;gap:6px;flex-wrap:wrap}
+.mdl .chips button{padding:7px 11px;border-radius:999px;border:1px solid color-mix(in srgb,var(--b-fg) 22%,transparent);background:transparent;color:var(--b-fg);font-weight:600;font-size:.85rem;cursor:pointer}
+.mdl .chips button[aria-pressed="true"]{background:var(--b-accent);color:var(--b-accent-fg);border-color:var(--b-accent)}
+.mdl .fine{font-size:.78rem;opacity:.7}
+.mdl .err{color:#FF8A7A;font-size:.85rem}
+.tx-fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:30;display:inline-flex;align-items:center;gap:8px;font:700 .95rem var(--s-body);padding:12px 18px;border-radius:999px;border:0;background:var(--b-accent);color:var(--b-accent-fg);cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.tx-fab svg{width:20px;height:20px}
+@media (max-width:1100px){.s-hero h1,.s-hero .tx{grid-column:1/-1}.s-today{grid-column:1/-1;grid-row:auto}.s-visit>div{grid-column:span 6}}
+@media (max-width:760px){.s-sched .r{grid-template-columns:80px minmax(0,1fr) auto}.s-sched .r span:nth-child(3){display:none}.s-visit>div{grid-column:1/-1}.s-nav{display:none}.mdl .row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="pv" id="pv" hidden><div class="in"><img src="/assets/mark.svg" alt=""><span class="t" id="pvT"></span><a href="#" id="pvAudit">See your audit</a><a class="go" href="#" id="pvGo">Get this site free</a></div></div>
+<div class="site" id="site"><div class="state"><p>Loading your new site…</p></div></div>
+<div id="ovl" class="ovl" hidden></div>
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const money = (n) => (+n || 0) ? '$' + (+n).toLocaleString('en-US', { maximumFractionDigits: 2 }) : 'Free';
+  const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const DSHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const dow = (d) => (d.getDay() + 6) % 7;
+  const mins = (t) => { const m = /^(\d{1,2}):?(\d{2})?\s*(am|pm)$/i.exec(String(t).trim()); if (!m) return 9999; return (+m[1] % 12 + (m[3].toLowerCase() === 'pm' ? 12 : 0)) * 60 + (+m[2] || 0); };
+  const pDate = (s) => { const [y, m, d] = String(s).split('-').map(Number); return new Date(y, (m || 1) - 1, d || 1); };
+  const fDate = (s) => pDate(s).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  const ago = (iso) => { if (!iso) return ''; const m = Math.round((Date.now() - new Date(iso)) / 60000); return m < 1 ? 'now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' hr ago' : Math.round(m / 1440) + ' days ago'; };
+  const today0 = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+  const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 40) || 'item';
+  const lum = (hex) => { const h = String(hex).replace('#', ''); if (h.length < 6) return 0; const [r, g, b] = [0, 2, 4].map((i) => { const c = parseInt(h.substr(i, 2), 16) / 255; return c <= .03928 ? c / 12.92 : Math.pow((c + .055) / 1.055, 2.4); }); return .2126 * r + .7152 * g + .0722 * b; };
+  const onColor = (hex) => lum(hex) > .4 ? '#0B0F18' : '#FFFFFF';
+
+  const URL_ = 'https://fairfhgyrosjqualmhwu.supabase.co', KEY = 'sb_publishable_1qg2GRUgxGxVMhOaoGGGFw_lm0j_j4h';
+  const byOrder = (a, b) => (a.order || 0) - (b.order || 0), byDate = (a, b) => String(a.date).localeCompare(String(b.date));
+  const slugQ = new URLSearchParams(location.search).get('g') || '';
+  const S = { config: null, schedule: null, plans: [], services: [], coaches: [], events: [], products: [], registrations: [] };
+  const cfg = () => S.config || {};
+  const brand = () => Object.assign({ name: 'Your gym', short: 'GYM', tagline: '', bg: '#0A1430', primary: '#2F6BFF', accent: '#F7C531' }, cfg().brand || {});
+  function applyBrand() {
+    const b = brand(), r = document.documentElement.style;
+    r.setProperty('--b-bg', b.bg); r.setProperty('--b-fg', onColor(b.bg) === '#FFFFFF' ? '#EEF2F8' : '#10141C');
+    r.setProperty('--b-primary', b.primary); r.setProperty('--b-primary-fg', onColor(b.primary));
+    r.setProperty('--b-accent', b.accent); r.setProperty('--b-accent-fg', onColor(b.accent));
+  }
+  let schedTab = null;
+  function drawSite() {
+    const W = $('#site');
+        if (!S.config) { W.innerHTML = '<div class="s-wrap" style="padding:60px 20px;display:grid;gap:10px"><h2 style="font:900 2.4rem var(--s-display);text-transform:uppercase">This gym is getting set up</h2><p style="opacity:.75">Add the gym name, colors and contact in the owner console under Website basics, and the site builds itself.</p></div>'; return; }
+    const c = cfg(), b = brand(), ct = c.contact || {}, hero = c.hero || {}, sec = Object.assign({ schedule: true, plans: true, events: true, book: true, store: true, coaches: true }, c.sections || {});
+    const classes = ((S.schedule || {}).classes || []);
+    const td = dow(new Date()); if (schedTab == null) schedTab = td;
+    const todays = classes.filter((k) => k.day === td).sort((x, y) => mins(x.time) - mins(y.time));
+    const plans = S.plans.filter((p) => p.visible !== false).sort(byOrder);
+    const events = S.events.filter((e) => e.visible !== false && pDate(e.date) >= today0()).sort(byDate);
+    const services = S.services.filter((s) => s.visible !== false).sort(byOrder);
+    const products = S.products.filter((p) => p.visible !== false).sort(byOrder);
+    const coaches = S.coaches.slice().sort(byOrder);
+    const hl = esc(hero.headline || b.name).replace(/(\S+)(\s+\S+\.?)$/, '$1<em>$2</em>');
+    const nav = [['schedule', 'Schedule', sec.schedule && classes.length], ['book', 'Book', sec.book && services.length], ['plans', 'Plans', sec.plans && plans.length], ['coaches', 'Coaches', sec.coaches && coaches.length], ['events', 'Events', sec.events && events.length], ['store', 'Store', sec.store && products.length], ['visit', 'Visit', true]].filter((n) => n[2]);
+    const spots = (e) => e.cap ? Math.max(0, e.cap - S.registrations.filter((r) => r.eventId === e.id && r.status !== 'canceled').length) : null;
+    W.innerHTML =
+      ((c.announce || {}).on && (c.announce || {}).text ? '<div class="s-ann">' + esc(c.announce.text) + '</div>' : '') +
+      '<header class="s-head"><div class="s-wrap"><a class="s-logo" href="#s-top"><i>' + esc(b.short) + '</i><b>' + esc(b.name) + '</b></a><nav class="s-nav">' + nav.map((n) => '<a href="#s-' + n[0] + '">' + n[1] + '</a>').join('') + '</nav><button class="s-btn pri" type="button" data-sbook="intro">Book a free class</button></div></header>' +
+      '<section class="s-hero" id="s-top"><div class="s-wrap"><h1>' + hl + '</h1><div class="tx"><p>' + esc(hero.sub || b.tagline) + '</p><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="s-btn pri" type="button" data-sbook="intro">Book a free class</button>' + (services.some((s) => s.id === 'dropin') ? '<button class="s-btn" type="button" data-sbook="dropin">Free drop in</button>' : '') + '<button class="s-btn" type="button" data-stext>Text us</button></div></div>' +
+      '<aside class="s-today"><span class="s-date">Today · ' + DAYS[td] + '</span><h3>Classes today</h3>' + (todays.length ? todays.map((k) => '<div class="r"><span>' + esc(k.time) + '</span><span>' + esc(k.name) + (k.coach ? ' · ' + esc(k.coach.split(' ')[0]) : '') + '</span></div>').join('') : '<p class="s-empty">No classes today. See the full week below.</p>') + '</aside></div></section>' +
+      (sec.schedule && classes.length ? '<section class="s-sec" id="s-schedule"><div class="s-wrap"><h2>Schedule</h2><p class="d">Every class is coached and scaled for your level.</p><div class="s-tabs">' + DSHORT.map((d, i) => '<button type="button" data-sday="' + i + '" aria-pressed="' + (i === schedTab) + '">' + d + '</button>').join('') + '</div><div class="s-sched">' + (classes.filter((k) => k.day === schedTab).sort((x, y) => mins(x.time) - mins(y.time)).map((k) => '<div class="r"><span>' + esc(k.time) + '</span><span><b>' + esc(k.name) + '</b></span><span style="opacity:.7">' + esc(k.coach || '') + '</span><button class="s-btn" type="button" data-sbook="intro" data-sday2="' + schedTab + '" data-stime="' + esc(k.time) + '">Try it free</button></div>').join('') || '<p class="s-empty">No classes this day.</p>') + '</div></div></section>' : '') +
+      (sec.book && services.length ? '<section class="s-sec" id="s-book"><div class="s-wrap"><h2>Book</h2><p class="d">Pick what you need and a time that works. A coach confirms by text.</p><div class="s-grid">' + services.map((s) => '<article class="s-card"><h3>' + esc(s.name) + '</h3><p style="opacity:.8">' + esc(s.desc || '') + '</p><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' + (s.kind === 'waitlist' ? '<span class="s-chip" style="color:#2BB3A6">Coming soon</span>' : '<span class="s-chip ' + (+s.price ? 'acc' : 'free') + '">' + esc(s.priceNote || money(s.price)) + '</span>') + (s.length ? '<span style="font-size:.85rem;opacity:.7">' + esc(s.length) + '</span>' : '') + '</div><button class="s-btn alt" type="button" data-sbook="' + s.id + '">' + (s.kind === 'waitlist' ? 'Join the waitlist' : 'Book') + '</button></article>').join('') + '</div></div></section>' : '') +
+      (sec.plans && plans.length ? '<section class="s-sec" id="s-plans"><div class="s-wrap"><h2>Plans</h2><p class="d">Simple pricing. Your first class is always free.</p><div class="s-grid">' + plans.map((p) => '<article class="s-card' + (p.featured ? ' feat' : '') + '">' + (p.featured ? '<span class="s-chip acc">Most popular</span>' : '') + '<h3>' + esc(p.name) + '</h3><div class="s-price">' + money(p.price) + '<small> / ' + esc(p.interval || 'month') + '</small></div>' + (p.visits ? '<b>' + esc(p.visits) + '</b>' : '') + (p.blurb ? '<p style="opacity:.8">' + esc(p.blurb) + '</p>' : '') + ((p.perks || []).length ? '<ul>' + p.perks.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '') + '<button class="s-btn ' + (p.featured ? 'pri' : 'alt') + '" type="button" data-splan="' + p.id + '">Join</button></article>').join('') + '</div></div></section>' : '') +
+      (sec.coaches && coaches.length ? '<section class="s-sec" id="s-coaches"><div class="s-wrap"><h2>Coaches</h2><div class="s-grid">' + coaches.map((k) => '<article class="s-card"><div style="width:56px;height:56px;border-radius:50%;background:var(--b-primary);color:var(--b-primary-fg);display:grid;place-items:center;font:900 1.3rem var(--s-display)">' + esc(k.name.split(' ').map((w) => w[0]).join('').slice(0, 2)) + '</div><h3 style="font-size:1.3rem">' + esc(k.name) + '</h3><span style="opacity:.7">' + esc(k.role || 'Coach') + '</span>' + (k.bio ? '<p style="opacity:.8;font-size:.94rem">' + esc(k.bio) + '</p>' : '') + '</article>').join('') + '</div></div></section>' : '') +
+      ((sec.events && events.length) || (sec.store && products.length) ? '<section class="s-sec s-band"><div class="s-wrap s-bandIn"><div><span class="s-date">Already a member?</span><h2 style="margin:6px 0 0">Get more out of ' + esc(b.short) + '</h2></div><div style="display:flex;gap:10px;flex-wrap:wrap">' + (sec.events && events.length ? '<a class="s-btn pri" href="#s-events">Sign up for events</a>' : '') + (sec.store && products.length ? '<a class="s-btn" href="#s-store">Get the gear</a>' : '') + '</div></div></section>' : '') +
+      (sec.events && events.length ? '<section class="s-sec" id="s-events"><div class="s-wrap"><h2>Events</h2><p class="d">Throwdowns, holiday WODs and the big ones. Swipe for more.</p><div class="s-strip">' + events.map((e) => { const sp = spots(e); return '<article class="s-card"><span class="s-date">' + fDate(e.date) + (e.time ? ' · ' + esc(e.time) : '') + '</span><h3>' + esc(e.title) + '</h3><p style="opacity:.8;font-size:.94rem">' + esc(e.desc || '') + '</p><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="s-chip ' + (+e.price ? 'acc' : 'free') + '">' + money(e.price) + '</span>' + (sp != null ? '<span style="font-size:.85rem;opacity:.7">' + (sp ? sp + ' spots left' : 'Full') + '</span>' : '') + '</div><button class="s-btn ' + (+e.price ? 'pri' : 'alt') + '" type="button" data-sevent="' + e.id + '"' + (sp === 0 ? ' disabled' : '') + '>' + (sp === 0 ? 'Full' : +e.price ? 'Register · ' + money(e.price) : 'Register free') + '</button></article>'; }).join('') + '</div></div></section>' : '') +
+      (sec.store && products.length ? '<section class="s-sec" id="s-store"><div class="s-wrap"><h2>Store</h2><p class="d">Order online, pick up at the front desk.</p><div class="s-strip">' + products.map((p) => '<article class="s-card"><div style="aspect-ratio:4/3;max-width:100%;border-radius:8px;background:linear-gradient(135deg,var(--b-primary),color-mix(in srgb,var(--b-primary) 40%,var(--b-bg)));display:grid;place-items:center;font:900 2rem var(--s-display);color:var(--b-primary-fg);text-transform:uppercase">' + esc(b.short) + '</div>' + (p.tag ? '<span class="s-chip acc">' + esc(p.tag) + '</span>' : '') + '<h3 style="font-size:1.25rem">' + esc(p.name) + '</h3><div style="display:flex;justify-content:space-between;align-items:center"><b>' + money(p.price) + '</b><button class="s-btn alt" type="button" data-sprod="' + p.id + '">Order</button></div></article>').join('') + '</div></div></section>' : '') +
+      '<section class="s-sec" id="s-visit"><div class="s-wrap"><h2>Visit</h2><div class="s-visit" style="margin-top:16px"><div><span class="s-date">Address</span><b style="font-size:1.1rem">' + esc(ct.address || '') + '</b><span>' + esc(ct.city || '') + '</span><a class="s-btn" style="justify-self:start;margin-top:6px" href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(b.name + ' ' + (ct.address || '') + ' ' + (ct.city || '')) + '" target="_blank" rel="noopener">Directions</a></div><div><span class="s-date">Hours</span>' + String(ct.hours || '').split('\n').map((l) => '<span>' + esc(l) + '</span>').join('') + '</div><div><span class="s-date">Call or text</span><b style="font-size:1.1rem;user-select:all">' + esc(ct.phone || '') + '</b>' + (ct.email ? '<span style="user-select:all">' + esc(ct.email) + '</span>' : '') + '<div style="display:flex;gap:12px;margin-top:6px">' + ((c.social || {}).ig ? '<a href="' + esc(c.social.ig) + '" target="_blank" rel="noopener">Instagram</a>' : '') + ((c.social || {}).fb ? '<a href="' + esc(c.social.fb) + '" target="_blank" rel="noopener">Facebook</a>' : '') + '</div></div></div></div></section>' +
+      '<footer class="s-foot"><div class="s-wrap"><span>© ' + new Date().getFullYear() + ' ' + esc(b.name) + ' · ' + esc(ct.address || '') + ', ' + esc(ct.city || '') + '</span><span>Powered by Dandy Strength</span></div></footer>' +
+      '<button class="tx-fab" type="button" data-stext><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12z"/></svg>Text us</button>';
+  }
+
+  /* preview modal: every button explains what the live site does, nothing is sent */
+  const O = $('#ovl');
+  const close = () => { O.hidden = true; O.innerHTML = ''; };
+  O.addEventListener('click', (e) => { if (e.target === O || e.target.closest('[data-close]')) close(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !O.hidden) close(); });
+  const claimUrl = () => '/audit?g=' + encodeURIComponent(slugQ) + '#claim';
+  function previewModal(title, what) {
+    O.innerHTML = '<div class="mdl" role="dialog" aria-modal="true" aria-labelledby="mT"><h3 id="mT">' + esc(title) + '</h3><p>' + what + '</p><p class="fine">This is a preview built from ' + esc(brand().name) + '\'s current website, so nothing is sent. On the live site it lands in your Dandy office and on your phone.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="s-btn pri" href="' + claimUrl() + '">Get this site free</a><button class="s-btn" type="button" data-close>Keep looking</button></div></div>';
+    O.hidden = false; O.querySelector('a,button').focus();
+  }
+  $('#site').addEventListener('click', (e) => {
+    const t = e.target.closest('button,a'); if (!t) return;
+    if (t.dataset.sday != null) { schedTab = +t.dataset.sday; drawSite(); return; }
+    if (t.dataset.sbook) { const s = S.services.find((x) => x.id === t.dataset.sbook); previewModal(s ? s.name : 'Book a free class', 'A new member picks a day and a class time, adds their name and mobile, and is booked in under a minute. A coach gets a text and confirms.'); return; }
+    if (t.dataset.sevent) { const ev = S.events.find((x) => x.id === t.dataset.sevent); previewModal(ev ? ev.title : 'Register', 'Members register and pay by card in one step. Spots count down live, and reminders go out by text.'); return; }
+    if (t.dataset.splan) { const p = S.plans.find((x) => x.id === t.dataset.splan); previewModal('Join' + (p ? ' · ' + p.name : ''), 'New members pick a plan, sign the waiver online and start autopay, with no front desk paperwork.'); return; }
+    if (t.dataset.sprod) { previewModal('Order', 'Members order gear and drinks from their phone and pick up at the front desk.'); return; }
+    if (t.hasAttribute('data-stext')) { previewModal('Text ' + brand().short, 'Visitors text the gym right from the site. Messages reach a coach\'s phone, so leads get an answer in minutes.'); return; }
+    const h = t.getAttribute('href'); if (h && h.startsWith('#s-')) { e.preventDefault(); const n = document.getElementById(h.slice(1)); if (n) n.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }
+  });
+
+  const fail = (t, b) => { $('#site').innerHTML = '<div class="state"><h1>' + esc(t) + '</h1><p>' + esc(b) + '</p></div>'; };
+  if (!slugQ) { fail('Find your preview', 'Use the link from your email to open your new site.'); return; }
+  fetch(URL_ + '/rest/v1/rpc/growth_preview', { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_slug: slugQ }) })
+    .then((r) => r.ok ? r.json() : null)
+    .then((d) => {
+      if (!d || !d.site) { fail('This preview is not available', 'It may have been removed.'); return; }
+      const site = d.site || {};
+      S.config = Object.assign({}, site.config || {}, { brand: Object.assign({}, (site.config || {}).brand || {}, d.brand || {}) });
+      S.schedule = site.schedule || { classes: [] };
+      ['plans', 'services', 'coaches', 'events', 'products'].forEach((k) => { S[k] = Array.isArray(site[k]) ? site[k] : []; });
+      document.title = brand().name + ' · new website preview';
+      $('#pvT').innerHTML = '<b>Preview:</b> ' + esc(brand().name) + ' on Dandy, rebuilt from your current site.';
+      $('#pvAudit').href = '/audit?g=' + encodeURIComponent(slugQ); $('#pvGo').href = claimUrl(); $('#pv').hidden = false;
+      applyBrand(); drawSite();
+    })
+    .catch(() => fail('That did not load', 'Refresh the page to try again.'));
+})();
+</script>
+</body>
+</html>

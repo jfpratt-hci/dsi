@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Growth pipeline · Dandy Strength</title>
+<link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: staff only console that fits one screen. KPI row on top, pipeline list on the left (5 of 12 columns), the selected gym's audit and email drafts on the right (7 of 12). */
+:root{--bg:#0E1420;--panel:#151D2C;--panel2:#1B2537;--line:#26324A;--ink:#E9EEF6;--muted:#8E9AB0;--accent:#F2C94C;--good:#3DBA74;--mid:#E0A43A;--bad:#F06262;
+  --disp:"Big Shoulders Display",Impact,"Arial Narrow",sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;--sans:"IBM Plex Sans",system-ui,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--sans)}
+a{color:var(--ink)}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{margin:0;font-family:var(--disp);text-transform:uppercase;letter-spacing:.01em;line-height:1}
+.shell{height:100%;display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:16px;padding:16px;max-width:1440px;margin:0 auto}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.top img{height:30px}
+.top h1{font-size:1.6rem}
+.top .sp{flex:1}
+.muted{color:var(--muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);font-weight:600;font-size:.85rem;cursor:pointer;text-decoration:none;white-space:nowrap;min-height:36px}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#141414}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:4px}
+.kpi span{font:600 .68rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.kpi b{font:900 2rem/1 var(--disp)}
+.main{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;min-height:0}
+.list{grid-column:span 5;background:var(--panel);border:1px solid var(--line);border-radius:10px;display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0}
+.filters{display:flex;gap:6px;flex-wrap:wrap;padding:10px;border-bottom:1px solid var(--line)}
+.filters button{padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);font-weight:600;font-size:.8rem;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--panel2);color:var(--ink);border-color:var(--accent)}
+.rows{overflow:auto}
+.row{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;width:100%;text-align:left}
+.row:hover,.row[aria-current="true"]{background:var(--panel2)}
+.sc{width:40px;height:40px;border-radius:8px;display:grid;place-items:center;font:900 1.2rem var(--disp);color:#141414}
+.row b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row small{color:var(--muted)}
+.pill{font:600 .64rem var(--mono);letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.detail{grid-column:span 7;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:auto;padding:16px;display:grid;gap:14px;align-content:start;min-height:0}
+.dh{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.dh .t{flex:1;min-width:220px;display:grid;gap:4px}
+.dh h2{font-size:1.8rem}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.fx{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.fx li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;font-size:.88rem}
+.fx li span{font:600 .72rem var(--mono);color:var(--accent)}
+.msg{border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;gap:8px;background:var(--panel2)}
+.msg .h{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.msg input,.msg textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;resize:vertical;line-height:1.45}
+.msg textarea{min-height:180px;font-size:.88rem}
+.note{font-size:.8rem;color:var(--muted)}
+.hook{border-left:3px solid var(--accent);padding:6px 10px;background:rgba(242,201,76,.08);font-size:.88rem}
+.gate{display:grid;place-content:center;gap:12px;text-align:center;min-height:60vh}
+@media (max-width:1000px){html,body{height:auto}.shell{height:auto}.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.list,.detail{grid-column:1/-1}.rows{max-height:50vh}}
+</style>
+</head>
+<body>
+<div class="shell" id="app"><div class="gate"><p class="muted">Loading…</p></div></div>
+<script type="module">
+import { sb } from '/js/sb.js';
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const app = $('#app');
+const tone = (s) => s == null ? 'var(--muted)' : s >= 80 ? 'var(--good)' : s >= 55 ? 'var(--mid)' : 'var(--bad)';
+const STAGES = [['all', 'All'], ['drafted', 'To approve'], ['approved', 'Approved'], ['sent', 'Sent'], ['opened', 'Opened'], ['claimed', 'Claimed'], ['replied', 'Replied'], ['skip', 'Skipped']];
+const STC = { found: 'var(--muted)', audited: 'var(--muted)', drafted: 'var(--accent)', approved: '#6E9BF2', sent: '#6E9BF2', opened: 'var(--mid)', replied: 'var(--good)', claimed: 'var(--good)', meeting: 'var(--good)', won: 'var(--good)', lost: 'var(--bad)', opted_out: 'var(--bad)', skip: 'var(--muted)' };
+let P = [], M = [], V = [], filter = 'drafted', sel = null;
+
+async function load() {
+  const [p, m, v] = await Promise.all([
+    sb.from('prospects').select('id,slug,gym_name,website,city,state,owner_name,owner_email,phone,status,score,grade,audit,facts,site,claim,notes,created_at').order('score', { ascending: true }),
+    sb.from('outreach_messages').select('*').order('step'),
+    sb.from('prospect_views').select('prospect_id,page,viewed_at').order('viewed_at', { ascending: false }).limit(2000)]);
+  if (p.error) throw p.error;
+  P = p.data || []; M = m.data || []; V = v.data || [];
+  if (!sel || !P.some((x) => x.id === sel)) sel = (P.find((x) => filter === 'all' || x.status === filter) || P[0] || {}).id;
+}
+const views = (id) => V.filter((x) => x.prospect_id === id);
+function draw() {
+  const n = (st) => P.filter((x) => x.status === st).length, opened = P.filter((x) => views(x.id).length).length;
+  const list = P.filter((x) => filter === 'all' || x.status === filter);
+  const p = P.find((x) => x.id === sel);
+  app.innerHTML = '<header class="top"><a href="/"><img src="/assets/mark.svg" alt="Dandy Strength"></a><h1>Growth pipeline</h1><span class="muted">Free audit and new site, offered to independent gyms</span><span class="sp"></span>' +
+    (n('drafted') ? '<button class="btn pri" type="button" id="approveAll">Approve all first emails (' + n('drafted') + ')</button>' : '') + '</header>' +
+    '<section class="kpis">' + [['Gyms found', P.length], ['To approve', n('drafted')], ['Emails sent', M.filter((x) => x.status === 'sent').length], ['Opened audit', opened], ['Claimed a site', n('claimed') + n('meeting') + n('won')], ['Opted out', n('opted_out')]].map(([l, v]) => '<div class="kpi"><span>' + l + '</span><b>' + v + '</b></div>').join('') + '</section>' +
+    '<div class="main"><section class="list" aria-label="Gyms"><div class="filters" role="group" aria-label="Stage">' + STAGES.map(([k, l]) => '<button type="button" data-f="' + k + '" aria-pressed="' + (k === filter) + '">' + l + ' ' + (k === 'all' ? P.length : n(k)) + '</button>').join('') + '</div>' +
+    '<div class="rows">' + (list.length ? list.map((x) => '<button class="row" type="button" data-id="' + x.id + '" aria-current="' + (x.id === sel) + '"><span class="sc" style="background:' + tone(x.score) + '">' + (x.score ?? '–') + '</span><span><b>' + esc(x.gym_name) + '</b><small>' + esc([x.city, x.state].filter(Boolean).join(', ')) + ' · ' + esc(x.owner_name || '') + (views(x.id).length ? ' · viewed ' + views(x.id).length + 'x' : '') + '</small></span><span class="pill" style="color:' + (STC[x.status] || 'var(--muted)') + '">' + esc(x.status) + '</span></button>').join('') : '<p class="muted" style="padding:16px">Nothing at this stage.</p>') + '</div></section>' +
+    '<section class="detail" aria-label="Gym detail">' + (p ? detail(p) : '<p class="muted">Pick a gym.</p>') + '</section></div>';
+}
+function detail(p) {
+  const a = p.audit || {}, msgs = M.filter((x) => x.prospect_id === p.id), vs = views(p.id);
+  return '<div class="dh"><span class="sc" style="width:56px;height:56px;font-size:1.8rem;background:' + tone(p.score) + '">' + (p.score ?? '–') + '</span><div class="t"><h2>' + esc(p.gym_name) + '</h2><span class="muted">' + esc(p.owner_name || '') + ' · ' + esc(p.owner_email || '') + (p.phone ? ' · ' + esc(p.phone) : '') + '</span><span class="muted">' + esc([p.city, p.state].filter(Boolean).join(', ')) + ' · <a href="' + esc(p.website) + '" target="_blank" rel="noopener">' + esc((p.website || '').replace(/^https?:\/\/(www\.)?/, '')) + '</a></span></div>' +
+    '<div class="acts"><a class="btn" href="/audit?g=' + encodeURIComponent(p.slug) + '" target="_blank">Audit page</a>' + (p.site ? '<a class="btn" href="/preview?g=' + encodeURIComponent(p.slug) + '" target="_blank">New site</a>' : '') + '<button class="btn" type="button" data-skip="' + p.id + '">' + (p.status === 'skip' ? 'Unskip' : 'Skip gym') + '</button></div></div>' +
+    (p.claim ? '<div class="hook"><b>Claimed:</b> ' + esc(p.claim.name) + ' · ' + esc(p.claim.email) + ' · ' + esc(p.claim.phone) + (p.claim.note ? '<br>' + esc(p.claim.note) : '') + '</div>' : '') +
+    ((p.facts || {}).hook ? '<div class="hook"><b>Hook:</b> ' + esc(p.facts.hook) + '</div>' : '') + (p.notes ? '<div class="hook">' + esc(p.notes) + '</div>' : '') +
+    (vs.length ? '<p class="note">Viewed ' + vs.length + ' times, last ' + new Date(vs[0].viewed_at).toLocaleString() + '</p>' : '') +
+    ((a.fixes || []).length ? '<div><h3 style="font-size:1.2rem;margin-bottom:8px">Top fixes</h3><ul class="fx">' + a.fixes.slice(0, 5).map((f) => '<li><span>+' + f.points + '</span><div>' + esc(f.check) + '</div></li>').join('') + '</ul></div>' : '') +
+    '<div style="display:grid;gap:10px"><h3 style="font-size:1.2rem">Emails</h3>' + (msgs.length ? msgs.map((m) => '<div class="msg" data-mid="' + m.id + '"><div class="h"><b>Email ' + m.step + '</b><span class="pill" style="color:' + (m.status === 'approved' ? '#6E9BF2' : m.status === 'sent' ? 'var(--good)' : m.status === 'draft' ? 'var(--accent)' : 'var(--muted)') + '">' + esc(m.status) + '</span><span class="note">' + (m.step === 1 ? 'Sends on approval' : m.step === 2 ? '4 days after email 1, if no reply' : '10 days after email 1, if no reply') + (m.sent_at ? ' · sent ' + new Date(m.sent_at).toLocaleDateString() : '') + '</span></div>' +
+      '<input value="' + esc(m.subject || '') + '" aria-label="Subject" ' + (m.status === 'sent' ? 'readonly' : '') + '><textarea aria-label="Body" ' + (m.status === 'sent' ? 'readonly' : '') + '>' + esc(m.body) + '</textarea>' +
+      (m.status === 'sent' ? '' : '<div class="acts"><button class="btn" type="button" data-save="' + m.id + '">Save</button>' + (m.status === 'draft' ? '<button class="btn pri" type="button" data-approve="' + m.id + '">Approve</button>' : m.status === 'approved' ? '<button class="btn" type="button" data-unapprove="' + m.id + '">Back to draft</button>' : '') + '</div>') + '</div>').join('') : '<p class="muted">No drafts yet.</p>') + '</div>';
+}
+async function act(fn) { try { await fn(); await load(); draw(); } catch (e) { alertBox(e.message || String(e)); } }
+function alertBox(t) { const d = document.createElement('div'); d.className = 'hook'; d.style.cssText = 'position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:9;background:var(--panel2)'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 4000); }
+app.addEventListener('click', (e) => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.f) { filter = t.dataset.f; sel = (P.find((x) => filter === 'all' || x.status === filter) || {}).id; draw(); return; }
+  if (t.dataset.id) { sel = t.dataset.id; draw(); return; }
+  const box = t.closest('.msg');
+  const edits = () => ({ subject: box.querySelector('input').value, body: box.querySelector('textarea').value });
+  if (t.dataset.save) return act(async () => { const r = await sb.from('outreach_messages').update(edits()).eq('id', t.dataset.save); if (r.error) throw r.error; });
+  if (t.dataset.approve) return act(async () => {
+    const r = await sb.from('outreach_messages').update(Object.assign(edits(), { status: 'approved' })).eq('id', t.dataset.approve); if (r.error) throw r.error;
+    const m = M.find((x) => x.id === t.dataset.approve); if (m && m.step === 1) { const q = await sb.from('prospects').update({ status: 'approved' }).eq('id', m.prospect_id).eq('status', 'drafted'); if (q.error) throw q.error; }
+  });
+  if (t.dataset.unapprove) return act(async () => { const r = await sb.from('outreach_messages').update({ status: 'draft' }).eq('id', t.dataset.unapprove); if (r.error) throw r.error; });
+  if (t.dataset.skip) return act(async () => { const p = P.find((x) => x.id === t.dataset.skip); const r = await sb.from('prospects').update({ status: p.status === 'skip' ? 'audited' : 'skip' }).eq('id', p.id); if (r.error) throw r.error; });
+  if (t.id === 'approveAll') {
+    if (t.dataset.sure !== '1') { t.dataset.sure = '1'; t.textContent = 'Tap again to approve every first email'; return; }
+    return act(async () => {
+      const ids = P.filter((x) => x.status === 'drafted').map((x) => x.id);
+      const r = await sb.from('outreach_messages').update({ status: 'approved' }).in('prospect_id', ids).eq('step', 1).eq('status', 'draft'); if (r.error) throw r.error;
+      const q = await sb.from('prospects').update({ status: 'approved' }).in('id', ids); if (q.error) throw q.error;
+    });
+  }
+});
+(async () => {
+  const { data } = await sb.auth.getSession();
+  if (!data.session) { app.innerHTML = '<div class="gate"><h1>Staff only</h1><p class="muted">Sign in to Dandy Strength to see the growth pipeline.</p><p><a class="btn pri" href="/login">Sign in</a></p></div>'; return; }
+  try { await load(); if (!P.length && !(await sb.rpc('is_platform_staff')).data) { app.innerHTML = '<div class="gate"><h1>Staff only</h1><p class="muted">This account is not on the Dandy staff list.</p></div>'; return; } draw(); }
+  catch (e) { app.innerHTML = '<div class="gate"><h1>That did not load</h1><p class="muted">' + esc(e.message || e) + '</p></div>'; }
+})();
+</script>
+</body>
+</html>

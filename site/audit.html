@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Free gym website audit · Dandy Strength</title>
+<meta name="description" content="A free audit of your gym website: how well it turns visitors into members, answers leads, gets found and sells more.">
+<link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one column, 12 column grid at 1100px, Dandy navy and gold. Score first, then the five areas, then the fixes worth the most, then the offer. */
+:root{--bg:#0E1420;--panel:#151D2C;--panel2:#1B2537;--line:#26324A;--ink:#E9EEF6;--muted:#8E9AB0;--accent:#F2C94C;--accent-fg:#141414;
+  --good:#3DBA74;--mid:#E0A43A;--bad:#F06262;
+  --disp:"Big Shoulders Display",Impact,"Arial Narrow",sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;--sans:"IBM Plex Sans",system-ui,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans);margin:0;padding:0 16px 48px;overflow-x:clip}
+a{color:var(--ink)}
+h1,h2,h3{margin:0;line-height:.95;font-family:var(--disp);text-transform:uppercase;letter-spacing:.01em;text-wrap:balance}
+p{margin:0}
+.wrap{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px}
+.span12{grid-column:1/-1}
+.bar{position:sticky;top:0;z-index:5;background:rgba(11,16,25,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin:0 -16px 32px;padding:0 16px}
+.bar .in{max-width:1100px;margin:0 auto;height:60px;display:flex;align-items:center;gap:12px}
+.bar img{height:34px;width:auto;display:block}
+.bar b{font:900 17px/.92 var(--disp);text-transform:uppercase;letter-spacing:.03em}
+.bar .sp{flex:1}
+.eyebrow{font:600 .72rem var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.muted{color:var(--muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:700 .95rem var(--sans);padding:12px 20px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;text-decoration:none;min-height:44px}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.sm{padding:8px 14px;font-size:.85rem;min-height:36px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.hero{grid-column:1/-1;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px;align-items:center}
+.hero .tx{grid-column:span 8;display:grid;gap:16px}
+.hero h1{font-size:clamp(2.6rem,6vw,4.6rem)}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.hero .sub{font-size:1.1rem;color:var(--muted);max-width:58ch}
+.hero .acts{display:flex;gap:10px;flex-wrap:wrap}
+.dial{grid-column:span 4;justify-self:center;display:grid;place-items:center;position:relative;width:min(260px,70vw);aspect-ratio:1}
+.dial svg{width:100%;height:100%;transform:rotate(-90deg)}
+.dial .n{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:2px}
+.dial .n b{font:900 clamp(4rem,10vw,5.6rem)/.85 var(--disp)}
+.dial .n span{font:600 .75rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.grade{display:inline-grid;place-items:center;width:44px;height:44px;border-radius:10px;font:900 1.8rem var(--disp);color:var(--accent-fg)}
+
+.sec{grid-column:1/-1;display:grid;gap:18px;padding-top:28px;border-top:1px solid var(--line)}
+.sec h2{font-size:clamp(2rem,4vw,2.8rem)}
+.areas{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px}
+.area{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:10px;align-content:start}
+.area h3{font-size:1.25rem}
+.area .pct{font:900 2.4rem/.9 var(--disp)}
+.meter{height:8px;border-radius:99px;background:var(--panel2);overflow:hidden}
+.meter i{display:block;height:100%;border-radius:99px}
+.area .note{font-size:.85rem;color:var(--muted)}
+
+.fixes{display:grid;gap:12px;counter-reset:fx}
+.fix{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:16px;align-items:start;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.fix::before{counter-increment:fx;content:counter(fx);font:900 2rem/1 var(--disp);color:var(--accent)}
+.fix h3{font-size:1.35rem;margin-bottom:6px}
+.fix p{color:var(--muted);font-size:.95rem}
+.fix p b{color:var(--ink);font-weight:600}
+.fix .pts{font:600 .75rem var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent);white-space:nowrap;border:1px solid currentColor;border-radius:99px;padding:3px 9px}
+.wins{display:flex;gap:8px;flex-wrap:wrap}
+.wins span{font-size:.88rem;padding:6px 12px;border-radius:99px;background:rgba(61,186,116,.12);color:#8FE0B4;border:1px solid rgba(61,186,116,.35)}
+
+.offer{grid-column:1/-1;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:28px}
+.offer .l{grid-column:span 7;display:grid;gap:14px;align-content:start}
+.offer .r{grid-column:span 5}
+.offer ul{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.offer li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px}
+.offer li::before{content:"";width:16px;height:16px;margin-top:4px;border-radius:4px;background:var(--accent);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3 3 7-7' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3 3 7-7' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat}
+form.claim{display:grid;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:18px}
+form.claim h3{font-size:1.6rem}
+form.claim label{display:grid;gap:4px;font-size:.82rem;color:var(--muted)}
+form.claim input,form.claim textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+form.claim .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.err{color:#FF8A7A;font-size:.88rem;min-height:1.2em}
+.done{display:grid;gap:8px}
+.foot{grid-column:1/-1;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:.85rem;padding-top:24px;border-top:1px solid var(--line)}
+.linkbtn{background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
+.state{grid-column:1/-1;padding:80px 0;display:grid;gap:12px;justify-items:start}
+
+@media (max-width:980px){.areas{grid-template-columns:repeat(2,minmax(0,1fr))}.offer .l,.offer .r{grid-column:1/-1}}
+@media (max-width:760px){
+  .hero .tx,.dial{grid-column:1/-1}.dial{order:-1;width:min(200px,60vw)}
+  .areas{grid-template-columns:1fr}
+  .fix{grid-template-columns:32px minmax(0,1fr)}.fix .pts{grid-column:2;justify-self:start}
+  form.claim .row{grid-template-columns:1fr}.offer{padding:20px}
+}
+</style>
+</head>
+<body>
+<header class="bar"><div class="in"><a href="/" aria-label="Dandy Strength home"><img src="/assets/mark.svg" alt="" width="34" height="34"></a><b>Dandy Strength</b><span class="sp"></span><a class="btn sm" href="#claim">Get the new site free</a></div></header>
+<main class="wrap" id="app"><div class="state"><p class="muted">Loading your audit…</p></div></main>
+
+<script>
+(() => {
+  const URL_ = 'https://fairfhgyrosjqualmhwu.supabase.co', KEY = 'sb_publishable_1qg2GRUgxGxVMhOaoGGGFw_lm0j_j4h';
+  const rpc = async (fn, args) => { const r = await fetch(URL_ + '/rest/v1/rpc/' + fn, { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(args) });
+    const j = await r.json().catch(() => null); if (!r.ok) throw new Error((j && j.message) || 'Something went wrong'); return j; };
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const app = document.getElementById('app');
+  const slug = new URLSearchParams(location.search).get('g') || '';
+  const AREAS = [
+    ['convert', 'Turns visitors into members', 'A clear offer and a way to book on the spot.'],
+    ['respond', 'Answers leads fast', 'Text, tap to call and a short form.'],
+    ['found', 'Gets found on Google and AI', 'Title, description, headline and local ranking.'],
+    ['reputation', 'Reviews and reputation', 'Your Google stars and review count.'],
+    ['modern', 'Modern, current site', 'Secure, built for phones, schedule and more to buy.']
+  ];
+  const tone = (p) => p >= 80 ? 'var(--good)' : p >= 55 ? 'var(--mid)' : 'var(--bad)';
+  const host = (u) => String(u || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+
+  function fail(t, b) { app.innerHTML = '<div class="state"><span class="eyebrow">Free gym website audit</span><h1 style="font-size:3rem">' + esc(t) + '</h1><p class="muted">' + b + '</p><a class="btn pri" href="/start">Ask for an audit of your gym</a></div>'; }
+
+  function draw(d) {
+    const a = d.audit || {}, s = +a.score || 0, g = a.grade || '', areas = a.areas || {}, fixes = a.fixes || [], wins = a.wins || [];
+    const name = d.gym_name, place = [d.city, d.state].filter(Boolean).join(', ');
+    document.title = name + ' website audit · Dandy Strength';
+    const C = 2 * Math.PI * 54, dash = C * s / 100;
+    const top = fixes.slice(0, 6), more = fixes.slice(6);
+    const when = d.audited_at ? new Date(d.audited_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+    app.innerHTML =
+      '<section class="hero"><div class="tx"><span class="eyebrow">Free website audit · ' + esc(place) + '</span>' +
+        '<h1>' + esc(name) + '<br><em>scores ' + s + ' of 100</em></h1>' +
+        '<p class="sub">We checked ' + esc(host(d.website)) + ' the way a new member and Google see it. ' + (fixes.length ? 'The ' + Math.min(fixes.length, 6) + ' fixes below are worth the most new members.' : 'It is in great shape.') + (d.preview ? ' We also rebuilt it on Dandy so you can see the difference.' : '') + '</p>' +
+        '<div class="acts">' + (d.preview ? '<a class="btn pri" href="/preview?g=' + encodeURIComponent(d.slug) + '">See your new site</a>' : '') + '<a class="btn' + (d.preview ? '' : ' pri') + '" href="#claim">Get the new site free</a></div></div>' +
+        '<div class="dial" role="img" aria-label="Score ' + s + ' of 100, grade ' + esc(g) + '"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54" fill="none" stroke="var(--panel2)" stroke-width="10"/><circle cx="60" cy="60" r="54" fill="none" stroke="' + tone(s) + '" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + dash.toFixed(1) + ' ' + C.toFixed(1) + '"/></svg>' +
+        '<div class="n"><b>' + s + '</b><span>Grade ' + esc(g) + '</span></div></div></section>' +
+
+      '<section class="sec"><h2>Five things that win members</h2><div class="areas">' + AREAS.map(([k, t, n]) => { const x = areas[k]; const p = x && +x.of ? Math.round(x.got / x.of * 100) : null;
+        return '<article class="area"><h3>' + t + '</h3>' + (p == null ? '<span class="pct muted">—</span><div class="meter"><i style="width:0"></i></div><span class="note">We could not check this one.</span>' : '<span class="pct" style="color:' + tone(p) + '">' + p + '%</span><div class="meter" role="img" aria-label="' + p + ' percent"><i style="width:' + p + '%;background:' + tone(p) + '"></i></div><span class="note">' + n + '</span>') + '</article>'; }).join('') + '</div></section>' +
+
+      (top.length ? '<section class="sec"><h2>The fixes worth the most</h2><div class="fixes">' + top.map((f) => '<article class="fix"><div><h3>' + esc(f.check) + '</h3><p>' + esc(f.why) + ' <b>Fix: ' + esc(f.fix) + '</b></p></div><span class="pts">+' + (+f.points) + ' pts</span></article>').join('') + '</div>' +
+        (more.length ? '<details><summary class="muted" style="cursor:pointer">' + more.length + ' smaller fix' + (more.length > 1 ? 'es' : '') + '</summary><div class="fixes" style="margin-top:12px">' + more.map((f) => '<article class="fix"><div><h3>' + esc(f.check) + '</h3><p>' + esc(f.why) + ' <b>Fix: ' + esc(f.fix) + '</b></p></div><span class="pts">+' + (+f.points) + ' pts</span></article>').join('') + '</div></details>' : '') + '</section>' : '') +
+
+      (wins.length ? '<section class="sec"><h2>What is already working</h2><div class="wins">' + wins.map((w) => '<span>' + esc(w.check) + '</span>').join('') + '</div></section>' : '') +
+
+      '<section class="offer" id="claim"><div class="l"><span class="eyebrow">Dandy Strength · the gym revenue engine</span><h2 style="font-size:clamp(2rem,4vw,3rem)">We fix all of it. The new site is free.</h2>' +
+        '<p class="muted">Dandy builds the site, then runs the things that bring in and keep members, in one place your staff signs into once.</p>' +
+        '<ul><li>A new site built around your free class, with booking on every class</li><li>A text line on the site that reaches your phone</li><li>Google, Yelp and AI search profiles fixed and kept in sync</li><li>Steady review asks after PRs and good classes</li><li>Programming, check in, billing and the TV in the gym, on plans from $99 a month</li></ul></div>' +
+        '<div class="r">' + (d.claimed ? '<div class="done"><h3 style="font-size:1.8rem">You are on the list</h3><p class="muted">We already have your request. We will be in touch within one business day.</p></div>' :
+        '<form class="claim" id="claimForm" novalidate><h3>Get the new site free</h3><p class="muted" style="font-size:.9rem">No contract. We set it up, you decide if you keep it.</p>' +
+          '<label>Your name<input name="n" autocomplete="name" required></label><div class="row"><label>Email<input name="e" type="email" autocomplete="email"></label><label>Mobile<input name="p" type="tel" autocomplete="tel"></label></div>' +
+          '<label>Anything we should know?<textarea name="m" rows="2" placeholder="Booking tool you use, best time to talk"></textarea></label><p class="err" id="cErr" role="alert"></p><button class="btn pri" type="submit">Send</button></form>') + '</div></section>' +
+
+      '<footer class="foot"><span>Audit run ' + esc(when) + ' by Dandy Strength from your public website and Google listing. Scores only count what we could check.</span><span><button class="linkbtn" type="button" id="optOut">Not interested? Remove this audit and stop emails</button></span></footer>';
+
+    const f = document.getElementById('claimForm');
+    if (f) f.addEventListener('submit', async (e) => {
+      e.preventDefault(); const v = Object.fromEntries(new FormData(f)), err = document.getElementById('cErr'), btn = f.querySelector('button');
+      if (!v.n.trim()) { err.textContent = 'Add your name.'; return; }
+      if (!v.e.trim() && v.p.replace(/\D/g, '').length < 10) { err.textContent = 'Add an email or a 10 digit mobile number.'; return; }
+      btn.disabled = true; err.textContent = '';
+      try { await rpc('growth_claim', { p_slug: d.slug, p_name: v.n, p_email: v.e, p_phone: v.p, p_note: v.m }); f.outerHTML = '<div class="done"><h3 style="font-size:1.8rem">Thanks, ' + esc(v.n.trim().split(' ')[0]) + '</h3><p class="muted">We will reach out within one business day to set up your new site.</p></div>'; }
+      catch (x) { err.textContent = x.message; btn.disabled = false; }
+    });
+    document.getElementById('optOut').addEventListener('click', async (e) => {
+      const b = e.currentTarget; if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Tap again to remove the audit and stop all emails'; return; }
+      b.disabled = true;
+      try { await rpc('growth_opt_out', { p_slug: d.slug }); fail('Done', 'This audit is removed and we will not email you again. Sorry for the bother.'); app.querySelector('.btn').remove(); }
+      catch (x) { b.textContent = 'That did not go through. Email us and we will remove it.'; }
+    });
+  }
+
+  if (!slug) { fail('Find your audit', 'Use the link from your email to open your gym\'s audit.'); return; }
+  rpc('growth_audit', { p_slug: slug }).then((d) => d ? draw(d) : fail('This audit is not available', 'It may have been removed. You can ask for a fresh one any time.'))
+    .catch(() => fail('That did not load', 'Refresh the page to try again.'));
+})();
+</script>
+</body>
+</html>
