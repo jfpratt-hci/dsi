@@ -375,14 +375,27 @@ textarea{min-height:70px;resize:vertical}
 
 /* booking */
 .book{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px}
-.book-main{grid-column:span 8;display:grid;gap:18px;align-content:start}
-.book-side{grid-column:span 4;display:grid;gap:16px;align-content:start}
-@media (max-width:960px){.book-main,.book-side{grid-column:1 / -1}}
+.book-main{grid-column:1 / -1;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:18px;align-items:start}
+.book-main>.step{grid-column:1 / -1}
+.book-main>#stepWhen{grid-column:span 7}.book-main>#stepYou{grid-column:span 5}
+@media (max-width:960px){.book-main>#stepWhen,.book-main>#stepYou{grid-column:1 / -1}}
+.plans{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}
+.plan{grid-column:span 4;display:grid;gap:12px;align-content:start;position:relative}
+.plan.best{border-color:var(--accent)}
+.plan .tag{position:absolute;top:18px;right:18px}
+.plan .pp{display:flex;align-items:baseline;gap:8px}.plan .pp b{font:800 3rem/1 var(--f-display)}.plan .pp span{color:var(--muted)}
+.plan p{margin:0}
+.plan ul{margin:0;padding:0;list-style:none;display:grid;gap:6px}.plan li{display:flex;align-items:center;gap:8px;font-size:.92rem}.plan li::before{content:"";width:9px;height:9px;border-radius:50%;border:2px solid var(--ok)}
+.plan .per{font-size:.78rem;color:var(--muted)}.plan .btn{justify-self:start}
+@media (max-width:900px){.plan{grid-column:1 / -1}}
+.faq{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}.faqq{grid-column:span 6;padding-block:8px}.faqq details{border-top:0}
+@media (max-width:760px){.faqq{grid-column:1 / -1}}
 .step{display:grid;gap:12px}
 .step-h{display:flex;align-items:center;gap:10px}
 .step-h .num{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:700 .8rem var(--f-mono);border:1px solid var(--line);color:var(--muted);flex:none}
 .step-h b{font:800 1.3rem var(--f-display);text-transform:uppercase;letter-spacing:.02em}
-.services{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.services{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:900px){.services{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:560px){.services{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .svc{all:unset;box-sizing:border-box;cursor:pointer;display:grid;gap:6px;align-content:start;padding:14px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);min-width:0}
 .svc:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -405,12 +418,13 @@ textarea{min-height:70px;resize:vertical}
 .summary div span:last-child{font-weight:600;text-align:right}
 .ok{border:1px solid var(--ok);border-radius:var(--r);padding:16px;display:grid;gap:6px}
 .ok b{font:800 1.4rem var(--f-display);text-transform:uppercase}
+.ok[hidden]{display:none}
 .hours div{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;gap:12px}
 .copyrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .copyrow .v{font-weight:600}
 .copyrow[hidden]{display:none}
 .hours div>span:first-child{white-space:nowrap}
-.hours div>span.mono{text-align:right}
+.hours div>span.mono{text-align:right;white-space:nowrap;font-size:.85rem}
 .linkbtn{font:600 .78rem var(--f-mono);border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:6px;padding:5px 9px;cursor:pointer}
 details{border-top:1px solid var(--line);padding:12px 0}
 summary{cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:12px}
@@ -422,14 +436,16 @@ details p{color:var(--muted);margin-top:6px;font-size:.94rem}
 /* contact: four cards on the 12 column grid (3 each), two per row on tablets, one on phones */
 .contact-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}
 .contact-grid .cc{grid-column:span 3;display:grid;gap:12px;align-content:start;min-width:0}
+.contact-grid .cc.visit{grid-column:span 6;grid-row:span 2}
+.contact-grid .cc.wide{grid-column:span 6}
 .cc .v.big{font:800 1.5rem var(--f-display, inherit);letter-spacing:.01em}
 .cc-acts{display:flex;gap:8px;flex-wrap:wrap}
 .soc{display:flex;flex-wrap:wrap;gap:8px}
 .soc a{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;text-decoration:none;color:var(--fg);font-weight:600;font-size:.88rem}
 .soc a:hover{border-color:var(--accent)}
 .soc a i{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
-@media (max-width:1000px){.contact-grid .cc{grid-column:span 6}}
-@media (max-width:600px){.contact-grid .cc{grid-column:1 / -1}}
+@media (max-width:1000px){.contact-grid .cc,.contact-grid .cc.wide{grid-column:span 6}.contact-grid .cc.visit{grid-column:1 / -1;grid-row:auto}}
+@media (max-width:600px){.contact-grid .cc,.contact-grid .cc.wide{grid-column:1 / -1}}
 footer{border-top:1px solid var(--line);padding-block:36px 48px}
 footer .grid{align-items:start}
 footer .f1{grid-column:span 5;display:grid;gap:10px}
@@ -492,6 +508,7 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
     <nav class="nav" id="nav" aria-label="Main">
       <a href="#community">Community</a>
       <a href="#classes">Classes</a>
+      <a href="#plans">Plans</a>
       <a href="#book">Book</a>
       <a href="#events">Events</a>
       <a href="#store">Store</a>
@@ -618,16 +635,35 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
         <article class="card prog"><span class="ages">Ages 5 to 9 · Teens · Athletes</span><h3>Kids, teens and sports</h3><p>Helping kids move, grow and gain confidence, plus teen conditioning and sports performance.</p></article>
       </div>
       <div class="card included">
-        <div style="display:grid;gap:4px"><b>Every membership includes</b><span class="muted" style="font-size:.9rem">Rates depend on how you train. We walk you through them after your free class.</span></div>
+        <div style="display:grid;gap:4px"><b>Every membership includes</b><span class="muted" style="font-size:.9rem">Plans start at $90 a month. <a href="#plans">See the plans</a></span></div>
         <ul><li>Coached classes</li><li>Weekend open gym</li><li>Dandy Strength Pro</li><li>Suggested weights</li></ul>
       </div>
     </div>
   </div>
 </section>
 
+<section id="plans">
+  <div class="wrap">
+    <div class="sec-head"><div class="t"><span class="eyebrow">Plans</span><h2>Pick how often you train</h2></div><p class="d">Every plan is month to month with coached classes, weekend open gym and Dandy Strength Pro. Start with a free class and a coach helps you choose. <span class="sample">Sample prices</span></p></div>
+    <div class="plans">
+      <article class="card plan"><span class="eyebrow">5 class plan</span><div class="pp"><b>$90</b><span>per month</span></div><p class="muted">Five classes a month. A good start, or a fit around a busy week.</p>
+        <ul><li>5 coached classes a month</li><li>Weekend open gym</li><li>Dandy Strength Pro</li></ul><span class="per mono">About $18 a class</span>
+        <a class="btn" href="#book" data-book="intro">Start with a free class</a></article>
+      <article class="card plan"><span class="eyebrow">10 class plan</span><div class="pp"><b>$150</b><span>per month</span></div><p class="muted">Two to three classes a week, the steady way most members build strength.</p>
+        <ul><li>10 coached classes a month</li><li>Weekend open gym</li><li>Dandy Strength Pro</li></ul><span class="per mono">About $15 a class</span>
+        <a class="btn" href="#book" data-book="intro">Start with a free class</a></article>
+      <article class="card plan best"><span class="eyebrow">Unlimited</span><span class="chip free tag">Best value</span><div class="pp"><b>$175</b><span>per month</span></div><p class="muted">Come to any class, any day. For members who want to train most days.</p>
+        <ul><li>Unlimited coached classes</li><li>Weekend open gym</li><li>Dandy Strength Pro</li></ul><span class="per mono">Under $11 a class at four a week</span>
+        <a class="btn primary" href="#book" data-book="intro">Start with a free class</a></article>
+    </div>
+    <div class="card included plan-add"><div style="display:grid;gap:4px"><b>Add coaching to any plan</b><span class="muted" style="font-size:.9rem">Book a coach by the hour, members and non members.</span></div>
+      <div class="cc-acts"><a class="btn" href="#book" data-book="pt">Personal training · $60 an hour</a><a class="btn" href="#book" data-book="nutrition">Nutrition coaching · $60 an hour</a></div></div>
+  </div>
+</section>
+
 <section id="book">
   <div class="wrap">
-    <div class="sec-head"><div class="t"><span class="eyebrow">Book online</span><h2>Book your visit</h2></div><p class="d">Your first class is free. Drop ins are free for visiting CrossFitters. Personal training books by the hour with the coach you choose. <span class="sample">Preview: nothing is sent</span></p></div>
+    <div class="sec-head"><div class="t"><span class="eyebrow">Book online</span><h2>Book your visit</h2></div><p class="d">Your first class is free. Drop ins are free for visiting CrossFitters. Personal training and nutrition coaching are $60 an hour with the coach you choose. <span class="sample">Preview: nothing is sent</span></p></div>
     <div class="book">
       <div class="book-main">
         <div class="card step">
@@ -641,12 +677,7 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
           <div class="slots" id="slotList" role="group" aria-label="Pick a time"></div>
           <p class="muted" id="slotNote" style="font-size:.85rem"></p>
         </div>
-        <div class="card step" id="stepWait" hidden>
-          <div class="step-h"><span class="num">2</span><b>Join the waitlist</b></div>
-          <p class="muted" id="waitText"></p>
-          <label for="wPref">Preferred session<select id="wPref"></select></label>
-        </div>
-        <div class="card step">
+        <div class="card step" id="stepYou">
           <div class="step-h"><span class="num">3</span><b>Your details</b></div>
           <form class="form" id="bookForm" novalidate>
             <div class="two">
@@ -665,43 +696,6 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
           <div class="ok" id="bOk" hidden></div>
         </div>
       </div>
-      <aside class="book-side">
-        <div class="card" style="display:grid;gap:10px">
-          <h3>Your booking</h3>
-          <div class="summary" id="summary"></div>
-        </div>
-        <div class="card" style="display:grid;gap:12px">
-          <h3>Find us</h3>
-          <a class="mapwrap" href="https://www.google.com/maps/search/?api=1&amp;query=CrossFit%20Symmetry%201005%20Lila%20Ave%20Milford%20OH%2045150" target="_blank" rel="noopener" aria-label="Open directions in Google Maps"><svg class="mapsvg" viewBox="-470 -330 940 660" role="img" aria-label="Map of CrossFit Symmetry at 1005 Lila Avenue, Milford, near US 50, SR 131 and Milford Parkway"><rect x="-470" y="-330" width="940" height="660" class="mbg"/><polygon class="mb" points="-300,-70 -255,-65 -133,-34 36,27 53,-20 20,-31 3,-48 -12,-43 -18,-54 -78,-66 -114,-83 -130,-84 -192,-101 -208,-96 -220,-96 -240,-96 -243,-84 -298,-91 -300,-70"/><polygon class="mb" points="35,64 30,76 59,85 35,64"/><path class="mv cv" d="M-367,-75 L-353,-69 L-329,-66 L-314,-65 L-296,-63 L-278,-62 L-257,-61 L-240,-56 L-221,-51 L-203,-46 L-185,-42 L-167,-38 L-147,-32 L-134,-29 L-112,-22 L-98,-17 L-83,-11 L-66,-6 L-47,2 L-30,9 L-13,14 L5,22 L22,29 L41,35 L72,46 L86,52 L110,49 L122,48"/><path class="mv cv" d="M94,53 L95,73 L96,94"/><path class="mv cv" d="M-127,63 L-109,13"/><path class="mv cv" d="M-109,13 L-98,-17"/><path class="mv cv" d="M-123,8 L-109,13 L-94,19"/><path class="mv cv" d="M-83,-11 L-94,19 L-103,42 L-93,53 L-70,62 L-53,70 L-41,75 L-16,84 L-2,90 L22,29"/><path class="mv cv" d="M-88,55 L-66,-6"/><path class="mv cv" d="M-70,62 L-47,2"/><path class="mv cv" d="M-53,70 L-30,9"/><path class="mv cv" d="M-35,77 L-13,14"/><path class="mv cv" d="M-16,84 L5,22"/><path class="mv cv" d="M-329,-66 L-311,-93 L-234,-106 L-173,-104 L-112,-93 L-28,-64 L29,-72 L77,-65 L111,-60 L72,46"/><path class="mv cv" d="M41,35 L63,-27 L77,-65"/><path class="mv cv" d="M-144,109 L-129,115 L-110,123 L-91,129 L-81,98 L-77,81"/><path class="mv cv" d="M-81,98 L-99,93 L-114,88 L-129,115 L-141,130 L-154,155 L-159,166 L-188,195 L-200,186"/><path class="mv cv" d="M-110,123 L-99,93"/><path class="mv cv" d="M-2,90 L46,108 L75,49"/><path class="mv cv" d="M-22,106 L-26,123"/><path class="mv cv" d="M-60,87 L-71,123"/><path class="mr cr" d="M-82,-332 L-97,-313 L-111,-294 L-131,-268 L-150,-242"/><path class="mr cr" d="M470,113 L414,126 L375,112 L320,83"/><path class="mr cr" d="M-475,-344 L-467,-322 L-454,-280 L-442,-240 L-425,-185 L-412,-145 L-402,-116 L-385,-91 L-367,-75"/><path class="mr cr" d="M-111,-294 L-87,-274 L-62,-261 L-42,-265"/><path class="mr cr" d="M474,46 L450,45 L414,61 L375,112"/><path class="mr cr" d="M165,-331 L155,-316 L138,-292 L113,-263 L86,-240 L60,-219 L42,-208 L22,-193 L-4,-179 L-33,-166 L-60,-157 L-95,-149 L-135,-146 L-195,-144 L-213,-141 L-232,-137 L-276,-126 L-303,-119 L-332,-108 L-358,-86 L-374,-60"/><path class="mr cr" d="M-256,333 L-250,312 L-246,294 L-241,276 L-231,244 L-218,207 L-202,188 L-176,160 L-169,151"/><path class="mr cr" d="M-226,-339 L-244,-316 L-248,-310"/><path class="mr cr" d="M450,-51 L457,-33 L467,-11 L471,4"/><path class="mr cr" d="M471,76 L469,104 L478,154"/><path class="mr cr" d="M-454,344 L-450,326 L-440,292 L-435,274 L-426,244 L-417,209 L-407,175 L-387,153 L-358,156 L-338,160 L-310,171 L-293,188 L-279,204 L-245,224 L-227,230"/><path class="mr cr" d="M390,-337 L377,-322 L355,-296 L331,-264 L311,-241 L287,-213 L280,-185"/><path class="mr cr" d="M-444,308 L-476,300"/><path class="mr cr" d="M-428,-45 L-470,51 L-481,74"/><path class="mr cr" d="M-385,448 L-343,295 L-327,238 L-308,211 L-288,192"/><path class="mr cr" d="M47,-359 L57,-316 L62,-292 L68,-265 L79,-241 L82,-237"/><path class="mr cr" d="M167,52 L190,81"/><path class="mr cr" d="M-154,133 L-136,92 L-131,73 L-127,63"/><path class="mr cr" d="M-169,151 L-154,133"/><path class="mr cr" d="M-374,-60 L-380,-41 L-384,-30"/><path class="mr cr" d="M281,-168 L270,-140 L246,-120 L230,-111 L207,-96 L186,-48 L180,-29 L172,20 L169,41 L167,52"/><path class="mr cr" d="M280,-185 L281,-168"/><path class="ks" d="M100,178 L133,143 L137,137"/><path class="ks" d="M135,333 L98,303 L79,282"/><path class="ks" d="M79,282 L66,251 L68,230"/><path class="ks" d="M68,230 L78,209 L88,192 L100,178"/><path class="ks" d="M217,59 L336,3 L414,-33 L450,-51 L499,-74"/><path class="ks" d="M190,81 L211,64 L217,59"/><path class="ks" d="M171,102 L190,81"/><path class="ks" d="M159,114 L171,102"/><path class="ks" d="M137,137 L148,126"/><path class="ks" d="M148,126 L159,114"/><path class="kp" d="M100,178 L70,158"/><path class="kp" d="M162,232 L142,213 L100,178"/><path class="kp" d="M-9,113 L-49,93 L-77,81 L-84,77"/><path class="kp" d="M8,120 L-9,113"/><path class="kp" d="M70,158 L42,140 L19,126 L8,120"/><path class="kp" d="M-84,77 L-127,63"/><path class="kp" d="M-127,63 L-167,49"/><path class="kp" d="M-205,35 L-240,22"/><path class="kp" d="M-167,49 L-193,33 L-205,35"/><path class="kp" d="M-205,35 L-174,51 L-167,49"/><path class="kp" d="M-240,22 L-274,10 L-308,-1"/><path class="kp" d="M-308,-1 L-326,-8"/><path class="kp" d="M-384,-30 L-415,-41 L-453,-54 L-478,-63"/><path class="kp" d="M-326,-8 L-336,-12"/><path class="kp" d="M-336,-12 L-374,-25 L-384,-30"/><path class="kp" d="M276,334 L243,303 L213,277 L195,262"/><path class="kp" d="M195,262 L183,251"/><path class="kp" d="M183,251 L168,238 L162,232"/><path class="ms cs" d="M100,178 L133,143 L137,137"/><path class="ms cs" d="M135,333 L98,303 L79,282"/><path class="ms cs" d="M79,282 L66,251 L68,230"/><path class="ms cs" d="M68,230 L78,209 L88,192 L100,178"/><path class="ms cs" d="M217,59 L336,3 L414,-33 L450,-51 L499,-74"/><path class="ms cs" d="M190,81 L211,64 L217,59"/><path class="ms cs" d="M171,102 L190,81"/><path class="ms cs" d="M159,114 L171,102"/><path class="ms cs" d="M137,137 L148,126"/><path class="ms cs" d="M148,126 L159,114"/><path class="mp cp" d="M100,178 L70,158"/><path class="mp cp" d="M162,232 L142,213 L100,178"/><path class="mp cp" d="M-9,113 L-49,93 L-77,81 L-84,77"/><path class="mp cp" d="M8,120 L-9,113"/><path class="mp cp" d="M70,158 L42,140 L19,126 L8,120"/><path class="mp cp" d="M-84,77 L-127,63"/><path class="mp cp" d="M-127,63 L-167,49"/><path class="mp cp" d="M-205,35 L-240,22"/><path class="mp cp" d="M-167,49 L-193,33 L-205,35"/><path class="mp cp" d="M-205,35 L-174,51 L-167,49"/><path class="mp cp" d="M-240,22 L-274,10 L-308,-1"/><path class="mp cp" d="M-308,-1 L-326,-8"/><path class="mp cp" d="M-384,-30 L-415,-41 L-453,-54 L-478,-63"/><path class="mp cp" d="M-326,-8 L-336,-12"/><path class="mp cp" d="M-336,-12 L-374,-25 L-384,-30"/><path class="mp cp" d="M276,334 L243,303 L213,277 L195,262"/><path class="mp cp" d="M195,262 L183,251"/><path class="mp cp" d="M183,251 L168,238 L162,232"/><g class="mlbl">
-<text transform="translate(-300,-6) rotate(19)">LILA AVE</text>
-<text transform="translate(206,250) rotate(42)">US 50</text>
-<text transform="translate(338,-8) rotate(-24)">SR 131</text>
-
-<text transform="translate(212,-82) rotate(-68)" class="sm">HAPPY HOLLOW RD</text>
-
-<text transform="translate(-60,-168) rotate(-12)" class="sm">MOHAWK TRL</text>
-</g><g class="mpin" transform="translate(-10,6)">
-<circle r="46" class="halo"/>
-<path d="M0 0 C -26 -30 -30 -44 -30 -58 A 30 30 0 1 1 30 -58 C 30 -44 26 -30 0 0 Z" class="pinb"/>
-<text y="-50" text-anchor="middle">CFS</text>
-</g></svg></a>
-          <span class="mapcredit">On Lila Ave, just off US 50 and SR 131 by Milford Parkway. Map data © OpenStreetMap contributors.</span>
-          <div class="copyrow"><span class="v" id="addr">1005 Lila Ave, Milford, OH 45150</span><button class="linkbtn" data-copy="addr" type="button">Copy</button></div>
-          <div class="copyrow"><span class="v" id="phone">513 809 1452</span><button class="linkbtn" data-copy="phone" type="button">Copy</button></div>
-          <a class="btn" style="justify-self:start" href="https://www.google.com/maps/search/?api=1&amp;query=CrossFit%20Symmetry%201005%20Lila%20Ave%20Milford%20OH%2045150" target="_blank" rel="noopener">Directions</a>
-          <div class="hours" id="bHours">
-            <div><span>Monday to Friday</span><span class="mono">5:30am to 6:30pm</span></div>
-            <div><span>Saturday</span><span class="mono">6:30am to 11:00am</span></div>
-            <div style="border-bottom:0"><span>Sunday</span><span class="mono">8:00am to 10:00am</span></div>
-          </div>
-        </div>
-        <div class="card" style="padding-block:10px 12px">
-          <details><summary>Never done CrossFit?</summary><p>Book a free class. A coach meets you 10 minutes early, shows you around and scales every movement for you.</p></details>
-          <details><summary>When is the gym open?</summary><p>During coached classes and weekend open gym. See the schedule above for this week's times.</p></details>
-          <details><summary>Who gets a free drop in?</summary><p>Anyone who trains CrossFit somewhere else. Visiting family in Milford? Come work out with us on the house.</p></details>
-          <details style="padding-bottom:0"><summary>What should I bring?</summary><p>Water, training shoes and clothes you can move in. We have everything else.</p></details>
-        </div>
-      </aside>
     </div>
   </div>
 </section>
@@ -765,20 +759,20 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
       <div class="floor" aria-label="Floor plan: main gym floor with two new recovery rooms beside the lobby">
         <span class="gymf">Gym floor</span><span class="rm">Massage</span><span class="rm">Stretch</span><span class="lb">Lobby</span><span class="lb">Office</span>
       </div>
-      <a class="btn" href="#book" data-book="massage" style="justify-self:start">Join the waitlist</a>
+      <button class="btn" type="button" data-open-text style="justify-self:start">Text us to get on the list</button>
     </div>
     <div class="rec-cards">
       <article class="card rec">
         <span class="room">Room 1 · Opening soon</span><h3>Sports massage</h3>
         <p>Licensed massage therapy for lifters and athletes. Work out the knots from heavy days and get back under the bar faster.</p>
         <ul><li>30, 60 or 90 minute sessions</li><li>Book online, pay in the app</li><li>Member pricing</li></ul>
-        <a class="btn" href="#book" data-book="massage" style="justify-self:start">Get on the list</a>
+        <button class="btn" type="button" data-open-text style="justify-self:start">Text us to get on the list</button>
       </article>
       <article class="card rec">
         <span class="room">Room 2 · Opening soon</span><h3>Assisted stretching</h3>
         <p>One on one stretching with a trained practitioner. Open up tight hips, shoulders and ankles so squats and overheads feel better.</p>
         <ul><li>25 or 50 minute sessions</li><li>Great before or after class</li><li>Member pricing</li></ul>
-        <a class="btn" href="#book" data-book="stretch" style="justify-self:start">Get on the list</a>
+        <button class="btn" type="button" data-open-text style="justify-self:start">Text us to get on the list</button>
       </article>
     </div>
   </div>
@@ -848,19 +842,45 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
   </div>
 </section>
 
+<section id="faq">
+  <div class="wrap">
+    <div class="sec-head"><div class="t"><span class="eyebrow">FAQ</span><h2>Frequently asked questions</h2></div><p class="d">Still wondering about something? Text us and a coach will answer.</p></div>
+    <div class="faq">
+      <div class="card faqq"><details><summary>Never done CrossFit?</summary><p>Book a free class. A coach meets you 10 minutes early, shows you around and scales every movement for you.</p></details></div>
+      <div class="card faqq"><details><summary>When is the gym open?</summary><p>During coached classes and weekend open gym. See the schedule above for this week's times.</p></details></div>
+      <div class="card faqq"><details><summary>Who gets a free drop in?</summary><p>Anyone who trains CrossFit somewhere else. Visiting family in Milford? Come work out with us on the house.</p></details></div>
+      <div class="card faqq"><details><summary>What should I bring?</summary><p>Water, training shoes and clothes you can move in. We have everything else.</p></details></div>
+    </div>
+  </div>
+</section>
+
 <section id="contact">
   <div class="wrap">
     <div class="sec-head"><div class="t"><span class="eyebrow">Contact</span><h2>Talk to a coach</h2></div><p class="d">Questions about a free class, drop ins, pricing or personal training? Text or call and a CFS coach gets right back to you.</p></div>
     <div class="contact-grid">
+      <article class="card cc visit"><span class="eyebrow">Find us</span>
+        <a class="mapwrap" href="https://www.google.com/maps/search/?api=1&amp;query=CrossFit%20Symmetry%201005%20Lila%20Ave%20Milford%20OH%2045150" target="_blank" rel="noopener" aria-label="Open directions in Google Maps"><svg class="mapsvg" viewBox="-470 -330 940 660" role="img" aria-label="Map of CrossFit Symmetry at 1005 Lila Avenue, Milford, near US 50, SR 131 and Milford Parkway"><rect x="-470" y="-330" width="940" height="660" class="mbg"/><polygon class="mb" points="-300,-70 -255,-65 -133,-34 36,27 53,-20 20,-31 3,-48 -12,-43 -18,-54 -78,-66 -114,-83 -130,-84 -192,-101 -208,-96 -220,-96 -240,-96 -243,-84 -298,-91 -300,-70"/><polygon class="mb" points="35,64 30,76 59,85 35,64"/><path class="mv cv" d="M-367,-75 L-353,-69 L-329,-66 L-314,-65 L-296,-63 L-278,-62 L-257,-61 L-240,-56 L-221,-51 L-203,-46 L-185,-42 L-167,-38 L-147,-32 L-134,-29 L-112,-22 L-98,-17 L-83,-11 L-66,-6 L-47,2 L-30,9 L-13,14 L5,22 L22,29 L41,35 L72,46 L86,52 L110,49 L122,48"/><path class="mv cv" d="M94,53 L95,73 L96,94"/><path class="mv cv" d="M-127,63 L-109,13"/><path class="mv cv" d="M-109,13 L-98,-17"/><path class="mv cv" d="M-123,8 L-109,13 L-94,19"/><path class="mv cv" d="M-83,-11 L-94,19 L-103,42 L-93,53 L-70,62 L-53,70 L-41,75 L-16,84 L-2,90 L22,29"/><path class="mv cv" d="M-88,55 L-66,-6"/><path class="mv cv" d="M-70,62 L-47,2"/><path class="mv cv" d="M-53,70 L-30,9"/><path class="mv cv" d="M-35,77 L-13,14"/><path class="mv cv" d="M-16,84 L5,22"/><path class="mv cv" d="M-329,-66 L-311,-93 L-234,-106 L-173,-104 L-112,-93 L-28,-64 L29,-72 L77,-65 L111,-60 L72,46"/><path class="mv cv" d="M41,35 L63,-27 L77,-65"/><path class="mv cv" d="M-144,109 L-129,115 L-110,123 L-91,129 L-81,98 L-77,81"/><path class="mv cv" d="M-81,98 L-99,93 L-114,88 L-129,115 L-141,130 L-154,155 L-159,166 L-188,195 L-200,186"/><path class="mv cv" d="M-110,123 L-99,93"/><path class="mv cv" d="M-2,90 L46,108 L75,49"/><path class="mv cv" d="M-22,106 L-26,123"/><path class="mv cv" d="M-60,87 L-71,123"/><path class="mr cr" d="M-82,-332 L-97,-313 L-111,-294 L-131,-268 L-150,-242"/><path class="mr cr" d="M470,113 L414,126 L375,112 L320,83"/><path class="mr cr" d="M-475,-344 L-467,-322 L-454,-280 L-442,-240 L-425,-185 L-412,-145 L-402,-116 L-385,-91 L-367,-75"/><path class="mr cr" d="M-111,-294 L-87,-274 L-62,-261 L-42,-265"/><path class="mr cr" d="M474,46 L450,45 L414,61 L375,112"/><path class="mr cr" d="M165,-331 L155,-316 L138,-292 L113,-263 L86,-240 L60,-219 L42,-208 L22,-193 L-4,-179 L-33,-166 L-60,-157 L-95,-149 L-135,-146 L-195,-144 L-213,-141 L-232,-137 L-276,-126 L-303,-119 L-332,-108 L-358,-86 L-374,-60"/><path class="mr cr" d="M-256,333 L-250,312 L-246,294 L-241,276 L-231,244 L-218,207 L-202,188 L-176,160 L-169,151"/><path class="mr cr" d="M-226,-339 L-244,-316 L-248,-310"/><path class="mr cr" d="M450,-51 L457,-33 L467,-11 L471,4"/><path class="mr cr" d="M471,76 L469,104 L478,154"/><path class="mr cr" d="M-454,344 L-450,326 L-440,292 L-435,274 L-426,244 L-417,209 L-407,175 L-387,153 L-358,156 L-338,160 L-310,171 L-293,188 L-279,204 L-245,224 L-227,230"/><path class="mr cr" d="M390,-337 L377,-322 L355,-296 L331,-264 L311,-241 L287,-213 L280,-185"/><path class="mr cr" d="M-444,308 L-476,300"/><path class="mr cr" d="M-428,-45 L-470,51 L-481,74"/><path class="mr cr" d="M-385,448 L-343,295 L-327,238 L-308,211 L-288,192"/><path class="mr cr" d="M47,-359 L57,-316 L62,-292 L68,-265 L79,-241 L82,-237"/><path class="mr cr" d="M167,52 L190,81"/><path class="mr cr" d="M-154,133 L-136,92 L-131,73 L-127,63"/><path class="mr cr" d="M-169,151 L-154,133"/><path class="mr cr" d="M-374,-60 L-380,-41 L-384,-30"/><path class="mr cr" d="M281,-168 L270,-140 L246,-120 L230,-111 L207,-96 L186,-48 L180,-29 L172,20 L169,41 L167,52"/><path class="mr cr" d="M280,-185 L281,-168"/><path class="ks" d="M100,178 L133,143 L137,137"/><path class="ks" d="M135,333 L98,303 L79,282"/><path class="ks" d="M79,282 L66,251 L68,230"/><path class="ks" d="M68,230 L78,209 L88,192 L100,178"/><path class="ks" d="M217,59 L336,3 L414,-33 L450,-51 L499,-74"/><path class="ks" d="M190,81 L211,64 L217,59"/><path class="ks" d="M171,102 L190,81"/><path class="ks" d="M159,114 L171,102"/><path class="ks" d="M137,137 L148,126"/><path class="ks" d="M148,126 L159,114"/><path class="kp" d="M100,178 L70,158"/><path class="kp" d="M162,232 L142,213 L100,178"/><path class="kp" d="M-9,113 L-49,93 L-77,81 L-84,77"/><path class="kp" d="M8,120 L-9,113"/><path class="kp" d="M70,158 L42,140 L19,126 L8,120"/><path class="kp" d="M-84,77 L-127,63"/><path class="kp" d="M-127,63 L-167,49"/><path class="kp" d="M-205,35 L-240,22"/><path class="kp" d="M-167,49 L-193,33 L-205,35"/><path class="kp" d="M-205,35 L-174,51 L-167,49"/><path class="kp" d="M-240,22 L-274,10 L-308,-1"/><path class="kp" d="M-308,-1 L-326,-8"/><path class="kp" d="M-384,-30 L-415,-41 L-453,-54 L-478,-63"/><path class="kp" d="M-326,-8 L-336,-12"/><path class="kp" d="M-336,-12 L-374,-25 L-384,-30"/><path class="kp" d="M276,334 L243,303 L213,277 L195,262"/><path class="kp" d="M195,262 L183,251"/><path class="kp" d="M183,251 L168,238 L162,232"/><path class="ms cs" d="M100,178 L133,143 L137,137"/><path class="ms cs" d="M135,333 L98,303 L79,282"/><path class="ms cs" d="M79,282 L66,251 L68,230"/><path class="ms cs" d="M68,230 L78,209 L88,192 L100,178"/><path class="ms cs" d="M217,59 L336,3 L414,-33 L450,-51 L499,-74"/><path class="ms cs" d="M190,81 L211,64 L217,59"/><path class="ms cs" d="M171,102 L190,81"/><path class="ms cs" d="M159,114 L171,102"/><path class="ms cs" d="M137,137 L148,126"/><path class="ms cs" d="M148,126 L159,114"/><path class="mp cp" d="M100,178 L70,158"/><path class="mp cp" d="M162,232 L142,213 L100,178"/><path class="mp cp" d="M-9,113 L-49,93 L-77,81 L-84,77"/><path class="mp cp" d="M8,120 L-9,113"/><path class="mp cp" d="M70,158 L42,140 L19,126 L8,120"/><path class="mp cp" d="M-84,77 L-127,63"/><path class="mp cp" d="M-127,63 L-167,49"/><path class="mp cp" d="M-205,35 L-240,22"/><path class="mp cp" d="M-167,49 L-193,33 L-205,35"/><path class="mp cp" d="M-205,35 L-174,51 L-167,49"/><path class="mp cp" d="M-240,22 L-274,10 L-308,-1"/><path class="mp cp" d="M-308,-1 L-326,-8"/><path class="mp cp" d="M-384,-30 L-415,-41 L-453,-54 L-478,-63"/><path class="mp cp" d="M-326,-8 L-336,-12"/><path class="mp cp" d="M-336,-12 L-374,-25 L-384,-30"/><path class="mp cp" d="M276,334 L243,303 L213,277 L195,262"/><path class="mp cp" d="M195,262 L183,251"/><path class="mp cp" d="M183,251 L168,238 L162,232"/><g class="mlbl">
+<text transform="translate(-300,-6) rotate(19)">LILA AVE</text>
+<text transform="translate(206,250) rotate(42)">US 50</text>
+<text transform="translate(338,-8) rotate(-24)">SR 131</text>
+
+<text transform="translate(212,-82) rotate(-68)" class="sm">HAPPY HOLLOW RD</text>
+
+<text transform="translate(-60,-168) rotate(-12)" class="sm">MOHAWK TRL</text>
+</g><g class="mpin" transform="translate(-10,6)">
+<circle r="46" class="halo"/>
+<path d="M0 0 C -26 -30 -30 -44 -30 -58 A 30 30 0 1 1 30 -58 C 30 -44 26 -30 0 0 Z" class="pinb"/>
+<text y="-50" text-anchor="middle">CFS</text>
+</g></svg></a>
+          <span class="mapcredit">Map data © OpenStreetMap contributors.</span>
+        <div class="copyrow"><span class="v" id="cAddr">1005 Lila Ave, Milford, OH 45150</span><button class="linkbtn" data-copy="cAddr" type="button">Copy</button></div>
+        <p class="muted" style="font-size:.9rem;margin:0">On Lila Ave, just off US 50 and SR 131 by Milford Parkway.</p>
+        <div class="cc-acts"><a class="btn" id="cDir" href="https://www.google.com/maps/search/?api=1&amp;query=CrossFit%20Symmetry%201005%20Lila%20Ave%20Milford%20OH%2045150" target="_blank" rel="noopener">Directions</a></div>
+      </article>
       <article class="card cc"><span class="eyebrow">Call or text</span>
         <div class="copyrow"><span class="v big" id="cPhone">513 809 1452</span><button class="linkbtn" data-copy="cPhone" type="button">Copy</button></div>
         <div class="copyrow" id="cEmailRow" hidden><span class="v" id="cEmail"></span><button class="linkbtn" data-copy="cEmail" type="button">Copy</button></div>
         <div class="cc-acts"><button class="btn primary" type="button" data-open-text>Text us</button><a class="btn" id="cCall" href="tel:+15138091452">Call</a></div>
-      </article>
-      <article class="card cc"><span class="eyebrow">Visit</span>
-        <div class="copyrow"><span class="v" id="cAddr">1005 Lila Ave, Milford, OH 45150</span><button class="linkbtn" data-copy="cAddr" type="button">Copy</button></div>
-        <p class="muted" style="font-size:.9rem;margin:0">On Lila Ave, just off US 50 and SR 131 by Milford Parkway.</p>
-        <div class="cc-acts"><a class="btn" id="cDir" href="https://www.google.com/maps/search/?api=1&amp;query=CrossFit%20Symmetry%201005%20Lila%20Ave%20Milford%20OH%2045150" target="_blank" rel="noopener">Directions</a></div>
       </article>
       <article class="card cc"><span class="eyebrow">Hours</span>
         <div class="hours" id="cHours">
@@ -869,7 +889,7 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
           <div style="border-bottom:0"><span>Sunday</span><span class="mono">8:00am to 10:00am</span></div>
         </div>
       </article>
-      <article class="card cc"><span class="eyebrow">Follow CFS</span>
+      <article class="card cc wide"><span class="eyebrow">Follow CFS</span>
         <div class="soc" id="cSocial"></div>
       </article>
     </div>
@@ -886,7 +906,7 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
       <span class="powered">Powered by Dandy Strength</span>
     </div>
     <div class="f2">
-      <div><span class="eyebrow">Train</span><a href="#classes">Schedule</a><a href="#classes" data-goto="workouts">Workouts</a><a href="#book" data-book="pt">Personal training</a><a href="#book" data-book="nutrition">Nutrition</a><a href="#recovery">Recovery rooms</a></div>
+      <div><span class="eyebrow">Train</span><a href="#classes">Schedule</a><a href="#classes" data-goto="workouts">Workouts</a><a href="#book" data-book="pt">Personal training</a><a href="#book" data-book="nutrition">Nutrition</a><a href="#recovery">Recovery rooms</a><a href="#plans">Plans</a><a href="#faq">FAQ</a></div>
       <div><span class="eyebrow">Compete</span><a href="#compete">The board</a><a href="#compete" data-goto="prs">PR wall</a><a href="#events">Events and Murph</a><a href="#store">CFS store</a><a href="#coaches">Coaches</a><a href="https://dandystrength.com" target="_blank" rel="noopener">Member login</a></div>
       <div id="fFollow"><span class="eyebrow">Follow</span><a href="https://www.instagram.com/crossfitsymmetry/" target="_blank" rel="noopener">Instagram</a><a href="https://www.facebook.com/people/CrossFit-Symmetry/100063663154017/" target="_blank" rel="noopener">Facebook</a><a href="https://www.crossfit.com/gym/7636/crossfit-symmetry" target="_blank" rel="noopener">CrossFit.com</a><a href="https://www.google.com/search?q=CrossFit+Symmetry+Milford+OH+reviews" target="_blank" rel="noopener">Google reviews</a><a href="#contact">Contact</a></div>
     </div>
@@ -1283,17 +1303,15 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
   const SERVICES = {
     intro: { name: 'Free intro class', short: 'Free class', desc: 'First time at Symmetry', len: '60 min', price: 'Free', kind: 'class' },
     dropin: { name: 'Free drop in', short: 'Drop in', desc: 'You train CrossFit elsewhere', len: '60 min', price: 'Free', kind: 'class' },
-    pt: { name: 'Personal training', short: 'Personal training', desc: '1 on 1 or bring a friend', len: '60 min', price: 'Quoted at booking', kind: 'pt' },
-    nutrition: { name: 'Nutrition consult', short: 'Nutrition', desc: 'Plan, targets and check ins', len: '45 min', price: 'Quoted at booking', kind: 'consult' },
-    massage: { name: 'Sports massage', short: 'Massage', desc: 'Recovery room 1', len: '30, 60 or 90 min', price: 'Member pricing', kind: 'wait', opts: ['30 minutes', '60 minutes', '90 minutes'] },
-    stretch: { name: 'Assisted stretching', short: 'Stretching', desc: 'Recovery room 2', len: '25 or 50 min', price: 'Member pricing', kind: 'wait', opts: ['25 minutes', '50 minutes'] },
+    pt: { name: 'Personal training', short: 'Personal training', desc: '1 on 1 or bring a friend', len: '60 min', price: '$60', kind: 'pt' },
+    nutrition: { name: 'Nutrition coaching', short: 'Nutrition', desc: 'Plan, targets and check ins', len: '60 min', price: '$60', kind: 'consult' },
   };
   const bk = { svc: 'intro', day: 0, time: null, coach: 'any', done: false };
   const dayAt = (off) => { const d = new Date(now); d.setDate(d.getDate() + off); return d; };
   Object.entries(SERVICES).forEach(([k, s]) => {
     const b = el('button', 'svc'); b.type = 'button'; b.dataset.v = k;
     b.append(el('b', '', s.short), el('span', 'd', s.desc));
-    b.append(s.kind === 'wait' ? el('span', 'chip soon', 'Coming soon') : s.price === 'Free' ? el('span', 'chip free', 'Free') : el('span', 'chip', s.len));
+    b.append(s.price === 'Free' ? el('span', 'chip free', 'Free') : el('span', 'chip', s.price + ' an hour'));
     b.addEventListener('click', () => { bk.svc = k; bk.time = null; bk.done = false; drawBook(); });
     $('#svcList').append(b);
   });
@@ -1326,14 +1344,9 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
   function drawBook() {
     const s = SERVICES[bk.svc];
     pressed($('#svcList'), bk.svc);
-    const wait = s.kind === 'wait';
-    $('#stepWhen').hidden = wait; $('#stepWait').hidden = !wait;
     $('#extraRow').hidden = bk.svc !== 'intro' && bk.svc !== 'dropin';
-    $('#bSubmit').textContent = wait ? 'Join the waitlist' : bk.svc === 'pt' ? 'Request this session' : bk.svc === 'nutrition' ? 'Request my consult' : 'Book my free class';
-    if (wait) {
-      $('#waitText').textContent = `${s.name} is coming to the new recovery rooms at Symmetry. Join the list and you will be first to book when we open, with member pricing.`;
-      const wp = $('#wPref'); wp.replaceChildren(...s.opts.map((o) => new Option(o)));
-    } else {
+    $('#bSubmit').textContent = bk.svc === 'pt' ? 'Request this session · $60' : bk.svc === 'nutrition' ? 'Request my session · $60' : 'Book my free class';
+    {
       $('#whenTitle').textContent = s.kind === 'pt' ? 'Pick a coach, day and time' : s.kind === 'consult' ? 'Pick a day and time' : 'Pick a class';
       $('#coachPick').hidden = s.kind !== 'pt';
       const db = $('#dateBtns'); db.replaceChildren();
@@ -1354,16 +1367,8 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
         b.addEventListener('click', () => { bk.time = x; drawBook(); });
         sl.append(b);
       });
-      $('#slotNote').textContent = s.kind === 'consult' ? 'Sample availability. Bring a few days of what you normally eat, or snap photos in the app.' : s.kind === 'pt' ? 'Sample availability. Live times come from each coach\'s calendar, and never overlap a class they are coaching.' : bk.svc === 'dropin' ? 'Drop ins can join any class or weekend open gym.' : 'Arrive 10 minutes early. Your coach will meet you at the door.';
+      $('#slotNote').textContent = s.kind === 'consult' ? 'Sample availability. In person or video. Bring a few days of what you normally eat, or snap photos in the app.' : s.kind === 'pt' ? 'Sample availability. Live times come from each coach\'s calendar, and never overlap a class they are coaching.' : bk.svc === 'dropin' ? 'Drop ins can join any class or weekend open gym.' : 'Arrive 10 minutes early. Your coach will meet you at the door.';
     }
-    const rows = [['Service', s.name], ['Length', s.len], ['Price', s.price]];
-    if (!wait) {
-      const d = dayAt(bk.day);
-      rows.push(['Day', d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })]);
-      rows.push(['Time', bk.time ? bk.time.t : 'Pick a time']);
-      if (bk.time) rows.push(['Coach', bk.time.coach]);
-    } else rows.push(['Status', 'Waitlist']);
-    $('#summary').replaceChildren(...rows.map(([k, v]) => { const r = el('div'); r.append(el('span', '', k), el('span', '', v)); return r; }));
     $('#bookForm').hidden = bk.done; $('#bOk').hidden = !bk.done;
   }
   window.startBooking = (svc, day, time) => {
@@ -1379,18 +1384,14 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
     const s = SERVICES[bk.svc];
     const name = $('#bName').value.trim(), email = $('#bEmail').value.trim();
     const err = $('#bErr');
-    if (s.kind !== 'wait' && !bk.time) { err.textContent = 'Pick a time first.'; err.hidden = false; return; }
+    if (!bk.time) { err.textContent = 'Pick a time first.'; err.hidden = false; return; }
     if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Add your name and a valid email so we can confirm.'; err.hidden = false; return; }
     err.hidden = true; bk.done = true;
     const first = name.split(' ')[0];
     const ok = $('#bOk'); ok.replaceChildren();
-    if (s.kind === 'wait') {
-      ok.append(el('b', '', "You're on the list"), el('p', '', `Thanks, ${first}. We will let you know the moment ${s.name.toLowerCase()} opens, with first pick of times (${$('#wPref').value}).`));
-    } else {
-      const d = dayAt(bk.day).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-      const who = s.kind === 'consult' ? 'your nutrition coach' : 'Coach ' + bk.time.coach;
-      ok.append(el('b', '', s.kind === 'class' ? "You're booked" : s.kind === 'pt' ? 'Session requested' : 'Consult requested'), el('p', '', `${first}, see you ${d} at ${bk.time.t} with ${who}. ${s.kind === 'class' ? 'We will text you a reminder the night before.' : 'We will confirm and send the rate by text.'}`));
-    }
+    const d = dayAt(bk.day).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    const who = s.kind === 'consult' ? 'your nutrition coach' : 'Coach ' + bk.time.coach;
+    ok.append(el('b', '', s.kind === 'class' ? "You're booked" : s.kind === 'pt' ? 'Session requested' : 'Nutrition session requested'), el('p', '', `${first}, see you ${d} at ${bk.time.t} with ${who}. ${s.kind === 'class' ? 'We will text you a reminder the night before.' : 'We will text you to confirm. The hour is $60.'}`));
     ok.append(el('p', 'muted', 'Preview only: on the live site this sends your confirmation and adds you to the class roster.'));
     const again = el('button', 'btn', 'Book something else'); again.type = 'button'; again.style.justifySelf = 'start';
     again.addEventListener('click', () => { bk.done = false; bk.time = null; drawBook(); }); ok.append(again);
