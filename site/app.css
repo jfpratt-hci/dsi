@@ -1411,3 +1411,4 @@ td.nowrap{white-space:nowrap}
 .dtvF select{height:40px;width:100%}
 .dtvMi{grid-template-columns:44px minmax(0,1fr) auto auto;gap:6px 8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
 .dtvMi .dtvMiPic{grid-row:span 2}.dtvMi input[data-k$=".name"]{grid-column:2/-1}
+.lgWays{margin:4px 0 -4px}

@@ -108,7 +108,7 @@ function navGroups() {
 }
 const ROUTE_GROUP = { '': 'home', pricing: 'home', start: 'home', boards: 'boards', prs: 'boards', pr: 'boards', compete: 'boards', season: 'boards', battles: 'boards', gyms: 'boards', benchmarks: 'boards', protests: 'boards', recap: 'boards', u: 'boards',
   week: 'train', training: 'train', log: 'train', progress: 'train', plans: 'train', coach: 'train', tracker: 'train', connect: 'train', import: 'train', lift: 'train', classes: 'train', mygym: 'me', billing: 'me', sign: 'me', signed: 'me',
-  club: 'office', insights: 'office', growth: 'office', dandytv: 'office', shop: 'train', class: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office', admin: 'admin', reports: 'admin', program: 'admin', me: 'me', pro: 'me', rules: 'me', blocked: 'me' };
+  club: 'office', insights: 'office', growth: 'office', dandytv: 'office', shop: 'train', class: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office', admin: 'admin', reports: 'admin', program: 'admin', me: 'me', security: 'me', pro: 'me', rules: 'me', blocked: 'me' };
 const ACCT = () => [['/me', 'Profile', 'Name, gym and lifter details'], ...(S.me.gym_id ? [['/mygym', 'Membership and billing', 'Plan, payments and documents']] : []), ['/me?tab=goals', 'Goals', 'What you are chasing'], ['/me?tab=reminders', 'Reminders', 'Nudges to log'], ['/me?tab=account', 'Account and safety', 'Email, privacy and blocks'], ['/u/' + S.me.id, 'My lifter card', 'Your public page'], ['/pro', 'DSI Pro', 'Membership and perks']];
 function buildNav(r) {
   const groups = navGroups(), cur = ROUTE_GROUP[r] ?? '';
@@ -761,7 +761,7 @@ VIEWS.me = async (_, tok) => {
     <section class="sec"><div><div class="kicker">Community</div><h2>Rules and <span>safety</span></h2></div>
       <div class="tools">${tile('/rules', 'Community rules', m.terms_accepted_at ? 'You agreed on ' + fmtD(m.terms_accepted_at) + '.' : 'Agree before posting in chat.')}${tile('/blocked', 'Blocked lifters', S.blocked.size ? S.blocked.size + ' blocked' : 'Nobody blocked.')}</div></section>
     <section class="sec"><div><div class="kicker">Account</div><h2>Your <span>account</span></h2></div>
-      <div class="row"><span class="pill acc" style="margin:0">Member</span><a class="btn ghost sm" href="/pro">Membership</a><button class="btn ghost sm" id="so">Sign out</button><button class="btn ghost sm dangerText" id="delAcct">Delete account</button></div>
+      <div class="row"><span class="pill acc" style="margin:0">Member</span><a class="btn ghost sm" href="/pro">Membership</a><a class="btn ghost sm" href="/security">Sign in options</a><button class="btn ghost sm" id="so">Sign out</button><button class="btn ghost sm dangerText" id="delAcct">Delete account</button></div>
       <p class="hint">Deleting removes your profile, every lift, goal, log, message and video, and your login. It cannot be undone.</p></section>` : `<section class="sec band"><div class="secHead"><div><div class="kicker">What you're chasing</div><h2>Goals</h2>${pro ? '<p class="secSub">Pick a date and your goal plan updates.</p>' : `<p class="secSub">Add a date and get a weekly plan with <a href="/pro">DSI Pro</a>.</p>`}</div></div>
       <form class="formCard" id="gf"><div class="goalRows" id="gRows">${goalIds.map(goalCard).join('')}</div>
       <div class="row"><label class="vh" for="g-add">Add a goal for another lift</label><select id="g-add" style="max-width:280px"><option value="">Add a goal for another lift…</option>${D.ALL_LIFTS.filter(([id]) => !goalIds.includes(id)).map(([id, n]) => `<option value="${id}">${esc(n)}</option>`).join('')}</select><button class="btn ghost sm" type="button" id="g-addb">Add</button></div>
@@ -769,7 +769,7 @@ VIEWS.me = async (_, tok) => {
     <section class="sec"><div><div class="kicker">Community</div><h2>Rules and <span>safety</span></h2></div>
       <div class="tools">${tile('/rules', 'Community rules', m.terms_accepted_at ? 'You agreed on ' + fmtD(m.terms_accepted_at) + '.' : 'Agree before posting in chat.')}${tile('/blocked', 'Blocked lifters', S.blocked.size ? S.blocked.size + ' blocked' : 'Nobody blocked.')}${S.me.gym_id ? tile('/mygym', 'My gym', 'Membership, waiver, invoices and attendance.') + tile('/classes', 'Book a class', 'Your gym\'s schedule for the week.') : ''}${S.myGyms.map(g => tile('/club/' + g.gym_id, 'Gym office', g.gym.name + ': check in, schedule, members, billing.')).join('')}${S.me.role === 'admin' ? tile('/admin', 'Management dashboard', 'Members, gyms and requests.') : ''}${isStaff() ? tile('/reports', 'Reports', 'Review reports within 24 hours.') + tile('/program', 'Import workouts', 'Post the week from a gym link or screenshots.') : ''}</div></section>
     <section class="sec"><div><div class="kicker">Account</div><h2>Your <span>account</span></h2></div>
-      <div class="row"><span class="pill acc" style="margin:0">${pro ? 'DSI Pro' : 'Member'}</span><a class="btn ghost sm" href="/pro">Membership</a><button class="btn ghost sm" id="so">Sign out</button><button class="btn ghost sm dangerText" id="delAcct">Delete account</button></div>
+      <div class="row"><span class="pill acc" style="margin:0">${pro ? 'DSI Pro' : 'Member'}</span><a class="btn ghost sm" href="/pro">Membership</a><a class="btn ghost sm" href="/security">Sign in options</a><button class="btn ghost sm" id="so">Sign out</button><button class="btn ghost sm dangerText" id="delAcct">Delete account</button></div>
       <p class="hint">Deleting removes your profile, every lift, goal, log, message and video, and your login. It cannot be undone.</p></section>`}`)) return;
   // One short page per tab instead of one long page. The tool tiles live in the top menus now.
   if (!first) {
@@ -1133,34 +1133,113 @@ VIEWS.support = async (_, tok) => paint(tok, doc('Help', '<span>Support</span>',
   <p><b>How do I delete my account?</b> In the app go to Me, then Delete account. On the web, email us and we will do it for you.</p>`));
 
 /* ---------- login ---------- */
+// Three ways in: an email code (no password), a password, or a code by text to a mobile number already on the account.
+const e164 = v => { const d = String(v || '').replace(/[^0-9+]/g, ''); if (/^\+\d{8,15}$/.test(d)) return d; const n = d.replace(/\D/g, ''); return n.length === 10 ? '+1' + n : n.length === 11 && n[0] === '1' ? '+' + n : ''; };
+const phoneOff = e => /provider|disabled|not enabled|unsupported/i.test((e && e.message) || '');
 VIEWS.login = async (_, tok) => {
   if (S.me) { go(S.me.display_name ? '/' : '/join', true); return; }
+  const way = new URLSearchParams(location.search).get('with') || 'email';
+  const tabs = [['email', 'Email code'], ['password', 'Password'], ['text', 'Text me a code']];
   if (!paint(tok, `<section class="sec narrow"><div><div class="kicker">Members</div><h2>Sign <span>in</span></h2></div>
-    <p class="lede">No password. We email you a sign in link and a 6 digit code. Already on the board? Use the same email and your numbers come with you. New here? <a href="/join">Join with your four lifts</a>.</p>
-    <form class="formCard" id="lg"><div class="field"><label for="lg-e">Email</label><input id="lg-e" type="email" autocomplete="email" required></div>
-      <div class="row"><button class="btn" type="submit">Email me a link</button><span class="hint" id="lg-msg"></span></div></form>
+    <p class="lede">Already on the board? Sign in the same way you joined and your numbers come with you. New here? <a href="/join">Join with your four lifts</a>.</p>
+    <nav class="chips lgWays" aria-label="How to sign in">${tabs.map(([k, n]) => `<a class="chip" href="/login?with=${k}" aria-pressed="${k === way}">${n}</a>`).join('')}</nav>
+    ${way === 'password' ? `<form class="formCard" id="pw"><div class="field"><label for="pw-e">Email</label><input id="pw-e" type="email" autocomplete="username" required></div>
+      <div class="field"><label for="pw-p">Password</label><input id="pw-p" type="password" autocomplete="current-password" required minlength="8"></div>
+      <div class="row"><button class="btn" type="submit">Sign in</button><button class="btn ghost sm" type="button" id="pw-f">Forgot or never set one?</button><span class="hint" id="pw-msg" role="status"></span></div></form>`
+    : way === 'text' ? `<form class="formCard" id="tx"><div class="field"><label for="tx-p">Mobile number</label><input id="tx-p" type="tel" autocomplete="tel" inputmode="tel" required placeholder="513 555 0100"></div>
+      <div class="row"><button class="btn" type="submit">Text me a code</button><span class="hint" id="tx-msg" role="status">For numbers added to an account. Add yours under Account, Sign in options.</span></div></form>
+    <form class="formCard" id="tc" hidden><div class="field"><label for="tc-c">6 digit code</label><input id="tc-c" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required></div>
+      <div class="row"><button class="btn" type="submit">Sign in</button><span class="hint" id="tc-msg" role="status"></span></div></form>`
+    : `<form class="formCard" id="lg"><div class="field"><label for="lg-e">Email</label><input id="lg-e" type="email" autocomplete="email" required></div>
+      <div class="row"><button class="btn" type="submit">Email me a link</button><span class="hint" id="lg-msg" role="status">No password needed. We email a sign in link and a 6 digit code.</span></div></form>
     <form class="formCard" id="cd" hidden><div class="field"><label for="cd-c">6 digit code</label><input id="cd-c" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" maxlength="10" required></div>
-      <div class="row"><button class="btn" type="submit">Sign in</button><span class="hint" id="cd-msg">Or just tap the link in the email.</span></div></form></section>`)) return;
-  let email = '';
-  $('#lg').onsubmit = async e => {
-    e.preventDefault();
-    email = $('#lg-e').value.trim().toLowerCase();
-    const b = e.target.querySelector('button'), msg = $('#lg-msg'); b.disabled = true; msg.textContent = 'Sending…';
-    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + '/', shouldCreateUser: true } });
-    b.disabled = false;
-    if (error) { msg.textContent = error.status === 429 ? 'Too many emails just now. Wait a minute and try again.' : error.message; return; }
-    msg.textContent = 'Check your email.';
-    $('#cd').hidden = false; $('#cd-c').focus();
-  };
-  $('#cd').onsubmit = async e => {
-    e.preventDefault();
-    const msg = $('#cd-msg');
-    const { error } = await sb.auth.verifyOtp({ email, token: $('#cd-c').value.trim(), type: 'email' });
-    if (error) msg.textContent = error.message;
-  };
+      <div class="row"><button class="btn" type="submit">Sign in</button><span class="hint" id="cd-msg">Or just tap the link in the email.</span></div></form>`}</section>`)) return;
+  let email = '', phone = '';
+  const lg = $('#lg'); if (lg) {
+    lg.onsubmit = async e => {
+      e.preventDefault();
+      email = $('#lg-e').value.trim().toLowerCase();
+      const b = e.target.querySelector('button'), msg = $('#lg-msg'); b.disabled = true; msg.textContent = 'Sending…';
+      const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + '/', shouldCreateUser: true } });
+      b.disabled = false;
+      if (error) { msg.textContent = error.status === 429 ? 'Too many emails just now. Wait a minute and try again.' : error.message; return; }
+      msg.textContent = 'Check your email.';
+      $('#cd').hidden = false; $('#cd-c').focus();
+    };
+    $('#cd').onsubmit = async e => { e.preventDefault(); const { error } = await sb.auth.verifyOtp({ email, token: $('#cd-c').value.trim(), type: 'email' }); if (error) $('#cd-msg').textContent = error.message; };
+  }
+  const pw = $('#pw'); if (pw) {
+    pw.onsubmit = async e => {
+      e.preventDefault();
+      const b = e.target.querySelector('button'), msg = $('#pw-msg'); b.disabled = true; msg.textContent = 'Signing in…';
+      const { error } = await sb.auth.signInWithPassword({ email: $('#pw-e').value.trim().toLowerCase(), password: $('#pw-p').value });
+      b.disabled = false;
+      if (error) msg.textContent = /invalid/i.test(error.message) ? 'That email and password do not match. Never set a password? Use Forgot, or sign in with an email code.' : error.message;
+    };
+    $('#pw-f').onclick = async () => {
+      const em = $('#pw-e').value.trim().toLowerCase(), msg = $('#pw-msg');
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { msg.textContent = 'Type your email first.'; $('#pw-e').focus(); return; }
+      msg.textContent = 'Sending…';
+      const { error } = await sb.auth.resetPasswordForEmail(em, { redirectTo: location.origin + '/security?reset=1' });
+      msg.textContent = error ? (error.status === 429 ? 'Too many emails just now. Wait a minute and try again.' : error.message) : 'Check your email for a link to set your password.';
+    };
+  }
+  const tx = $('#tx'); if (tx) {
+    tx.onsubmit = async e => {
+      e.preventDefault();
+      phone = e164($('#tx-p').value); const msg = $('#tx-msg');
+      if (!phone) { msg.textContent = 'Type a 10 digit mobile number.'; return; }
+      const b = e.target.querySelector('button'); b.disabled = true; msg.textContent = 'Texting…';
+      const { error } = await sb.auth.signInWithOtp({ phone, options: { shouldCreateUser: false } });
+      b.disabled = false;
+      if (error) { msg.textContent = phoneOff(error) ? 'Text codes are not switched on yet. Use an email code for now.' : /signups not allowed|not found|otp/i.test(error.message) ? 'No account has this number yet. Sign in with an email code, then add your number under Account, Sign in options.' : error.status === 429 ? 'Too many texts just now. Wait a minute and try again.' : error.message; return; }
+      msg.textContent = 'Code sent.'; $('#tc').hidden = false; $('#tc-c').focus();
+    };
+    $('#tc').onsubmit = async e => { e.preventDefault(); const { error } = await sb.auth.verifyOtp({ phone, token: $('#tc-c').value.trim(), type: 'sms' }); if (error) $('#tc-msg').textContent = error.message; };
+  }
 };
 
-
+// Account: set or change a password, and add a mobile number for text codes.
+VIEWS.security = async (_, tok) => {
+  if (!S.me) return needLogin(tok, 'change how you sign in');
+  const { data: { user } } = await sb.auth.getUser();
+  const reset = new URLSearchParams(location.search).has('reset');
+  const shown = p => p ? p.replace(/^\+?1?(\d{3})(\d{3})(\d{4})$/, '$1 $2 $3') : '';
+  if (!paint(tok, `<section class="sec narrow"><div><div class="kicker">Account</div><h2>Sign in <span>options</span></h2></div>
+    <p class="lede">You can always sign in with an email code to ${esc((user && user.email) || 'your email')}. Add a password or a mobile number to sign in those ways too.</p>
+    <form class="formCard" id="sp"><div class="formH">${reset ? 'Set your new password' : 'Password'}</div>
+      <div class="field"><label for="sp-p">New password</label><input id="sp-p" type="password" autocomplete="new-password" minlength="8" required></div>
+      <div class="field"><label for="sp-2">Type it again</label><input id="sp-2" type="password" autocomplete="new-password" minlength="8" required></div>
+      <div class="row"><button class="btn" type="submit">Save password</button><span class="hint" id="sp-msg" role="status">At least 8 characters.</span></div></form>
+    <form class="formCard" id="sm"><div class="formH">Mobile number for text codes${user && user.phone ? ` <span class="sub">Now ${esc(shown(user.phone))}</span>` : ''}</div>
+      <div class="field"><label for="sm-p">${user && user.phone ? 'Change to' : 'Mobile number'}</label><input id="sm-p" type="tel" autocomplete="tel" inputmode="tel" required placeholder="513 555 0100"></div>
+      <div class="row"><button class="btn" type="submit">Text me a code</button><span class="hint" id="sm-msg" role="status"></span></div></form>
+    <form class="formCard" id="sc" hidden><div class="field"><label for="sc-c">6 digit code</label><input id="sc-c" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required></div>
+      <div class="row"><button class="btn" type="submit">Add this number</button><span class="hint" id="sc-msg" role="status"></span></div></form></section>`)) return;
+  if (reset) $('#sp-p').focus();
+  $('#sp').onsubmit = async e => {
+    e.preventDefault(); const msg = $('#sp-msg'), a = $('#sp-p').value;
+    if (a !== $('#sp-2').value) { msg.textContent = 'Those two do not match.'; return; }
+    const { error } = await sb.auth.updateUser({ password: a });
+    if (error) { msg.textContent = /reauth|nonce/i.test(error.message) ? 'For safety, sign in again with an email code, then set it here.' : error.message; return; }
+    e.target.reset(); msg.textContent = 'Saved. Sign in with your email and this password any time.'; toast('Password saved');
+  };
+  let phone = '';
+  $('#sm').onsubmit = async e => {
+    e.preventDefault(); const msg = $('#sm-msg'); phone = e164($('#sm-p').value);
+    if (!phone) { msg.textContent = 'Type a 10 digit mobile number.'; return; }
+    msg.textContent = 'Texting…';
+    const { error } = await sb.auth.updateUser({ phone });
+    if (error) { msg.textContent = phoneOff(error) ? 'Text codes are not switched on yet. Check back soon.' : /already/i.test(error.message) ? 'That number is on another account.' : error.message; return; }
+    msg.textContent = 'Code sent.'; $('#sc').hidden = false; $('#sc-c').focus();
+  };
+  $('#sc').onsubmit = async e => {
+    e.preventDefault();
+    const { error } = await sb.auth.verifyOtp({ phone, token: $('#sc-c').value.trim(), type: 'phone_change' });
+    if (error) { $('#sc-msg').textContent = error.message; return; }
+    toast('Number added. Sign in by text any time.'); VIEWS.security(_, S.tok);
+  };
+};
 
 /* ---------- import workouts (staff): gym link, screenshots or text into the week ---------- */
 const BASES = [['squat', 'Squat'], ['dead', 'Deadlift'], ['clean', 'Clean'], ['bench', 'Bench']];
@@ -1409,6 +1488,7 @@ async function boot() {
     S.session = session;
     setTimeout(async () => {
       await loadMe();
+      if (ev === 'PASSWORD_RECOVERY') { history.replaceState(null, '', '/security?reset=1'); route(); return; }
       if (ev === 'SIGNED_IN') {
         const had = S.me && S.me.display_name, j = await finishJoin();
         if (j && j.ok) { history.replaceState(null, '', '/u/' + S.me.id); toast('You\'re on the board, ' + S.me.display_name); }
