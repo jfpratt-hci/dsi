@@ -1401,3 +1401,13 @@ td.nowrap{white-space:nowrap}
 .grCheck input{padding:6px 8px;font-size:14px;min-height:0}
 .grCheck .hint{margin:0;font-size:12px}
 .grCheck .grF.wide input{font-size:14px}
+/* Dandy TV setup: merchandise items and the image slide */
+.dtvMerch{display:grid;gap:8px}
+.dtvMi{display:grid;grid-template-columns:44px minmax(0,1fr) 5.5em auto auto;gap:8px;align-items:center}
+.dtvMi input{height:36px;font-size:14px;width:100%}
+.dtvMiPic{width:44px;height:44px;border-radius:8px;background:#fff;overflow:hidden;display:grid;place-items:center}.dtvMiPic img{width:100%;height:100%;object-fit:contain}.dtvMiPic svg{width:80%;height:80%}.dtvMiPic:has(svg){background:var(--panel2)}
+.dtvUp{cursor:pointer}
+.dtvImgPick{aspect-ratio:16/9;border:1px dashed var(--line);border-radius:8px;display:grid;place-items:center;overflow:hidden;background:var(--panel2)}.dtvImgPick img{max-width:100%;max-height:100%;object-fit:contain}.dtvImgPick span{color:var(--muted);font-size:13px}
+.dtvF select{height:40px;width:100%}
+.dtvMi{grid-template-columns:44px minmax(0,1fr) auto auto;gap:6px 8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.dtvMi .dtvMiPic{grid-row:span 2}.dtvMi input[data-k$=".name"]{grid-column:2/-1}

@@ -45,6 +45,8 @@ export function install(X) {
     prs: { n: 'PRs this week', d: "Your members' new personal records", live: true },
     leaders: { n: 'Gym leaderboard', d: 'Top DSI scores in your gym', live: true },
     shop: { n: 'Gym shop', d: 'What is in the fridge, with a QR to buy', live: true },
+    merch: { n: 'Merchandise', d: 'Tees, hoodies and hats with photos, prices and a QR to order' },
+    image: { n: 'Image', d: 'Any picture or poster: an event, a promo, a member shout out' },
     free_class: { n: 'Free class offer', d: 'Bring a friend, first class free' },
     event: { n: 'Event', d: 'A date, a countdown and a QR to sign up' },
     review: { n: 'Review ask', d: 'Five stars and a QR to your Google reviews' },
@@ -52,6 +54,8 @@ export function install(X) {
     custom: { n: 'Your own message', d: 'Any headline, words and link' },
   };
   const uid = () => Math.random().toString(36).slice(2, 10);
+  // Set a slide field by path, like "title" or "items.2.price".
+  const setK = (o, path, v) => { const ks = path.split('.'); let x = o; for (let i = 0; i < ks.length - 1; i++) { const k = ks[i]; if (x[k] == null) x[k] = /^\d+$/.test(ks[i + 1]) ? [] : {}; x = x[k]; } x[ks[ks.length - 1]] = v; };
   function starter(type, g) {
     const k = keyOf(g), base = { id: uid(), type, on: true };
     return {
@@ -62,6 +66,8 @@ export function install(X) {
       review: { ...base, title: `Love ${g.name}?`, text: 'A quick Google review helps more people find their community gym.', url: '', cta: 'Scan to review' },
       text_us: { ...base, title: 'Questions? Text us.', text: 'A coach answers fast. Class times, pricing, personal training, anything.', phone: g.phone || '', cta: 'Scan to text' },
       custom: { ...base, title: 'Your headline', text: 'A line or two about it.', url: '', cta: 'Scan for more' },
+      merch: { ...base, title: 'Rep the gym', text: 'Tees, hoodies and hats. Ask at the desk.', items: [], url: `${SITE}/gyms/${k}`, cta: 'Scan to order' },
+      image: { ...base, title: '', img: '', fit: 'whole', url: '', cta: '' },
     }[type];
   }
   const defaults = g => ['schedule', 'prs', 'free_class', 'leaders', 'shop', 'text_us'].map(t => starter(t, g)).filter(s => s.type !== 'text_us' || s.phone);
@@ -120,6 +126,15 @@ export function install(X) {
   .lbRank{font:900 64px/1 var(--disp);color:var(--ac);grid-row:span 2}
   .lbItems{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}.lbItem{background:var(--panel);border:2px solid var(--line);border-radius:20px;padding:20px;display:grid;justify-items:center;gap:6px;text-align:center}
   .lbItem i{font-style:normal;font-size:64px;line-height:1}.lbItem b{font:700 26px var(--sans)}.lbItem span{font:900 40px/1 var(--disp);color:var(--ac)}
+  .lbMerch{display:grid;grid-template-columns:repeat(4,1fr);gap:22px}.lbMerch.n1{grid-template-columns:minmax(0,420px)}.lbMerch.n2{grid-template-columns:repeat(2,1fr)}.lbMerch.n3{grid-template-columns:repeat(3,1fr)}
+  .lbMi{background:var(--panel);border:2px solid var(--line);border-radius:22px;padding:18px;display:grid;gap:8px;justify-items:center;text-align:center;min-width:0}
+  .lbMiPic{width:100%;aspect-ratio:1;border-radius:14px;background:#fff;display:grid;place-items:center;overflow:hidden}.lbMiPic img{width:100%;height:100%;object-fit:contain}.lbMiPic svg{width:70%;height:70%}
+  .lbMiPic:has(svg){background:var(--bg2)}
+  .lbMi b{font:700 24px/1.15 var(--sans);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;max-width:100%;min-height:2.3em}.lbMi span{font:900 48px/1 var(--disp);color:var(--ac)}
+  .lbImg{grid-column:1/span 7;align-self:stretch;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:18px;min-height:0}.lbImg.full{grid-column:1/-1}
+  .lbImgBox{min-height:0;display:grid;place-items:center;border-radius:24px;overflow:hidden}.lbImgBox img{max-width:100%;max-height:100%;object-fit:contain;border-radius:24px;display:block}.lbImgBox img.fill{width:100%;height:100%;object-fit:cover}
+  .lbImgCap{font:900 64px/1 var(--disp);text-transform:uppercase;text-align:center}
+  .lbSlide:has(.lbImg.bleed){padding:0}.lbImg.bleed .lbImgBox,.lbImg.bleed .lbImgBox img{border-radius:0}.lbImg.bleed{gap:0}.lbImg.bleed .lbImgCap{position:absolute;left:0;right:0;bottom:0;padding:28px 80px;background:linear-gradient(transparent,rgba(5,9,26,.85))}
   .lbStars{font-size:110px;letter-spacing:12px;color:var(--ac);line-height:1}.lbPhone{font:900 130px/1 var(--disp);color:var(--ac);font-variant-numeric:tabular-nums}
   .lbEmpty{font:600 36px var(--sans);color:var(--muted)}
   .lbTick{border-top:2px solid var(--line);display:grid;grid-template-columns:repeat(12,1fr);gap:32px;align-items:center;padding:0 80px;position:relative;z-index:2;background:var(--bg2)}
@@ -133,6 +148,19 @@ export function install(X) {
 
   const mmToT = m => { const h = Math.floor(m / 60) % 24, x = m % 60; return `${h % 12 || 12}:${String(x).padStart(2, '0')}${h < 12 ? 'am' : 'pm'}`; };
   const dur = m => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m} min`);
+
+  const priceTxt = p => { const v = String(p).trim(); return /^\$/.test(v) ? v : /^[0-9.]+$/.test(v) ? '$' + (+v % 1 ? (+v).toFixed(2) : +v) : v; };
+  // A plain shape for gear without a photo, picked from the name.
+  const gearSvg = name => {
+    const n = String(name || '').toLowerCase();
+    const d = /hood|sweat|crew/.test(n) ? 'M38 18c4 8 10 12 12 12s8-4 12-12l20 8 10 24-14 6v40H22V56L8 50l10-24z M42 18c2 10 6 16 8 16s6-6 8-16'
+      : /tank|singlet/.test(n) ? 'M36 14c0 12 6 18 14 18s14-6 14-18h8c0 14 4 20 8 26v52H20V40c4-6 8-12 8-26z'
+      : /hat|cap|snapback|beanie/.test(n) ? 'M18 62c0-22 14-36 32-36s32 14 32 36z M10 62h70c6 0 12 4 12 8H10z'
+      : /bottle|shaker|cup|mug/.test(n) ? 'M38 10h24v12l6 10v58H32V32l6-10z'
+      : /bag|tote/.test(n) ? 'M22 36h56l-4 56H26z M38 36c0-12 4-18 12-18s12 6 12 18'
+      : 'M36 16c2 6 8 10 14 10s12-4 14-10l22 10-8 20-12-4v50H34V42l-12 4-8-20z';
+    return `<svg viewBox="0 0 100 100" aria-hidden="true"><path d="${d}" fill="var(--panel2,#1c2c50)" stroke="var(--ac,#F2C94C)" stroke-width="3" stroke-linejoin="round" fill-rule="evenodd"/></svg>`;
+  };
 
   function slideHtml(s, g, dd) {
     const kick = t => `<div class="lbKick"><i></i>${esc(t)}</div>`;
@@ -150,6 +178,14 @@ export function install(X) {
     if (s.type === 'prs') return `<div class="lbGrid"><div class="hd">${kick('PRs this week')}<span class="lbChip">${dd.prs.length} new</span></div>${dd.prs.length ? dd.prs.slice(0, 9).map(p => `<div class="lbPr"><div class="lbPlate">DSI</div><b>${esc(dd.nameOf(p.profile_id))}</b><div class="w">${fmt(p.weight_lb)} <small>lb</small></div><span>${esc(D.liftName(p.lift))} · up ${fmt(num(p.weight_lb) - num(p.prev_best))} lb</span></div>`).join('') : '<p class="lbEmpty">No PRs yet this week. Somebody fix that.</p>'}</div>`;
     if (s.type === 'leaders') return `<div class="lbGrid"><div class="hd">${kick(g.name + ' leaderboard')}<span class="lbChip">DSI score</span></div>${dd.board.length ? dd.board.map((r, i) => `<div class="lbPr"><div class="lbRank">${i + 1}</div><b>${esc(r.name)}</b><div class="w">${fmt(r.score)} <small>DSI</small></div></div>`).join('') : '<p class="lbEmpty">Nobody on the board yet. Get your DSI at dandystrength.com</p>'}</div>`;
     if (s.type === 'shop') return main(`${kick('Gym shop')}${h1(s.title || 'Grab a drink')}${dd.items.length ? `<div class="lbItems">${dd.items.slice(0, 8).map(i => `<div class="lbItem"><i>${esc(i.emoji)}</i><b>${esc(i.name)}</b><span>$${(i.price_cents / 100).toFixed(i.price_cents % 100 ? 2 : 0)}</span></div>`).join('')}</div>` : `<p class="lbLede">${esc(s.text || '')}</p>`}`);
+    if (s.type === 'merch') {
+      const its = (s.items || []).filter(i => i && i.name).slice(0, 4);
+      return main(`${kick('Gym gear')}${h1(s.title || 'Rep the gym')}${its.length ? `<div class="lbMerch n${its.length}">${its.map(i => `<div class="lbMi"><div class="lbMiPic">${i.img ? `<img src="${esc(i.img)}" alt="">` : gearSvg(i.name)}</div><b>${esc(i.name)}</b>${i.price ? `<span>${esc(priceTxt(i.price))}</span>` : ''}</div>`).join('')}</div>` : `<p class="lbLede">${esc(s.text || '')}</p>`}`);
+    }
+    if (s.type === 'image') {
+      const pic = s.img ? `<img src="${esc(s.img)}" alt="${esc(s.title || '')}" class="${s.fit === 'fill' ? 'fill' : ''}">` : '<p class="lbEmpty">Add a picture in Dandy TV setup.</p>';
+      return `<div class="lbImg${qr ? '' : ' full'}${s.fit === 'fill' && !qr ? ' bleed' : ''}"><div class="lbImgBox">${pic}</div>${s.title ? `<div class="lbImgCap">${esc(s.title)}</div>` : ''}</div>${qrBox}`;
+    }
     if (s.type === 'event') {
       const when = s.date ? new Date(s.date) : null, ms = when ? when - now : 0;
       const cd = !when ? '' : ms <= 0 ? '<div class="lbCount"><div><b>Today</b><span>Let\'s go</span></div></div>' : `<div class="lbCount"><div><b>${Math.floor(ms / 864e5)}</b><span>Days</span></div><div><b>${Math.floor(ms % 864e5 / 36e5)}</b><span>Hours</span></div><div><b>${Math.floor(ms % 36e5 / 6e4)}</b><span>Minutes</span></div></div>`;
@@ -235,6 +271,18 @@ export function install(X) {
     const editor = s => {
       const t = TYPES[s.type], qr = qrOf(s);
       if (t.live) return `<p class="hint">${esc(t.d)}. It fills itself from Dandy, nothing to type.</p>${s.type === 'shop' ? field(s, 'title', 'Headline') + field(s, 'url', 'QR link', 'url') + field(s, 'cta', 'Under the QR') : ''}${s.type === 'shop' ? `<div class="dtvQrRow"><div class="dtvQrMd">${qrSvg(qr)}</div><p class="sub">This QR opens ${esc(qr.replace(/^https?:\/\//, ''))}</p></div>` : ''}`;
+      const qrPart = `${field(s, 'url', 'QR link (leave empty for no QR)', 'url', 'https://')}${field(s, 'cta', 'Under the QR', 'text', 'Scan to order')}`;
+      if (s.type === 'image') return `<div class="dtvImgPick">${s.img ? `<img src="${esc(s.img)}" alt="">` : '<span>No picture yet</span>'}</div>
+        <div class="row"><label class="btn sm dtvUp">Upload a picture<input type="file" accept="image/*" data-up="img" hidden></label>${s.img ? '<button type="button" class="btn ghost sm" data-clr="img">Remove</button>' : ''}</div>
+        ${field(s, 'img', 'Or paste a picture link', 'url', 'https://')}
+        <label class="dtvF"><span>Size</span><select data-k="fit"><option value="whole"${s.fit !== 'fill' ? ' selected' : ''}>Show the whole picture</option><option value="fill"${s.fit === 'fill' ? ' selected' : ''}>Fill the screen (edges may crop)</option></select></label>
+        ${field(s, 'title', 'Caption (optional)', 'text', 'Partner WOD Saturday 9am')}${qrPart}<p class="hint">Landscape pictures look best: 1920 by 1080, or any wide photo or poster.</p>`;
+      if (s.type === 'merch') { const its = s.items || []; return `${field(s, 'title', 'Headline')}${field(s, 'text', 'Words when there is no gear yet', 'area')}
+        <div class="dtvF"><span>Gear (up to 4 show)</span><div class="dtvMerch">${its.map((it, i) => `<div class="dtvMi"><div class="dtvMiPic">${it.img ? `<img src="${esc(it.img)}" alt="">` : gearSvg(it.name)}</div>
+          <input data-k="items.${i}.name" value="${esc(it.name || '')}" placeholder="Hoodie" maxlength="40" aria-label="Item name"><input data-k="items.${i}.price" value="${esc(it.price || '')}" placeholder="45" maxlength="12" aria-label="Price" inputmode="decimal">
+          <label class="btn ghost sm dtvUp" title="Photo">Photo<input type="file" accept="image/*" data-up="items.${i}.img" hidden></label><button type="button" class="btn ghost sm" data-rmi="${i}" aria-label="Remove item">×</button></div>`).join('')}</div>
+          <div class="row">${its.length < 8 ? '<button type="button" class="btn ghost sm" data-addi>Add an item</button>' : ''}<button type="button" class="btn ghost sm" data-store>Fill from the gym store</button></div></div>${qrPart}
+        <div class="dtvQrRow"><div class="dtvQrMd">${qr ? qrSvg(qr) : '<span>No QR</span>'}</div><p class="sub">Point the QR at where people order, like your online store.</p></div>`; }
       return `${field(s, 'title', 'Headline')}${field(s, 'text', 'Words', 'area')}
         ${s.type === 'event' ? field(s, 'date', 'Date and time', 'datetime-local') : ''}
         ${['event', 'free_class', 'custom'].includes(s.type) ? field(s, 'chips', 'Tags, split with commas', 'text', 'Free, Saturday 9am, Teams of two') : ''}
@@ -277,8 +325,39 @@ export function install(X) {
       draw();
     };
     $('#dtvList').onchange = e => { const i = e.target.dataset.on; if (i == null) return; slides[+i].on = e.target.checked; touch(); draw(); };
-    $('#dtvEdit').oninput = e => { const k = e.target.dataset.k; if (!k || !slides[sel]) return; slides[sel][k] = e.target.value; touch(); clearTimeout(VIEWS.dandytv._t); VIEWS.dandytv._t = setTimeout(() => { const f = document.activeElement, pos = f && f.selectionStart; const k2 = f && f.dataset.k; draw(); if (k2) { const n = $(`#dtvEdit [data-k="${k2}"]`); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch {} } } }, 500); };
-    $('#dtvAdd').onclick = () => { slides.push(starter($('#dtvAddT').value, g)); sel = slides.length - 1; touch(); draw(); };
+    $('#dtvEdit').oninput = e => { const k = e.target.dataset.k; if (!k || !slides[sel]) return; setK(slides[sel], k, e.target.value); touch(); clearTimeout(VIEWS.dandytv._t); VIEWS.dandytv._t = setTimeout(() => { const f = document.activeElement, pos = f && f.selectionStart; const k2 = f && f.dataset.k; draw(); if (k2) { const n = $(`#dtvEdit [data-k="${k2}"]`); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch {} } } }, 500); };
+    $('#dtvEdit').onchange = async e => {
+      const t = e.target;
+      if (t.dataset.k === 'fit') { slides[sel].fit = t.value; touch(); draw(); return; }
+      if (!t.dataset.up || !t.files || !t.files[0]) return;
+      const f = t.files[0];
+      if (!/^image\//.test(f.type)) return toast('Pick a picture file');
+      if (f.size > 8 * 1024 * 1024) return toast('That picture is over 8 MB. Pick a smaller one.');
+      toast('Uploading…');
+      const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg', path = `${g.id}/tv/${uid()}.${ext}`;
+      const { error } = await sb.storage.from('gym-media').upload(path, f, { contentType: f.type, upsert: false });
+      if (error) return toast(/row-level|policy|unauthorized|403/i.test(error.message) ? 'Only the gym owner can upload pictures. Paste a picture link instead.' : error.message);
+      setK(slides[sel], t.dataset.up, sb.storage.from('gym-media').getPublicUrl(path).data.publicUrl); touch(); draw(); toast('Picture added');
+    };
+    $('#dtvEdit').onclick = async e => {
+      const s = slides[sel], b = e.target.closest('[data-addi],[data-rmi],[data-store],[data-clr]'); if (!b || !s) return;
+      if (b.dataset.clr) s[b.dataset.clr] = '';
+      else if (b.hasAttribute('data-addi')) (s.items = s.items || []).push({ name: '', price: '' });
+      else if (b.dataset.rmi) s.items.splice(+b.dataset.rmi, 1);
+      else if (b.hasAttribute('data-store')) {
+        const { data, error } = await sb.from('products').select('name,price_cents,image_paths,sort').eq('gym_id', g.id).order('sort').limit(8);
+        if (error) return toast(error.message);
+        if (!data || !data.length) return toast('No gear in the gym store yet. Add items here instead.');
+        s.items = data.map(p => ({ name: p.name, price: String(p.price_cents % 100 ? (p.price_cents / 100).toFixed(2) : p.price_cents / 100), img: (p.image_paths || [])[0] ? sb.storage.from('gym-media').getPublicUrl(p.image_paths[0]).data.publicUrl : '' }));
+        toast(`${s.items.length} item${s.items.length === 1 ? '' : 's'} added from the store`);
+      }
+      touch(); draw();
+    };
+    $('#dtvAdd').onclick = async () => {
+      const s = starter($('#dtvAddT').value, g);
+      if (s.type === 'merch') { const { data } = await sb.from('products').select('name,price_cents,image_paths,sort').eq('gym_id', g.id).order('sort').limit(8); s.items = (data || []).map(p => ({ name: p.name, price: String(p.price_cents % 100 ? (p.price_cents / 100).toFixed(2) : p.price_cents / 100), img: (p.image_paths || [])[0] ? sb.storage.from('gym-media').getPublicUrl(p.image_paths[0]).data.publicUrl : '' })); }
+      slides.push(s); sel = slides.length - 1; touch(); draw();
+    };
     $('#dtvLs').onchange = e => { lobbySecs = +e.target.value; touch(); };
     $('#dtvCs').onchange = e => { classSecs = +e.target.value; touch(); };
     $$('[data-cs]').forEach(c => c.onchange = () => { screensOn[c.dataset.cs] = c.checked; if (!Object.values(screensOn).some(Boolean)) { c.checked = true; screensOn[c.dataset.cs] = true; return toast('Keep at least one class screen on'); } touch(); });
