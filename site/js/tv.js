@@ -137,7 +137,7 @@ export function install(X) {
   function slideHtml(s, g, dd) {
     const kick = t => `<div class="lbKick"><i></i>${esc(t)}</div>`;
     const chips = s.chips ? `<div class="lbChips">${String(s.chips).split(',').map(x => x.trim()).filter(Boolean).map((t, i) => `<span class="lbChip${i ? '' : ' y'}">${esc(t)}</span>`).join('')}</div>` : '';
-    const qr = qrOf(s), qrBox = qr ? `<div class="lbSide"><div class="lbQr">${qrSvg(qr)}</div><div class="lbScan">${esc(s.cta || 'Scan me')}<small>${esc(s.type === 'text_us' ? s.phone : qr.replace(/^https?:\/\//, ''))}</small></div></div>` : '';
+    const qr = qrOf(s), qrBox = qr ? `<div class="lbSide"><div class="lbQr">${qrSvg(qr)}</div>${s.cta ? `<div class="lbScan">${esc(s.cta)}</div>` : ''}</div>` : '';
     const main = inner => `<div class="lbMain${qr ? '' : ' full'}">${inner}</div>${qrBox}`;
     const h1 = t => `<h1 class="${String(t).length > 22 ? 'm' : ''}">${esc(t)}</h1>`;
     const now = new Date(), nm = now.getHours() * 60 + now.getMinutes();
