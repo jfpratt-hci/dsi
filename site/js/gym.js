@@ -133,6 +133,7 @@ export function install(X) {
     <section class="sec"><form class="formCard" id="wcF"><div class="formH">Website contact and social<span class="sub">Shows in your website's Contact section and footer. Leave a link blank to hide it.</span></div><div class="fields">
       <div class="field"><label for="wc-p">Phone</label><input id="wc-p" type="tel" maxlength="40" value="${esc(g.phone || '')}" placeholder="513 555 0100"></div>
       <div class="field"><label for="wc-e">Email</label><input id="wc-e" type="email" maxlength="120" value="${esc(g.email || '')}" placeholder="hello@yourgym.com"></div>
+      <div class="field w2"><label for="wc-n">Email website submissions to</label><input id="wc-n" type="email" maxlength="200" value="${esc(g.notify_email || '')}" placeholder="${esc(g.email || 'you@yourgym.com')}"><span class="hint">Messages, event signups, appointment requests and store orders. Blank uses the email above. Not shown on the site.</span></div>
       <div class="field w2"><label for="wc-a">Street address</label><input id="wc-a" maxlength="200" value="${esc(g.address || '')}" placeholder="1005 Lila Ave, Milford, OH 45150"></div>
       <div class="field w4"><label for="wc-h">Hours, one line each: Days | Times</label><textarea id="wc-h" rows="4" maxlength="1000" placeholder="Mon to Thu | 5:30am to 6:30pm">${esc(hrsTxt)}</textarea></div>
       ${SITE_SOC.map(([k, n]) => `<div class="field w2"><label for="wc-${k}">${n}</label><input id="wc-${k}" type="url" maxlength="300" value="${esc(soc[k] || '')}" placeholder="https://"></div>`).join('')}</div>
@@ -166,7 +167,7 @@ export function install(X) {
         social[k] = v;
       }
       const hours = $('#wc-h').value.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 12).map(l => { const i = l.indexOf('|'); return i < 0 ? { label: '', text: l } : { label: l.slice(0, i).trim(), text: l.slice(i + 1).trim() }; });
-      const r1 = await sb.from('gyms').update({ phone: $('#wc-p').value.trim() || null, email: $('#wc-e').value.trim() || null, address: $('#wc-a').value.trim() || null }).eq('id', gid);
+      const r1 = await sb.from('gyms').update({ phone: $('#wc-p').value.trim() || null, email: $('#wc-e').value.trim() || null, address: $('#wc-a').value.trim() || null, ...('notify_email' in g ? { notify_email: $('#wc-n').value.trim() || null } : {}) }).eq('id', gid);
       if (r1.error) { m.textContent = r1.error.message; return; }
       const r2 = await sb.from('gym_sites').upsert({ gym_id: gid, hours, social }, { onConflict: 'gym_id' });
       m.textContent = r2.error ? r2.error.message : 'Saved. Your website shows it on the next visit.';
