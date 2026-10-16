@@ -70,6 +70,8 @@ export function install(X) {
     return g.id;
   }
   const SLUG = /^[a-z0-9]([a-z0-9-]{1,38}[a-z0-9])$/;
+  // Social links a gym website can show, in footer order.
+  const SITE_SOC = [['ig', 'Instagram'], ['fb', 'Facebook'], ['tiktok', 'TikTok'], ['youtube', 'YouTube'], ['x', 'X'], ['google', 'Google reviews'], ['yelp', 'Yelp'], ['crossfit', 'CrossFit.com']];
 
   async function gymData(gid, day) {
     const [g, members, staff, board, ws] = await Promise.all([
@@ -112,6 +114,9 @@ export function install(X) {
     const claimNames = claims.length ? new Map(must(await sb.from('profiles').select('id,display_name').in('id', claims.map(c => c.profile_id))).map(p => [p.id, p.display_name])) : new Map();
     const claimGyms = claims.length ? new Map(must(await sb.from('gyms').select('id,name').in('id', claims.map(c => c.gym_id))).map(x => [x.id, x.name])) : new Map();
     const tvUrl = location.origin + '/tv/' + (g.slug || gid);
+    const site = owns(gid) ? ((await sb.from('gym_sites').select('hours,social').eq('gym_id', gid).maybeSingle()).data || { hours: [], social: {} }) : null;
+    const soc = (site && site.social) || {};
+    const hrsTxt = ((site && site.hours) || []).map(h => (h.label || '') + ' | ' + (h.text || '')).join('\n');
     if (!paint(tok, `${X.officeBar(g, 'settings')}<section class="sec"><h3>Gym <span>settings</span></h3><p class="secSub">${members.length} lifters. Dandy TV link, coaches and gym details.</p>
       <div class="formCard"><div class="formH">Dandy TV link<span class="sub">Open it in the TV's browser, a Fire Stick or a laptop on HDMI, then go full screen. No login needed.</span></div>
         <div class="row"><input id="tvUrl" readonly value="${esc(tvUrl)}" style="max-width:420px"><button class="btn ghost sm" type="button" id="tvCopy">Copy link</button></div>
@@ -124,7 +129,14 @@ export function install(X) {
     ${owns(gid) ? `<section class="sec"><form class="formCard" id="gdF"><div class="formH">Gym details</div><div class="fields">
       <div class="field w2"><label for="gd-n">Name</label><input id="gd-n" maxlength="60" value="${esc(g.name)}" required></div>
       <div class="field w2"><label for="gd-c">City</label><input id="gd-c" maxlength="60" value="${esc(g.city || '')}"></div></div>
-      <div class="row"><button class="btn">Save</button><span class="hint" id="gd-msg"></span></div></form></section>` : ''}
+      <div class="row"><button class="btn">Save</button><span class="hint" id="gd-msg"></span></div></form></section>
+    <section class="sec"><form class="formCard" id="wcF"><div class="formH">Website contact and social<span class="sub">Shows in your website's Contact section and footer. Leave a link blank to hide it.</span></div><div class="fields">
+      <div class="field"><label for="wc-p">Phone</label><input id="wc-p" type="tel" maxlength="40" value="${esc(g.phone || '')}" placeholder="513 555 0100"></div>
+      <div class="field"><label for="wc-e">Email</label><input id="wc-e" type="email" maxlength="120" value="${esc(g.email || '')}" placeholder="hello@yourgym.com"></div>
+      <div class="field w2"><label for="wc-a">Street address</label><input id="wc-a" maxlength="200" value="${esc(g.address || '')}" placeholder="1005 Lila Ave, Milford, OH 45150"></div>
+      <div class="field w4"><label for="wc-h">Hours, one line each: Days | Times</label><textarea id="wc-h" rows="4" maxlength="1000" placeholder="Mon to Thu | 5:30am to 6:30pm">${esc(hrsTxt)}</textarea></div>
+      ${SITE_SOC.map(([k, n]) => `<div class="field w2"><label for="wc-${k}">${n}</label><input id="wc-${k}" type="url" maxlength="300" value="${esc(soc[k] || '')}" placeholder="https://"></div>`).join('')}</div>
+      <div class="row"><button class="btn">Save</button><span class="hint" id="wc-msg"></span></div></form></section>` : ''}
     ${claims.length ? `<section class="sec"><h2>Gym owner <span>requests</span></h2><div class="board"><div class="tablewrap"><table><thead><tr><th>Lifter</th><th>Gym</th><th>Their note</th><th></th></tr></thead><tbody>
       ${claims.map(c => `<tr><td><a href="/u/${c.profile_id}">${esc(claimNames.get(c.profile_id) || 'Someone')}</a></td><td><a href="/gyms/${c.gym_id}">${esc(claimGyms.get(c.gym_id) || '')}</a></td><td>${esc(c.note || '')}</td><td class="r"><button class="btn sm" data-cl="${c.id}" data-ok="1">Approve</button> <button class="btn ghost sm" data-cl="${c.id}">Decline</button></td></tr>`).join('')}
       </tbody></table></div></div></section>` : ''}`)) return;
@@ -143,6 +155,22 @@ export function install(X) {
     if (co) co.onsubmit = async e => { e.preventDefault(); const pid = $('#co-p').value; if (!pid) return; const { error } = await sb.from('gym_staff').insert({ gym_id: gid, profile_id: pid, role: 'coach' }); if (error) return toast(error.message); toast('Coach added'); route(); };
     const gd = $('#gdF');
     if (gd) gd.onsubmit = async e => { e.preventDefault(); const { error } = await sb.from('gyms').update({ name: $('#gd-n').value.trim(), city: $('#gd-c').value.trim() || null }).eq('id', gid); $('#gd-msg').textContent = error ? (/gyms_name_ci/.test(error.message) ? 'Another gym already has that name.' : error.message) : 'Saved.'; };
+    const wc = $('#wcF');
+    if (wc) wc.onsubmit = async e => {
+      e.preventDefault();
+      const m = $('#wc-msg'), social = {};
+      for (const [k, n] of SITE_SOC) {
+        const v = $('#wc-' + k).value.trim();
+        if (!v) continue;
+        if (!/^https:\/\/[^\s]+$/i.test(v)) { m.textContent = n + ' needs a full link starting with https://'; return; }
+        social[k] = v;
+      }
+      const hours = $('#wc-h').value.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 12).map(l => { const i = l.indexOf('|'); return i < 0 ? { label: '', text: l } : { label: l.slice(0, i).trim(), text: l.slice(i + 1).trim() }; });
+      const r1 = await sb.from('gyms').update({ phone: $('#wc-p').value.trim() || null, email: $('#wc-e').value.trim() || null, address: $('#wc-a').value.trim() || null }).eq('id', gid);
+      if (r1.error) { m.textContent = r1.error.message; return; }
+      const r2 = await sb.from('gym_sites').upsert({ gym_id: gid, hours, social }, { onConflict: 'gym_id' });
+      m.textContent = r2.error ? r2.error.message : 'Saved. Your website shows it on the next visit.';
+    };
     $$('[data-cl]').forEach(b => b.onclick = async () => { const { error } = await sb.rpc('decide_gym_claim', { p_id: b.dataset.cl, p_approve: !!b.dataset.ok }); if (error) return toast(error.message); toast(b.dataset.ok ? 'Approved. They run that gym now.' : 'Declined'); route(); });
   };
 

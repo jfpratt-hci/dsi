@@ -393,6 +393,9 @@ textarea{min-height:70px;resize:vertical}
 .hours div{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;gap:12px}
 .copyrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .copyrow .v{font-weight:600}
+.copyrow[hidden]{display:none}
+.hours div>span:first-child{white-space:nowrap}
+.hours div>span.mono{text-align:right}
 .linkbtn{font:600 .78rem var(--f-mono);border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:6px;padding:5px 9px;cursor:pointer}
 details{border-top:1px solid var(--line);padding:12px 0}
 summary{cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:12px}
@@ -401,6 +404,17 @@ summary::after{content:"+";font:600 1.2rem var(--f-mono);color:var(--muted)}
 details[open] summary::after{content:"\2013"}
 details p{color:var(--muted);margin-top:6px;font-size:.94rem}
 
+/* contact: four cards on the 12 column grid (3 each), two per row on tablets, one on phones */
+.contact-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}
+.contact-grid .cc{grid-column:span 3;display:grid;gap:12px;align-content:start;min-width:0}
+.cc .v.big{font:800 1.5rem var(--f-display, inherit);letter-spacing:.01em}
+.cc-acts{display:flex;gap:8px;flex-wrap:wrap}
+.soc{display:flex;flex-wrap:wrap;gap:8px}
+.soc a{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;text-decoration:none;color:var(--fg);font-weight:600;font-size:.88rem}
+.soc a:hover{border-color:var(--accent)}
+.soc a i{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
+@media (max-width:1000px){.contact-grid .cc{grid-column:span 6}}
+@media (max-width:600px){.contact-grid .cc{grid-column:1 / -1}}
 footer{border-top:1px solid var(--line);padding-block:36px 48px}
 footer .grid{align-items:start}
 footer .f1{grid-column:span 5;display:grid;gap:10px}
@@ -461,12 +475,13 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
       <span><b>CFS</b><small>CrossFit Symmetry</small></span>
     </a>
     <nav class="nav" id="nav" aria-label="Main">
+      <a href="#community">Community</a>
       <a href="#classes">Classes</a>
       <a href="#book">Book</a>
-      <a href="#community">Community</a>
       <a href="#events">Events</a>
       <a href="#store">Store</a>
       <a href="#compete">Compete</a>
+      <a href="#contact">Contact</a>
     </nav>
     <div class="actions">
       <a class="btn login" href="https://dandystrength.com" target="_blank" rel="noopener">Member login</a>
@@ -500,6 +515,26 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
       <a class="pr-mini" href="#compete" data-goto="prs"><span><span class="eyebrow">PR wall</span><br>New personal records this week</span><b id="prCount">0</b></a>
     </aside>
   </div>
+</section>
+
+<section id="community">
+  <div class="wrap">
+    <div class="sec-head"><div class="t"><span class="eyebrow">Community</span><h2>Fun workouts for all levels</h2></div><p class="d">Thirteen years in Milford. The workouts change every day; the people cheering you through the last rep do not.</p></div>
+    <div class="pillars">
+      <article class="card pillar"><span class="n">3</span><h3>Levels in every workout</h3><p>Every class has a beginner, intermediate and Rx version. Everyone finishes together, and nobody gets left out.</p></article>
+      <article class="card pillar"><span class="n" id="pClasses">31</span><h3>Coached classes a week</h3><p>A coach runs every class, teaches every movement and adjusts every weight. You never have to guess what to do.</p></article>
+      <article class="card pillar"><span class="n">Free</span><h3>First class and drop ins</h3><p>Your first class is on us, and visiting CrossFitters drop in free. Come see what the hype is about.</p></article>
+    </div>
+    <div class="social-head">
+      <div style="display:grid;gap:6px"><span class="eyebrow">@crossfitsymmetry</span><h3 style="font-size:1.8rem">Life at Symmetry</h3></div>
+      <div class="btns">
+        <span class="sample">Preview posts</span>
+        <a class="btn" data-soc="ig" href="https://www.instagram.com/crossfitsymmetry/" target="_blank" rel="noopener">Follow on Instagram</a>
+        <a class="btn" data-soc="fb" href="https://www.facebook.com/people/CrossFit-Symmetry/100063663154017/" target="_blank" rel="noopener">Like on Facebook</a>
+      </div>
+    </div>
+  </div>
+  <div class="feed" aria-label="Recent Instagram and Facebook posts"><div class="track" id="track"></div></div>
 </section>
 
 <section id="classes">
@@ -629,7 +664,7 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
           <div class="copyrow"><span class="v" id="addr">1005 Lila Ave, Milford, OH 45150</span><button class="linkbtn" data-copy="addr" type="button">Copy</button></div>
           <div class="copyrow"><span class="v" id="phone">513 809 1452</span><button class="linkbtn" data-copy="phone" type="button">Copy</button></div>
           <a class="btn" style="justify-self:start" href="https://www.google.com/maps/search/?api=1&amp;query=CrossFit%20Symmetry%201005%20Lila%20Ave%20Milford%20OH%2045150" target="_blank" rel="noopener">Directions</a>
-          <div class="hours">
+          <div class="hours" id="bHours">
             <div><span>Monday to Friday</span><span class="mono">5:30am to 6:30pm</span></div>
             <div><span>Saturday</span><span class="mono">6:30am to 11:00am</span></div>
             <div style="border-bottom:0"><span>Sunday</span><span class="mono">8:00am to 10:00am</span></div>
@@ -644,25 +679,6 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
       </aside>
     </div>
   </div>
-</section>
-<section id="community">
-  <div class="wrap">
-    <div class="sec-head"><div class="t"><span class="eyebrow">Community</span><h2>Fun workouts for all levels</h2></div><p class="d">Thirteen years in Milford. The workouts change every day; the people cheering you through the last rep do not.</p></div>
-    <div class="pillars">
-      <article class="card pillar"><span class="n">3</span><h3>Levels in every workout</h3><p>Every class has a beginner, intermediate and Rx version. Everyone finishes together, and nobody gets left out.</p></article>
-      <article class="card pillar"><span class="n" id="pClasses">31</span><h3>Coached classes a week</h3><p>A coach runs every class, teaches every movement and adjusts every weight. You never have to guess what to do.</p></article>
-      <article class="card pillar"><span class="n">Free</span><h3>First class and drop ins</h3><p>Your first class is on us, and visiting CrossFitters drop in free. Come see what the hype is about.</p></article>
-    </div>
-    <div class="social-head">
-      <div style="display:grid;gap:6px"><span class="eyebrow">@crossfitsymmetry</span><h3 style="font-size:1.8rem">Life at Symmetry</h3></div>
-      <div class="btns">
-        <span class="sample">Preview posts</span>
-        <a class="btn" href="https://www.instagram.com/crossfitsymmetry/" target="_blank" rel="noopener">Follow on Instagram</a>
-        <a class="btn" href="https://www.facebook.com/people/CrossFit-Symmetry/100063663154017/" target="_blank" rel="noopener">Like on Facebook</a>
-      </div>
-    </div>
-  </div>
-  <div class="feed" aria-label="Recent Instagram and Facebook posts"><div class="track" id="track"></div></div>
 </section>
 
 <section id="coaches">
@@ -807,6 +823,34 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
   </div>
 </section>
 
+<section id="contact">
+  <div class="wrap">
+    <div class="sec-head"><div class="t"><span class="eyebrow">Contact</span><h2>Talk to a coach</h2></div><p class="d">Questions about a free class, drop ins, pricing or personal training? Text or call and a CFS coach gets right back to you.</p></div>
+    <div class="contact-grid">
+      <article class="card cc"><span class="eyebrow">Call or text</span>
+        <div class="copyrow"><span class="v big" id="cPhone">513 809 1452</span><button class="linkbtn" data-copy="cPhone" type="button">Copy</button></div>
+        <div class="copyrow" id="cEmailRow" hidden><span class="v" id="cEmail"></span><button class="linkbtn" data-copy="cEmail" type="button">Copy</button></div>
+        <div class="cc-acts"><button class="btn primary" type="button" data-open-text>Text us</button><a class="btn" id="cCall" href="tel:+15138091452">Call</a></div>
+      </article>
+      <article class="card cc"><span class="eyebrow">Visit</span>
+        <div class="copyrow"><span class="v" id="cAddr">1005 Lila Ave, Milford, OH 45150</span><button class="linkbtn" data-copy="cAddr" type="button">Copy</button></div>
+        <p class="muted" style="font-size:.9rem;margin:0">On Lila Ave, just off US 50 and SR 131 by Milford Parkway.</p>
+        <div class="cc-acts"><a class="btn" id="cDir" href="https://www.google.com/maps/search/?api=1&amp;query=CrossFit%20Symmetry%201005%20Lila%20Ave%20Milford%20OH%2045150" target="_blank" rel="noopener">Directions</a></div>
+      </article>
+      <article class="card cc"><span class="eyebrow">Hours</span>
+        <div class="hours" id="cHours">
+          <div><span>Monday to Friday</span><span class="mono">5:30am to 6:30pm</span></div>
+          <div><span>Saturday</span><span class="mono">6:30am to 11:00am</span></div>
+          <div style="border-bottom:0"><span>Sunday</span><span class="mono">8:00am to 10:00am</span></div>
+        </div>
+      </article>
+      <article class="card cc"><span class="eyebrow">Follow CFS</span>
+        <div class="soc" id="cSocial"></div>
+      </article>
+    </div>
+  </div>
+</section>
+
 </main>
 
 <footer>
@@ -819,7 +863,7 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
     <div class="f2">
       <div><span class="eyebrow">Train</span><a href="#classes">Schedule</a><a href="#classes" data-goto="workouts">Workouts</a><a href="#book" data-book="pt">Personal training</a><a href="#book" data-book="nutrition">Nutrition</a><a href="#recovery">Recovery rooms</a></div>
       <div><span class="eyebrow">Compete</span><a href="#compete">The board</a><a href="#compete" data-goto="prs">PR wall</a><a href="#events">Events and Murph</a><a href="#store">CFS store</a><a href="#coaches">Coaches</a><a href="https://dandystrength.com" target="_blank" rel="noopener">Member login</a></div>
-      <div><span class="eyebrow">Follow</span><a href="https://www.instagram.com/crossfitsymmetry/" target="_blank" rel="noopener">Instagram</a><a href="https://www.facebook.com/people/CrossFit-Symmetry/100063663154017/" target="_blank" rel="noopener">Facebook</a><a href="https://www.google.com/search?q=CrossFit+Symmetry+Milford+OH+reviews" target="_blank" rel="noopener">Google reviews</a></div>
+      <div id="fFollow"><span class="eyebrow">Follow</span><a href="https://www.instagram.com/crossfitsymmetry/" target="_blank" rel="noopener">Instagram</a><a href="https://www.facebook.com/people/CrossFit-Symmetry/100063663154017/" target="_blank" rel="noopener">Facebook</a><a href="https://www.crossfit.com/gym/7636/crossfit-symmetry" target="_blank" rel="noopener">CrossFit.com</a><a href="https://www.google.com/search?q=CrossFit+Symmetry+Milford+OH+reviews" target="_blank" rel="noopener">Google reviews</a><a href="#contact">Contact</a></div>
     </div>
     <div class="fine"><span>© <span id="yr">2026</span> CrossFit Symmetry · 1005 Lila Ave, Milford, OH 45150</span><span>DSI is for bragging rights, not medical or training advice.</span></div>
   </div>
@@ -1394,6 +1438,47 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
   nav.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => { nav.classList.remove('open'); mb.setAttribute('aria-expanded', 'false'); }));
 
   drawAll(); drawCalc(); drawBook();
+})();
+</script>
+<script>
+/* Contact, hours and social links come from the gym's DSI settings (Gym office, Settings, Website contact and social). The values in the HTML are the fallback if that call fails. */
+(() => {
+  const API = 'https://fairfhgyrosjqualmhwu.supabase.co/rest/v1/rpc/site_contact', KEY = 'sb_publishable_1qg2GRUgxGxVMhOaoGGGFw_lm0j_j4h';
+  const LBL = [['ig', 'Instagram'], ['fb', 'Facebook'], ['tiktok', 'TikTok'], ['youtube', 'YouTube'], ['x', 'X'], ['google', 'Google reviews'], ['yelp', 'Yelp'], ['crossfit', 'CrossFit.com']];
+  const FALLBACK = { ig: 'https://www.instagram.com/crossfitsymmetry/', fb: 'https://www.facebook.com/people/CrossFit-Symmetry/100063663154017/', crossfit: 'https://www.crossfit.com/gym/7636/crossfit-symmetry', google: 'https://www.google.com/search?q=CrossFit+Symmetry+Milford+OH+reviews' };
+  const $ = (id) => document.getElementById(id);
+  const ok = (u) => typeof u === 'string' && /^https:\/\//i.test(u.trim());
+  const link = (href, text, cls) => { const a = document.createElement('a'); a.href = href; a.target = '_blank'; a.rel = 'noopener'; if (cls) a.className = cls; a.textContent = text; return a; };
+  function socials(soc) {
+    const list = LBL.filter(([k]) => ok(soc[k])).map(([k, n]) => [k, n, soc[k].trim()]);
+    const f = $('fFollow'); f.replaceChildren(Object.assign(document.createElement('span'), { className: 'eyebrow', textContent: 'Follow' }));
+    list.forEach(([, n, u]) => f.appendChild(link(u, n)));
+    const c = document.createElement('a'); c.href = '#contact'; c.textContent = 'Contact'; f.appendChild(c);
+    const cs = $('cSocial'); cs.replaceChildren();
+    list.forEach(([, n, u]) => { const a = link(u, n); a.prepend(document.createElement('i')); cs.appendChild(a); });
+    document.querySelectorAll('[data-soc]').forEach((a) => { const u = soc[a.dataset.soc]; if (ok(u)) { a.href = u.trim(); a.hidden = false; } else a.hidden = true; });
+  }
+  function hours(rows) {
+    if (!Array.isArray(rows) || !rows.length) return;
+    ['cHours', 'bHours'].forEach((id) => {
+      const box = $(id); if (!box) return; box.replaceChildren();
+      rows.forEach((r, i) => { const d = document.createElement('div'); if (i === rows.length - 1) d.style.borderBottom = '0';
+        const a = document.createElement('span'); a.textContent = r.label || ''; const b = document.createElement('span'); b.className = 'mono'; b.textContent = r.text || '';
+        d.append(a, b); box.appendChild(d); });
+    });
+  }
+  function contact(c) {
+    const digits = String(c.phone || '').replace(/\D/g, '');
+    if (digits.length >= 10) { const p = digits.slice(-10).replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3'); ['cPhone', 'phone'].forEach((id) => { if ($(id)) $(id).textContent = p; }); $('cCall').href = 'tel:+1' + digits.slice(-10); }
+    if (c.email) { $('cEmail').textContent = c.email; $('cEmailRow').hidden = false; }
+    if (c.address && /\d{5}/.test(c.address)) { ['cAddr', 'addr'].forEach((id) => { if ($(id)) $(id).textContent = c.address; }); }
+  }
+  socials(FALLBACK);
+  document.querySelectorAll('[data-open-text]').forEach((b) => b.addEventListener('click', () => { const fab = $('txFab'); if (fab && fab.getAttribute('aria-expanded') !== 'true') fab.click(); }));
+  fetch(API, { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_key: 'cfs' }) })
+    .then((r) => r.ok ? r.json() : null)
+    .then((c) => { if (!c) return; if (c.social && Object.keys(c.social).length) socials(c.social); hours(c.hours); contact(c); })
+    .catch(() => {});
 })();
 </script>
 <script>
