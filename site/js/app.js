@@ -92,12 +92,15 @@ const gyms0 = () => S.myGyms || [];
 function navGroups() {
   const me = S.me && S.me.display_name ? S.me : null, pro = isPro(), P = pro ? '' : 'Pro. ';
   const g = [
-    ...(gyms0().length ? [] : [{ k: 'home', n: 'For gyms', href: '/pricing' }]),
+    ...(gyms0().length ? [] : [{ k: 'home', n: 'For gyms', sections: [{ h: 'Why Dandy Strength', items: [['/grow', 'How it grows your gym', 'Find, try, join, stay, spend'], ['/tour', 'Tour the sample gym', 'Every dashboard, made up numbers'], ['/switch', 'Switch to Dandy', 'From Kilo, Wodify or PushPress']] },
+      { h: 'Get started', items: [['/pricing', 'Pricing', 'Run $249 or Grow $499'], ['/start', 'Book a setup call', 'We reply within one business day']] }] }]),
+    ...(me ? [] : [{ k: 'members', n: 'For members', href: '/members' }]),
+  ];
+  if (me) g.push(
     { k: 'boards', n: 'Boards', sections: [{ h: 'Rankings', items: [['/boards', 'Leaderboard', 'Every lifter ranked by DSI'], ['/prs', 'PR wall', 'The newest personal records'], ['/benchmarks', 'Benchmarks', 'How strong is strong'], ['/gyms', 'Gym league', 'Gyms ranked head to head']] },
       { h: 'Competition', items: [['/compete', 'Compete', 'Seasons, battles and the league'], ['/season', 'This season', 'Standings for the current season'], ['/battles', 'Weekly battles', 'One lift, one week, one winner']] }] },
     { k: 'train', n: 'Train', sections: [{ h: 'Every day', items: [['/week', 'The week', 'This week\'s workouts by day'], ...(me && me.gym_id ? [['/classes', 'Book a class', 'Reserve your spot'], ['/mygym#attendance', 'My attendance', 'Every class you have made'], ['/shop/' + me.gym_id, 'Gym shop', 'Drinks, snacks and gear']] : []), ['/training', 'My training', 'Log your own sessions, sets and reps'], ['/log', 'Log a lift', 'Add a set and update your DSI'], ['/tracker', 'Plate tracker', P + 'The camera counts reps and reads the plates']] },
-      { h: 'Get better', items: [['/progress', 'Progress', P + 'Charts for every lift'], ['/plans', 'Goal plans', P + 'A plan to hit your next number'], ['/coach', 'Coach', P + 'Ask about your training'], ['/connect', 'Connected apps', P + 'WHOOP, Apple Health, Health Connect'], ...(me ? [['/import', 'Import history', 'Bring in your old lifts']] : [])] }] },
-  ];
+      { h: 'Get better', items: [['/progress', 'Progress', P + 'Charts for every lift'], ['/plans', 'Goal plans', P + 'A plan to hit your next number'], ['/coach', 'Coach', P + 'Ask about your training'], ['/connect', 'Connected apps', P + 'WHOOP, Apple Health, Health Connect'], ...(me ? [['/import', 'Import history', 'Bring in your old lifts']] : [])] }] });
   const gyms = S.myGyms || [];
   const offItems = (x, keys) => OFFICE.filter(o => keys.includes(o[0]) && (!o[3] || x.role === 'owner' || (S.me && S.me.role === 'admin'))).map(([k, n, d]) => [officeHref(x.gym_id, k), n, d]);
   if (gyms.length === 1) { const x = gyms[0], nm = x.gym.name || 'Gym';
@@ -106,7 +109,7 @@ function navGroups() {
   if (me && (me.role === 'admin' || me.role === 'commissioner')) g.push({ k: 'admin', n: 'Admin', sections: [{ h: me.role === 'admin' ? 'Management' : 'Commissioner', items: [...(me.role === 'admin' ? [['/admin', 'Management dashboard', 'Members, gyms and stats'], ['/admin?tab=gyms', 'All gyms', 'Edit gyms and open any office'], ['/admin?tab=requests', 'Requests', 'Gym claims and approvals']] : []), ['/reports', 'Reports', 'Flagged lifts and people'], ['/program', 'Import workouts', 'Load a program for a gym']] }] });
   return g;
 }
-const ROUTE_GROUP = { '': 'home', pricing: 'home', start: 'home', boards: 'boards', prs: 'boards', pr: 'boards', compete: 'boards', season: 'boards', battles: 'boards', gyms: 'boards', benchmarks: 'boards', protests: 'boards', recap: 'boards', u: 'boards',
+const ROUTE_GROUP = { '': 'home', pricing: 'home', start: 'home', grow: 'home', tour: 'home', switch: 'home', members: 'members', boards: 'boards', prs: 'boards', pr: 'boards', compete: 'boards', season: 'boards', battles: 'boards', gyms: 'boards', benchmarks: 'boards', protests: 'boards', recap: 'boards', u: 'boards',
   week: 'train', training: 'train', log: 'train', progress: 'train', plans: 'train', coach: 'train', tracker: 'train', connect: 'train', import: 'train', lift: 'train', classes: 'train', mygym: 'me', billing: 'me', sign: 'me', signed: 'me',
   club: 'office', insights: 'office', growth: 'office', dandytv: 'office', shop: 'train', class: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office', admin: 'admin', reports: 'admin', program: 'admin', me: 'me', security: 'me', pro: 'me', rules: 'me', blocked: 'me' };
 const ACCT = () => [['/me', 'Profile', 'Name, gym and lifter details'], ...(S.me.gym_id ? [['/mygym', 'Membership and billing', 'Plan, payments and documents']] : []), ['/me?tab=goals', 'Goals', 'What you are chasing'], ['/me?tab=reminders', 'Reminders', 'Nudges to log'], ['/me?tab=account', 'Account and safety', 'Email, privacy and blocks'], ['/u/' + S.me.id, 'My lifter card', 'Your public page'], ['/pro', 'DSI Pro', 'Membership and perks']];
@@ -1463,6 +1466,10 @@ installHome(CTX);
 installConnect(CTX);
 installInsights(CTX);
 installGrowth(CTX);
+// Real names and numbers are for signed in members. Visitors get the sample gym and a sign in prompt instead.
+for (const [k, what] of [['boards', 'Boards'], ['prs', 'PR walls'], ['pr', 'PRs'], ['u', 'Lifter pages'], ['gyms', 'Gym boards'], ['compete', 'Competitions'], ['season', 'Seasons'], ['battles', 'Battles'], ['recap', 'Year recaps']]) {
+  const f = VIEWS[k]; if (f) VIEWS[k] = (a, tok) => (S.me ? f(a, tok) : CTX.membersOnly(tok, what));
+}
 installShop(CTX);
 installTv(CTX);
 installTraining(CTX);
