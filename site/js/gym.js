@@ -665,7 +665,9 @@ export function install(X) {
         return `<div class="tvSeg ${x.k}${cur ? ' cur' : ''}${done ? ' done' : ''}" style="flex:${x.b - x.a} 1 0"><b style="width:${f * 100}%"></b>${inner}</div>`;
       }).join('')}${live ? `<em class="tvMark" style="left:${Math.min(100, (m / len) * 100)}%"></em>` : ''}</div>
         ${live ? `<div class="tvEnds"><span>${fmtTime(win.at)} start</span><span>${fmtTime(win.at + len * 60000)} end</span></div>` : ''}`;
+      const fb = $('#tvFocusBox [data-cbar]'), wasEmpty = fb && !fb.innerHTML;
       put(boxes, barHtml);
+      if (wasEmpty && focus) fitText();
       let html = '';
       if (win && win.next) { const sec = (win.at - Date.now()) / 1000; html = `<div class="lbl">Next class</div><b>${sec < 3600 ? mmss(sec) : fmtTime(win.at)}</b>${sec < 3600 ? `<small>Starts ${fmtTime(win.at)}</small>` : ''}`; }
       else if (live) {
@@ -725,11 +727,11 @@ export function install(X) {
       if (!box) { box = document.createElement('div'); box.id = 'tvFocusBox'; box.className = 'tvStageBox'; document.body.appendChild(box); }
       box.innerHTML = focusHtml();
       if (!box.innerHTML) { focus = null; box.remove(); return; }
-      fitText();
+      classBar(); fitText(); // the class bar takes room first, then the words fill what is left
       box.querySelectorAll('[data-fpart]').forEach(b => b.onclick = () => showFocus(b.dataset.fpart));
       box.querySelectorAll('[data-whobtn]').forEach(b => b.onclick = showWho);
       $('#tvFClose').onclick = () => showFocus(null);
-      bindTimer(); pill(); classBar();
+      bindTimer(); pill();
     };
     // The workout screen: one text size for every part, as big as fits. iPads mirrored to a TV are 4:3, so a fixed size runs off.
     const fitCards = () => {
