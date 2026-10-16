@@ -488,11 +488,11 @@ export function install(X) {
       const { g, w, logs, rowOf, lb, prs, q, battles, by, yday, from30 } = st;
       const members = inClass(), cls = classNow();
       const out = [], cs = (st.tv && st.tv.class_screens) || {}, on = k => cs[k] !== false;
-      const head = (k, t) => `<header class="tvHead"><div class="tvGym"><img src="/assets/mark.svg" alt="Dandy Strength" class="tvLogo"><div><b>${esc(g.name)}</b><span>${esc(k)}</span></div></div><div class="tvTitle">${t}</div><div></div></header>`;
+      const head = (k, t) => `<header class="tvHead"><div class="tvGym"><img src="/assets/mark.svg" alt="Dandy Strength" class="tvLogo"><div><b>${esc(g.name)}</b><span>${esc(k)}</span></div></div><div class="tvTitle">${t}</div><div class="tvNow sm" data-cnow></div></header><div class="tvCBar" data-cbar></div>`;
       // 1. Workout of the day
       // No header here: the workout's name leads the screen; the logo, date and time sit in the footer.
       if (on('wod')) out.push(`<div class="tvBody tvWodS">
-        ${w ? `<div class="tvTop"><div class="tvTitleRow"><h1>${esc(w.title)}</h1><div class="tvNow" data-now></div></div><div data-tl><div class="tvRule"></div></div></div><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div class="tvPartBtn" role="button" tabindex="0" data-part="${p.L}" aria-label="Show part ${p.L} full screen"><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
+        ${w ? `<div class="tvTop"><div class="tvTitleRow"><h1>${esc(w.title)}</h1><div class="tvNow" data-cnow></div></div><div data-cbar data-rule><div class="tvRule"></div></div></div><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div class="tvPartBtn" role="button" tabindex="0" data-part="${p.L}" aria-label="Show part ${p.L} full screen"><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
         : `<h1>Rest or not posted</h1><p class="tvEmpty">Coaches post the day at dandystrength.com/gym/${esc(g.id)}</p>`}</div>`);
       // 2. Today's targets (one screen per 12 members)
       const lifts = (w && w.lifts) || [];
@@ -646,12 +646,17 @@ export function install(X) {
       return nx ? { next: true, at: Date.parse(nx.starts_at), len: len(nx), label: `${fmtTime(nx.starts_at)} ${nx.name || 'class'}` } : null;
     };
     let lastSeg = '';
+    // The class clock is its own thing: it runs from the scheduled start on every screen, the part view included,
+    // and never waits on the part clocks. It shows where the class should be.
     const classBar = () => {
-      const box = document.querySelector('.tvWodS [data-tl]'), nowEl = document.querySelector('.tvWodS [data-now]');
-      if (!box || !nowEl) return;
+      const boxes = $$('[data-cbar]'), nows = $$('[data-cnow]'), b = document.body;
+      if (!boxes.length && !nows.length) return;
+      const put = (els, h) => els.forEach(el => { const v = typeof h === 'function' ? h(el) : h; if (el.innerHTML !== v) el.innerHTML = v; });
       const { segs, used } = classPlan();
-      if (!segs.length) { if (!box.querySelector('.tvRule')) box.innerHTML = '<div class="tvRule"></div>'; nowEl.innerHTML = ''; return; }
-      const win = classWin(), live = win && !win.next, len = Math.max(live ? win.len : 60, used);
+      const win = classWin(), live = !!(win && !win.next);
+      b.classList.toggle('tvPlan', !!segs.length);
+      if (!segs.length) { put(boxes, el => el.hasAttribute('data-rule') ? '<div class="tvRule"></div>' : ''); put(nows, ''); b.classList.remove('tvLive'); lastSeg = ''; return; }
+      const len = Math.max(live ? win.len : 60, used);
       const all = used < len ? segs.concat([{ k: 'open', a: used, b: len }]) : segs;
       const m = live ? (Date.now() - win.at) / 60000 : -1, seg = live ? all.find(x => m >= x.a && m < x.b) : null;
       const barHtml = `<div class="tvTL">${all.map(x => {
@@ -660,21 +665,21 @@ export function install(X) {
         return `<div class="tvSeg ${x.k}${cur ? ' cur' : ''}${done ? ' done' : ''}" style="flex:${x.b - x.a} 1 0"><b style="width:${f * 100}%"></b>${inner}</div>`;
       }).join('')}${live ? `<em class="tvMark" style="left:${Math.min(100, (m / len) * 100)}%"></em>` : ''}</div>
         ${live ? `<div class="tvEnds"><span>${fmtTime(win.at)} start</span><span>${fmtTime(win.at + len * 60000)} end</span></div>` : ''}`;
-      if (box.innerHTML !== barHtml) box.innerHTML = barHtml;
-      // The big clock beside the title.
+      put(boxes, barHtml);
       let html = '';
-      if (!win) html = '';
-      else if (win.next) { const s = (win.at - Date.now()) / 1000; html = `<div class="lbl">Next class</div><b>${s < 3600 ? mmss(s) : fmtTime(win.at)}</b>${s < 3600 ? `<small>Starts ${fmtTime(win.at)}</small>` : ''}`; }
+      if (win && win.next) { const sec = (win.at - Date.now()) / 1000; html = `<div class="lbl">Next class</div><b>${sec < 3600 ? mmss(sec) : fmtTime(win.at)}</b>${sec < 3600 ? `<small>Starts ${fmtTime(win.at)}</small>` : ''}`; }
       else if (live) {
-        // The main screen tracks the whole class; each part's own clock lives in the part view.
         const el = m * 60, leftMin = Math.max(0, Math.ceil(len - m));
         const what = !seg ? '' : seg.k === 'part' ? `${seg.p.L} ${esc(seg.p.name || 'Part ' + seg.p.L)} now` : seg.k === 'gap' ? `Change over, next ${seg.next.L}` : 'Cooldown';
         html = `<div class="lbl">Class time</div><b>${mmss(el)}</b><small>${leftMin} min left${what ? ' · ' + what : ''}</small>`;
       }
-      if (nowEl.innerHTML !== html) { nowEl.innerHTML = html; fitTitle(); }
-      // Light up the card on now, and beep as each part and changeover begins.
+      const changed = nows.some(el => el.innerHTML !== html);
+      put(nows, html); if (changed) fitTitle();
+      b.classList.toggle('tvLive', !!html);
+      // Light up the card and the part tab on now, and beep as each part and changeover begins.
       const onL = seg && seg.k === 'part' ? seg.p.L : '';
-      document.querySelectorAll('.tvWodS .tvPartBtn').forEach(c => c.classList.toggle('on', c.dataset.part === onL));
+      $$('.tvWodS .tvPartBtn').forEach(c => c.classList.toggle('on', c.dataset.part === onL));
+      $$('.tvFTabs [data-fpart]').forEach(c => c.classList.toggle('on', c.dataset.fpart === onL));
       const key = seg ? seg.k + seg.a : '';
       if (live && key && lastSeg && key !== lastSeg) beep(990, 0.5);
       lastSeg = key;
@@ -695,7 +700,8 @@ export function install(X) {
       const tg = l ? members.map(m => { const t = D.target(l, rowOf(m)), v = num((((logs.find(x => x.profile_id === m.id) || {}).entries) || {})[l.id]); return { n: m.display_name, t, v }; }).filter(x => x.t || x.v) : [];
       return `<div class="tvFocus" role="dialog" aria-modal="true" aria-label="Part ${p.L}">
         <header class="tvFHead"><nav class="tvFTabs">${ps.map(x => `<button type="button" data-fpart="${x.L}"${x.L === p.L ? ' aria-current="true"' : ''}><i>${x.L}</i>${esc(x.name || 'Part ' + x.L)}</button>`).join('')}</nav>
-          <div class="tvClock">${clock()}</div><button type="button" class="tvFClose" id="tvFClose" aria-label="Close (Esc)">×</button></header>
+          <div class="tvNow sm" data-cnow></div><div class="tvClock">${clock()}</div><button type="button" class="tvFClose" id="tvFClose" aria-label="Close (Esc)">×</button></header>
+        <div class="tvCBar" data-cbar></div>
         <div class="tvFBody">
           <div class="tvFMain">
             <p class="tvFText" id="tvFText">${esc(p.text)}</p>
@@ -723,7 +729,7 @@ export function install(X) {
       box.querySelectorAll('[data-fpart]').forEach(b => b.onclick = () => showFocus(b.dataset.fpart));
       box.querySelectorAll('[data-whobtn]').forEach(b => b.onclick = showWho);
       $('#tvFClose').onclick = () => showFocus(null);
-      bindTimer(); pill();
+      bindTimer(); pill(); classBar();
     };
     // The workout screen: one text size for every part, as big as fits. iPads mirrored to a TV are 4:3, so a fixed size runs off.
     const fitCards = () => {

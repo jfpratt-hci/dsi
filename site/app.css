@@ -1337,3 +1337,22 @@ td.nowrap{white-space:nowrap}
 .tvFTabs{gap:1cqw}
 .tvFTabs button{font-size:2.2cqw;padding:.7cqw 1.4cqw;gap:.8cqw;border-radius:.6cqw}
 .tvFTabs button i{width:2.8cqw;height:2.8cqw;font-size:1.9cqw;border-radius:.4cqw}
+/* Class clock on every Dandy TV screen: the timeline sits between the header and the body, with the class time in the header. */
+.tvCBar:empty{display:none}
+.tvS .tvCBar{grid-column:1/-1}
+.tvPlan .tvS .tvHead,.tvPlan .tvFHead{border-bottom:0;padding-bottom:.3cqw}
+.tvCBar{display:grid;gap:.5cqw;min-width:0}
+.tvNow.sm{justify-self:end;gap:.1cqw}
+.tvNow.sm b{font-size:3cqw}
+.tvNow.sm .lbl,.tvNow.sm small{font-size:.95cqw}
+.tvFHead{grid-template-columns:minmax(0,1fr) auto auto auto}
+.tvLive .tvFHead .tvClock{display:none}
+.tvFTabs button.on:not([aria-current]){box-shadow:inset 0 -.3cqw 0 var(--accent)}
+.tvFocus{display:flex;flex-direction:column}
+.tvFocus>.tvFBody{flex:1 1 0}
+/* Header screens: header, class bar, body, footer. The workout screen has no header, so its body spans the first three rows. */
+.tvS{grid-template-rows:auto auto minmax(0,1fr) auto}
+.tvS>.tvWodS{grid-row:1/4}
+.tvS>.tvCBar:empty{display:block;height:0;margin-top:-1.4cqw}
+.tvS>.tvBody{min-height:0}
+.tvS>.tvFoot{grid-row:4}
