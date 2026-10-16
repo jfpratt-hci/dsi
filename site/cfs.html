@@ -122,22 +122,37 @@ section{padding-block:64px;border-top:1px solid var(--line)}
 .pillar p{color:var(--muted);font-size:.95rem}
 .social-head{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:16px}
 .social-head .btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.feed{overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);padding-block:4px}
-.track{display:flex;gap:16px;width:max-content;padding-inline:20px}
-@media (prefers-reduced-motion: no-preference){.track{animation:feed 70s linear infinite}.feed:hover .track,.feed:focus-within .track{animation-play-state:paused}@keyframes feed{to{transform:translateX(calc(-50% - 8px))}}}
-@media (prefers-reduced-motion: reduce){.feed{overflow-x:auto;mask-image:none}}
-.post{width:250px;flex:none;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;text-decoration:none;display:grid}
+.feed{display:grid;gap:14px}
+.track{display:grid;grid-auto-flow:column;grid-auto-columns:calc((100% - 32px) / 3);gap:16px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:none;padding-block:2px}
+.track::-webkit-scrollbar{display:none}
+@media (max-width:900px){.track{grid-auto-columns:calc((100% - 16px) / 2)}}
+@media (max-width:600px){.track{grid-auto-columns:100%}}
+.post{min-width:0;scroll-snap-align:start;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;text-decoration:none;display:grid;grid-template-rows:auto auto 1fr}
 .post .ph{display:flex;align-items:center;gap:8px;padding:10px 12px;font-size:.8rem}
-.post .av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:900 .9rem var(--f-display);background:var(--bg);border:2px solid var(--accent)}
+.post .av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:900 .9rem var(--f-display);background:var(--bg);border:2px solid var(--accent);overflow:hidden;flex:none}
+.post .av img{width:100%;height:100%;object-fit:cover}
 .post .hd{font-weight:600}
 .post .hd small{display:block;font-weight:400;color:var(--muted);font-size:.72rem}
 .post .ic{margin-left:auto;color:var(--muted);display:flex}
-.post .vis{aspect-ratio:1/1;display:grid;place-items:center;text-align:center;padding:18px;position:relative;overflow:hidden;color:#fff}
+.post .vis{aspect-ratio:4/5;display:grid;place-items:center;text-align:center;padding:18px;position:relative;overflow:hidden;color:#fff}
 .post .vis b{font:900 2.6rem var(--f-display);line-height:.85;text-transform:uppercase;position:relative;z-index:1;text-wrap:balance}
 .post .vis small{display:block;font:600 .72rem var(--f-mono);letter-spacing:.12em;text-transform:uppercase;margin-top:8px;opacity:.9}
 .post .vis::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-size:32px 32px}
 .post .cap{padding:12px;font-size:.86rem;display:grid;gap:4px}
 .post .cap span{color:var(--muted);font-size:.74rem}
+.post .cap .txt{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.post .vis.photo{padding:0;background:var(--panel2)}
+.post .vis.photo::after{display:none}
+.post .vis.photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.post .vis .badge{position:absolute;top:10px;right:10px;z-index:1;display:flex;padding:6px;border-radius:50%;background:rgba(10,20,48,.6);color:#fff}
+.feed-nav{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.dots{display:flex;flex-wrap:wrap;align-items:center}
+.dot{width:24px;height:24px;padding:0;border:0;background:none;cursor:pointer;display:grid;place-items:center}
+.dot::before{content:"";width:8px;height:8px;border-radius:4px;background:var(--line);transition:width .2s,background .2s}
+.dot[aria-current="true"]::before{width:22px;background:var(--accent)}
+.feed-btns{display:flex;gap:8px}
+.fbtn{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--fg);display:grid;place-items:center;cursor:pointer}
+.fbtn:hover{border-color:var(--accent)}
 
 /* schedule */
 .week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}
@@ -533,8 +548,18 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
         <a class="btn" data-soc="fb" href="https://www.facebook.com/people/CrossFit-Symmetry/100063663154017/" target="_blank" rel="noopener">Like on Facebook</a>
       </div>
     </div>
+    <div class="feed" id="feed" role="region" aria-roledescription="carousel" aria-label="Recent posts from @crossfitsymmetry">
+      <div class="track" id="track" aria-live="off"></div>
+      <div class="feed-nav">
+        <div class="dots" id="feedDots" aria-label="Choose a post"></div>
+        <div class="feed-btns">
+          <button class="fbtn" type="button" id="feedPrev" aria-label="Previous post"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <button class="fbtn" type="button" id="feedPlay" aria-label="Pause slideshow"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></button>
+          <button class="fbtn" type="button" id="feedNext" aria-label="Next post"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="feed" aria-label="Recent Instagram and Facebook posts"><div class="track" id="track"></div></div>
 </section>
 
 <section id="classes">
@@ -955,7 +980,9 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
   });
   if (nextIdx === -1 && !today.some((c) => mins(c[0]) <= nowMin && nowMin < mins(c[0]) + 60)) tl.append(el('p', 'co', 'Classes are done for today. Book one for tomorrow below.'));
 
-  /* Social feed (preview posts; the live feed connects at launch) */
+  /* Social feed: a slideshow of the gym's latest Instagram posts, one post per screen on phones, two on tablets, three on desktop.
+     It moves to the next post every 4 seconds and holds still while someone hovers, swipes, tabs into it, or presses pause.
+     Until the live feed is connected (gym_sites.social.ig_feed, a Behold JSON feed link) it shows the preview posts below. */
   const IG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>';
   const FB = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M13.5 21v-7h2.5l.5-3h-3V9.5c0-.9.4-1.5 1.6-1.5H16.5V5.3c-.5-.1-1.3-.2-2.3-.2-2.3 0-3.7 1.4-3.7 3.9V11H8v3h2.5v7"/></svg>';
   const POSTS = [
@@ -969,19 +996,96 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
     ['ig', 'Murph 2027', 'Memorial Day · Sign up', '#2F6BFF', '#7a5a06', 'Heats are open for Murph on Memorial Day. Grab a spot and a shirt.', 7],
     ['fb', 'The board', 'Who takes the Dandy?', 'var(--p-dandy)', '#5a4612', 'The October board is wide open. Log your lifts in the app.', 11],
   ];
-  const track = $('#track');
-  const mkPost = ([pf, big, small, c1, c2, cap, ago], dup) => {
-    const a = el('a', 'post'); a.href = pf === 'ig' ? 'https://www.instagram.com/crossfitsymmetry/' : 'https://www.facebook.com/people/CrossFit-Symmetry/100063663154017/'; a.target = '_blank'; a.rel = 'noopener';
-    if (dup) { a.setAttribute('aria-hidden', 'true'); a.tabIndex = -1; }
-    const ph = el('div', 'ph'); const hd = el('span', 'hd', 'crossfitsymmetry'); hd.append(el('small', '', 'Milford, Ohio'));
-    const ic = el('span', 'ic'); ic.innerHTML = pf === 'ig' ? IG : FB; ph.append(el('span', 'av', 'S'), hd, ic);
+  const IG_URL = 'https://www.instagram.com/crossfitsymmetry/', FB_URL = 'https://www.facebook.com/people/CrossFit-Symmetry/100063663154017/';
+  const track = $('#track'), feedEl = $('#feed'), dots = $('#feedDots'), playBtn = $('#feedPlay');
+  const safe = (u) => typeof u === 'string' && /^https:\/\//i.test(u) ? u : '';
+  const head = (pf, pic) => {
+    const ph = el('div', 'ph'), av = el('span', 'av', pic ? undefined : 'S');
+    if (pic) { const im = el('img'); im.src = pic; im.alt = ''; av.append(im); }
+    const hd = el('span', 'hd', 'crossfitsymmetry'); hd.append(el('small', '', 'Milford, Ohio'));
+    const ic = el('span', 'ic'); ic.innerHTML = pf === 'ig' ? IG : FB; ph.append(av, hd, ic); return ph;
+  };
+  const link = (href) => { const a = el('a', 'post'); a.href = href; a.target = '_blank'; a.rel = 'noopener'; return a; };
+  const mkPreview = ([pf, big, small, c1, c2, cap, ago]) => {
+    const a = link(pf === 'ig' ? IG_URL : FB_URL);
     const vis = el('div', 'vis'); vis.style.background = `linear-gradient(140deg, ${c1}, ${c2})`;
     const t = el('b', '', big); t.append(el('small', '', small)); vis.append(t);
-    const cp = el('div', 'cap'); cp.append(el('div', '', cap), el('span', '', `${pf === 'ig' ? 'Instagram' : 'Facebook'} · ${ago}d ago`));
-    a.append(ph, vis, cp); return a;
+    const cp = el('div', 'cap'); cp.append(el('div', 'txt', cap), el('span', '', `${pf === 'ig' ? 'Instagram' : 'Facebook'} · ${ago}d ago`));
+    a.append(head(pf), vis, cp); return a;
   };
-  POSTS.forEach((p) => track.append(mkPost(p, false)));
-  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) POSTS.forEach((p) => track.append(mkPost(p, true)));
+  const when = (iso) => {
+    const t = Date.parse(iso); if (!t) return '';
+    const d = Math.floor((Date.now() - t) / 864e5);
+    return d < 1 ? 'Today' : d < 7 ? d + 'd ago' : d < 56 ? Math.round(d / 7) + 'w ago' : new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+  const BADGE = { VIDEO: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>',
+    CAROUSEL_ALBUM: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="7" y="7" width="13" height="13" rx="2"/><path d="M4 16V6a2 2 0 0 1 2-2h10"/></svg>' };
+  const pick = (p) => {
+    const sz = p.sizes || (p.children && p.children[0] && p.children[0].sizes) || {};
+    return safe((sz.medium || sz.large || sz.small || {}).mediaUrl) || safe(p.thumbnailUrl) || (p.mediaType === 'VIDEO' ? '' : safe(p.mediaUrl));
+  };
+  const mkLive = (p, pic, i) => {
+    const src = pick(p); if (!src) return null;
+    const a = link(safe(p.permalink) || IG_URL);
+    const vis = el('div', 'vis photo'), rgb = p.colorPalette && p.colorPalette.muted;
+    if (/^\d{1,3},\d{1,3},\d{1,3}$/.test(rgb || '')) vis.style.background = `rgb(${rgb})`;
+    const cap = String(p.prunedCaption || p.caption || '').trim();
+    const im = el('img'); im.src = src; im.alt = p.altText || cap.slice(0, 140) || 'Instagram post from CrossFit Symmetry'; im.decoding = 'async'; if (i > 3) im.loading = 'lazy';
+    vis.append(im);
+    if (BADGE[p.mediaType]) { const b = el('span', 'badge'); b.innerHTML = BADGE[p.mediaType]; vis.append(b); }
+    const cp = el('div', 'cap'); cp.append(el('div', 'txt', cap || 'See the post on Instagram'), el('span', '', 'Instagram · ' + when(p.timestamp)));
+    a.append(head('ig', pic), vis, cp); return a;
+  };
+
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let timer = 0, holdUntil = 0, paused = reduce, onScreen = false, inside = false, raf = 0;
+  const gap = () => parseFloat(getComputedStyle(track).columnGap) || 0;
+  const step = () => { const c = track.firstElementChild; return c ? c.getBoundingClientRect().width + gap() : 1; };
+  const perView = () => Math.max(1, Math.round((track.clientWidth + gap()) / step()));
+  const lastIdx = () => Math.max(0, track.children.length - perView());
+  const cur = () => Math.min(lastIdx(), Math.round(track.scrollLeft / step()));
+  const go = (i) => { const n = lastIdx(); track.scrollTo({ left: (i > n ? 0 : i < 0 ? n : i) * step(), behavior: reduce ? 'auto' : 'smooth' }); };
+  const hold = () => { holdUntil = Date.now() + 8000; };
+  const paintDots = () => {
+    const n = lastIdx() + 1;
+    if (dots.children.length !== n) dots.replaceChildren(...Array.from({ length: n }, (_, i) => {
+      const b = el('button', 'dot'); b.type = 'button'; b.setAttribute('aria-label', `Show post ${i + 1} of ${n}`);
+      b.addEventListener('click', () => { hold(); go(i); }); return b;
+    }));
+    const k = cur(); [...dots.children].forEach((d, i) => d.setAttribute('aria-current', String(i === k)));
+    dots.hidden = n < 2;
+  };
+  const setPlay = (p) => {
+    paused = p; playBtn.setAttribute('aria-label', p ? 'Play slideshow' : 'Pause slideshow');
+    playBtn.innerHTML = p ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>'
+      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+  };
+  const tick = () => { if (!paused && onScreen && !inside && !document.hidden && Date.now() > holdUntil && lastIdx() > 0) go(cur() + 1); };
+  const setPosts = (nodes) => { track.replaceChildren(...nodes); track.scrollLeft = 0; paintDots(); };
+  setPlay(paused);
+  timer = setInterval(tick, 4000);
+  playBtn.addEventListener('click', () => setPlay(!paused));
+  $('#feedPrev').addEventListener('click', () => { hold(); go(cur() - 1); });
+  $('#feedNext').addEventListener('click', () => { hold(); go(cur() + 1); });
+  track.addEventListener('scroll', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(paintDots); }, { passive: true });
+  ['pointerdown', 'wheel', 'touchstart'].forEach((ev) => track.addEventListener(ev, hold, { passive: true }));
+  feedEl.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') inside = true; });
+  feedEl.addEventListener('pointerleave', () => { inside = false; });
+  feedEl.addEventListener('focusin', () => { inside = true; });
+  feedEl.addEventListener('focusout', (e) => { if (!feedEl.contains(e.relatedTarget)) inside = false; });
+  addEventListener('resize', paintDots);
+  if ('IntersectionObserver' in window) new IntersectionObserver((es) => { onScreen = es[0].isIntersecting; }, { threshold: 0.4 }).observe(feedEl); else onScreen = true;
+  setPosts(POSTS.map(mkPreview));
+  // Called by the contact script below once it reads the gym's settings. Keeps the preview posts if the feed can't load.
+  window.cfsInstagram = (url) => fetch(url).then((r) => r.ok ? r.json() : null).then((j) => {
+    if (!j || !Array.isArray(j.posts)) return;
+    const pic = safe(j.profilePictureUrl);
+    const nodes = j.posts.slice(0, 12).map((p, i) => mkLive(p, pic, i)).filter(Boolean);
+    if (nodes.length < 2) return;
+    setPosts(nodes);
+    const tag = document.querySelector('.social-head .sample'); if (tag) tag.hidden = true;
+    feedEl.setAttribute('aria-label', 'Recent Instagram posts from @crossfitsymmetry');
+  }).catch(() => {});
 
   /* Weekly schedule */
   const clsEl = (c, long) => { const d = el('div', 'cls' + (c[1] === 'Open gym' ? ' og' : '')); d.append(el('div', 'tm', c[0]), el('div', 'co', long ? `${c[1]} · Coach ${c[2]}` : (c[1] === 'Open gym' ? 'Open gym · ' : '') + c[2].split(' ')[0])); return d; };
@@ -1477,7 +1581,8 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
   document.querySelectorAll('[data-open-text]').forEach((b) => b.addEventListener('click', () => { const fab = $('txFab'); if (fab && fab.getAttribute('aria-expanded') !== 'true') fab.click(); }));
   fetch(API, { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_key: 'cfs' }) })
     .then((r) => r.ok ? r.json() : null)
-    .then((c) => { if (!c) return; if (c.social && Object.keys(c.social).length) socials(c.social); hours(c.hours); contact(c); })
+    .then((c) => { if (!c) return; if (c.social && Object.keys(c.social).length) socials(c.social); hours(c.hours); contact(c);
+      if (c.social && ok(c.social.ig_feed) && window.cfsInstagram) window.cfsInstagram(c.social.ig_feed.trim()); })
     .catch(() => {});
 })();
 </script>

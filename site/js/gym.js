@@ -159,7 +159,8 @@ export function install(X) {
     const wc = $('#wcF');
     if (wc) wc.onsubmit = async e => {
       e.preventDefault();
-      const m = $('#wc-msg'), social = {};
+      // Keep settings this form doesn't show (like the Instagram photo feed link) so saving here never wipes them.
+      const m = $('#wc-msg'), social = Object.fromEntries(Object.entries(soc).filter(([k]) => !SITE_SOC.some(([s]) => s === k)));
       for (const [k, n] of SITE_SOC) {
         const v = $('#wc-' + k).value.trim();
         if (!v) continue;
