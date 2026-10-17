@@ -215,7 +215,8 @@ textarea{min-height:70px;resize:vertical}
 .board-ctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
 .toggle{display:flex;align-items:center;gap:8px;font-size:.88rem;color:var(--muted);cursor:pointer}
 .toggle input{width:auto}
-.board{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;min-width:600px}
+.board{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+@media (max-width:520px){.board .who .chip{display:table;margin:4px 0 0!important}.board td{padding:10px 6px}.board th:nth-child(3),.board td:nth-child(3){display:none}}
 .board th{font:600 .7rem var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:right;padding:8px 10px;border-bottom:1px solid var(--line)}
 .board th:nth-child(-n+3),.board td:nth-child(-n+3){text-align:left}
 .board td{padding:10px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top}
@@ -386,6 +387,7 @@ textarea{min-height:70px;resize:vertical}
 .plan .pp{display:flex;align-items:baseline;gap:8px}.plan .pp b{font:800 3rem/1 var(--f-display)}.plan .pp span{color:var(--muted)}
 .plan p{margin:0}
 .plan ul{margin:0;padding:0;list-style:none;display:grid;gap:6px}.plan li{display:flex;align-items:center;gap:8px;font-size:.92rem}.plan li::before{content:"";width:9px;height:9px;border-radius:50%;border:2px solid var(--ok)}
+.plan .pro-note{font-size:.88rem;color:var(--muted)}
 .plan .per{font-size:.78rem;color:var(--muted)}.plan .btn{justify-self:start}
 @media (max-width:900px){.plan{grid-column:1 / -1}}
 .faq{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}.faqq{grid-column:span 6;padding-block:8px}.faqq details{border-top:0}
@@ -419,6 +421,7 @@ textarea{min-height:70px;resize:vertical}
 .ok{border:1px solid var(--ok);border-radius:var(--r);padding:16px;display:grid;gap:6px}
 .ok b{font:800 1.4rem var(--f-display);text-transform:uppercase}
 .ok[hidden]{display:none}
+[hidden]{display:none!important}
 .hours div{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;gap:12px}
 .copyrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .copyrow .v{font-weight:600}
@@ -510,10 +513,8 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
       <a href="#classes">Classes</a>
       <a href="#plans">Plans</a>
       <a href="#book">Book</a>
-      <a href="#events">Events</a>
-      <a href="#store">Store</a>
-      <a href="#compete">Compete</a>
       <a href="#contact">Contact</a>
+      <a href="#compete">The board</a>
     </nav>
     <div class="actions">
       <a class="btn login" href="https://dandystrength.com" target="_blank" rel="noopener">Member login</a>
@@ -635,8 +636,8 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
         <article class="card prog"><span class="ages">Ages 5 to 9 · Teens · Athletes</span><h3>Kids, teens and sports</h3><p>Helping kids move, grow and gain confidence, plus teen conditioning and sports performance.</p></article>
       </div>
       <div class="card included">
-        <div style="display:grid;gap:4px"><b>Every membership includes</b><span class="muted" style="font-size:.9rem">Plans start at $90 a month. <a href="#plans">See the plans</a></span></div>
-        <ul><li>Coached classes</li><li>Weekend open gym</li><li>Dandy Strength Pro</li><li>Suggested weights</li></ul>
+        <div style="display:grid;gap:4px"><b>Every membership includes</b><span class="muted" style="font-size:.9rem">Plans start at $79 a month. <a href="#plans">See the plans</a></span></div>
+        <ul><li>Coached classes</li><li>Weekend open gym</li><li>Lift tracking in Dandy</li><li>Dandy Pro with Unlimited</li></ul>
       </div>
     </div>
   </div>
@@ -644,16 +645,16 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
 
 <section id="plans">
   <div class="wrap">
-    <div class="sec-head"><div class="t"><span class="eyebrow">Plans</span><h2>Pick how often you train</h2></div><p class="d">Every plan is month to month with coached classes, weekend open gym and Dandy Strength Pro. Start with a free class and a coach helps you choose. <span class="sample">Sample prices</span></p></div>
+    <div class="sec-head"><div class="t"><span class="eyebrow">Plans</span><h2>Pick how often you train</h2></div><p class="d">Every plan is month to month with coached classes and weekend open gym. Unlimited adds Dandy Pro. Start with a free class and a coach helps you choose. <span class="sample">Sample prices</span></p></div>
     <div class="plans">
-      <article class="card plan"><span class="eyebrow">5 class plan</span><div class="pp"><b>$90</b><span>per month</span></div><p class="muted">Five classes a month. A good start, or a fit around a busy week.</p>
-        <ul><li>5 coached classes a month</li><li>Weekend open gym</li><li>Dandy Strength Pro</li></ul><span class="per mono">About $18 a class</span>
+      <article class="card plan"><span class="eyebrow">5 class plan</span><div class="pp"><b>$79</b><span>per month</span></div><p class="muted">Five classes a month. A good start, or a fit around a busy week.</p>
+        <ul><li>5 coached classes a month</li><li>Weekend open gym</li><li>Your lifts tracked in Dandy</li></ul><span class="per mono">About $16 a class</span>
         <a class="btn" href="#book" data-book="intro">Start with a free class</a></article>
-      <article class="card plan"><span class="eyebrow">10 class plan</span><div class="pp"><b>$150</b><span>per month</span></div><p class="muted">Two to three classes a week, the steady way most members build strength.</p>
-        <ul><li>10 coached classes a month</li><li>Weekend open gym</li><li>Dandy Strength Pro</li></ul><span class="per mono">About $15 a class</span>
+      <article class="card plan"><span class="eyebrow">10 class plan</span><div class="pp"><b>$129</b><span>per month</span></div><p class="muted">Two to three classes a week, the steady way most members build strength.</p>
+        <ul><li>10 coached classes a month</li><li>Weekend open gym</li><li>Your lifts tracked in Dandy</li></ul><span class="per mono">About $13 a class</span>
         <a class="btn" href="#book" data-book="intro">Start with a free class</a></article>
-      <article class="card plan best"><span class="eyebrow">Unlimited</span><span class="chip free tag">Best value</span><div class="pp"><b>$175</b><span>per month</span></div><p class="muted">Come to any class, any day. For members who want to train most days.</p>
-        <ul><li>Unlimited coached classes</li><li>Weekend open gym</li><li>Dandy Strength Pro</li></ul><span class="per mono">Under $11 a class at four a week</span>
+      <article class="card plan best"><span class="eyebrow">Unlimited</span><span class="chip free tag">Best value</span><div class="pp"><b>$160</b><span>per month</span></div><p class="muted">Come to any class, any day. For members who want to train most days.</p>
+        <ul><li>Unlimited coached classes</li><li>Weekend open gym</li><li><b>Dandy Pro included</b></li></ul><p class="pro-note">Dandy Pro gives you your weight for every workout, tracks every lift and shows you getting stronger month by month.</p><span class="per mono">About $12 a class at three a week</span>
         <a class="btn primary" href="#book" data-book="intro">Start with a free class</a></article>
     </div>
     <div class="card included plan-add"><div style="display:grid;gap:4px"><b>Add coaching to any plan</b><span class="muted" style="font-size:.9rem">Book a coach by the hour, members and non members.</span></div>
@@ -707,140 +708,10 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
   </div>
 </section>
 
-<section class="member-band" aria-labelledby="mbH">
-  <div class="wrap mb">
-    <div class="t"><span class="eyebrow">Already a member?</span><h2 id="mbH">Get more out of CFS</h2></div>
-    <nav class="mb-links" aria-label="Member extras"><a class="btn primary" href="#events">Sign up for events</a><a class="btn" href="#store">Get CFS gear</a><a class="btn" href="#recovery">Recovery rooms</a><a class="btn" href="#compete">Chase the board</a></nav>
-  </div>
-</section>
-<section id="events">
-  <div class="wrap">
-    <div class="sec-head"><div class="t"><span class="eyebrow">CFS events</span><h2>Mark your calendar</h2></div><p class="d">Partner workouts, max out days, holiday WODs and Murph on Memorial Day. Friends and family welcome. <span class="sample">Sample events</span></p></div>
-    <div class="strip-head">
-      <button class="btn" id="calToggle" type="button" aria-expanded="false" aria-controls="evPanel">Calendar view</button>
-      <div class="strip-ctl"><button class="arrow" type="button" data-strip="evList" data-dir="-1" aria-label="Earlier events">‹</button><button class="arrow" type="button" data-strip="evList" data-dir="1" aria-label="Later events">›</button></div>
-    </div>
-    <div class="strip" id="evList" aria-label="Upcoming events"></div>
-    <div class="ev-panel" id="evPanel" hidden>
-      <div class="ev-cal card">
-        <div class="cal-head"><button class="cal-nav" id="calPrev" type="button" aria-label="Previous month">‹</button><b id="calTitle">October</b><button class="cal-nav" id="calNext" type="button" aria-label="Next month">›</button></div>
-        <div class="cal" id="calGrid" role="group" aria-label="Event calendar"></div>
-      </div>
-      <div class="ev-form card"><div class="signup" id="signup"><span class="eyebrow">Sign up</span><p class="muted">Tap an event on the calendar or in the row above to save your spot.</p></div></div>
-    </div>
-  </div>
-</section>
 
 
-<section id="store">
-  <div class="wrap">
-    <div class="sec-head"><div class="t"><span class="eyebrow">CFS store</span><h2>Rep the blue and yellow</h2></div><p class="d">Shirts, hoodies and gear in Symmetry colors. Order online and pick up at the front desk, free. <span class="sample">Sample products and prices</span></p></div>
-    <div class="strip-head">
-      <button class="btn" id="cartToggle" type="button" aria-expanded="false" aria-controls="cartPanel">Cart <span class="cartcount" id="cartCount">0</span> <span class="mono" id="cartTotal">$0</span></button>
-      <div class="strip-ctl"><button class="arrow" type="button" data-strip="products" data-dir="-1" aria-label="Previous products">‹</button><button class="arrow" type="button" data-strip="products" data-dir="1" aria-label="More products">›</button></div>
-    </div>
-    <div class="strip" id="products" aria-label="CFS gear"></div>
-    <div class="card cartpanel" id="cartPanel" hidden aria-live="polite">
-      <h3>Your cart</h3>
-      <div id="cartLines"></div>
-      <p class="muted" style="font-size:.8rem">Free pickup at the gym. Members pay in the app.</p>
-      <button class="btn primary" id="checkout" type="button" style="justify-self:start" disabled>Check out</button>
-      <p id="cartMsg" class="muted" style="font-size:.85rem" hidden></p>
-    </div>
-  </div>
-</section>
 
-<section id="recovery">
-  <div class="wrap recovery">
-    <div class="rec-copy">
-      <span class="eyebrow">Coming soon · The recovery rooms</span>
-      <h2>Train hard. Recover right here.</h2>
-      <p class="muted">We are turning the extra offices at Symmetry into private recovery rooms. Book a massage or a stretch session before or after class, without leaving the gym.</p>
-      <div class="floor" aria-label="Floor plan: main gym floor with two new recovery rooms beside the lobby">
-        <span class="gymf">Gym floor</span><span class="rm">Massage</span><span class="rm">Stretch</span><span class="lb">Lobby</span><span class="lb">Office</span>
-      </div>
-      <button class="btn" type="button" data-open-text style="justify-self:start">Text us to get on the list</button>
-    </div>
-    <div class="rec-cards">
-      <article class="card rec">
-        <span class="room">Room 1 · Opening soon</span><h3>Sports massage</h3>
-        <p>Licensed massage therapy for lifters and athletes. Work out the knots from heavy days and get back under the bar faster.</p>
-        <ul><li>30, 60 or 90 minute sessions</li><li>Book online, pay in the app</li><li>Member pricing</li></ul>
-        <button class="btn" type="button" data-open-text style="justify-self:start">Text us to get on the list</button>
-      </article>
-      <article class="card rec">
-        <span class="room">Room 2 · Opening soon</span><h3>Assisted stretching</h3>
-        <p>One on one stretching with a trained practitioner. Open up tight hips, shoulders and ankles so squats and overheads feel better.</p>
-        <ul><li>25 or 50 minute sessions</li><li>Great before or after class</li><li>Member pricing</li></ul>
-        <button class="btn" type="button" data-open-text style="justify-self:start">Text us to get on the list</button>
-      </article>
-    </div>
-  </div>
-</section>
 
-<section id="compete">
-  <div class="wrap">
-    <div class="sec-head"><div class="t"><span class="eyebrow">Compete · Dandy Strength Index</span><h2>Friendly rivalry, built in</h2></div><p class="d">The DSI ranks every member against lifters their age and size, so a first year member and a ten year veteran can chase the same board. For bragging rights, not medical or training advice.</p></div>
-    <div class="tabs" role="tablist">
-      <button role="tab" type="button" aria-selected="true" data-panel="tBoard">The board</button>
-      <button role="tab" type="button" aria-selected="false" data-panel="tPrs">PR wall</button>
-      <button role="tab" type="button" aria-selected="false" data-panel="tDsi">Get your DSI</button>
-    </div>
-
-    <div id="tBoard" role="tabpanel">
-      <div class="board-grid">
-        <div class="board-main card">
-          <div class="board-ctl"><div class="pills" id="liftSeg" role="group" aria-label="Ranking"></div><span class="sample">Sample athletes</span></div>
-          <div class="board-ctl"><div class="pills" id="divSeg" role="group" aria-label="Division"></div><div class="pills" id="ageSeg" role="group" aria-label="Age group"></div></div>
-          <div class="board-ctl" style="margin-bottom:4px"><label class="toggle" for="roastToggle"><input type="checkbox" id="roastToggle"> Show roasts (members opt in)</label><span class="eyebrow" id="boardCount"></span></div>
-          <div class="tablewrap"><table class="board" id="boardTbl"><thead><tr><th>#</th><th>Athlete</th><th>Tier</th><th id="valHead">DSI</th><th>Bodyweight</th><th>Age</th><th></th></tr></thead><tbody id="boardBody"></tbody></table></div>
-          <button class="btn" id="moreBtn" type="button" style="margin-top:12px">Show full board</button>
-        </div>
-        <aside class="board-side">
-          <div class="card" style="display:grid;gap:10px"><h3>Plate tiers</h3><p class="muted" style="font-size:.88rem">Climb from green to red, then take the Dandy.</p><div class="tiers" id="tierKey"></div></div>
-          <div class="card" style="display:grid;gap:10px"><h3>Protests</h3><p class="muted" style="font-size:.88rem">Lift not to standard? Protest it. Three protests sends it back for video.</p><div id="protestList" style="display:grid;gap:8px"></div></div>
-        </aside>
-      </div>
-    </div>
-
-    <div id="tPrs" role="tabpanel" hidden>
-      <div class="board-ctl"><p class="muted">Every PR logged this week, dated and loud. Each one rings the bell and posts to the gym chat.</p><span class="sample">Sample athletes</span></div>
-      <div class="prwall" id="prWall"></div>
-    </div>
-
-    <div id="tDsi" role="tabpanel" hidden>
-      <div class="calc">
-        <div class="calc-in card">
-          <div class="row3">
-            <label for="cSex">Division<select id="cSex"><option value="M">Men</option><option value="F">Women</option></select></label>
-            <label for="cAge">Age<input id="cAge" type="number" inputmode="numeric" value="40" min="12" max="99"></label>
-            <label for="cBw">Bodyweight<input id="cBw" type="number" inputmode="numeric" value="212" min="70" max="500"></label>
-          </div>
-          <div class="row4">
-            <label for="cSquat">Squat<input id="cSquat" type="number" inputmode="numeric" value="245" min="0" step="5"></label>
-            <label for="cBench">Bench<input id="cBench" type="number" inputmode="numeric" value="200" min="0" step="5"></label>
-            <label for="cDead">Deadlift<input id="cDead" type="number" inputmode="numeric" value="275" min="0" step="5"></label>
-            <label for="cClean">Clean<input id="cClean" type="number" inputmode="numeric" value="195" min="0" step="5"></label>
-          </div>
-          <p class="muted" style="font-size:.82rem">All weights in pounds. Your score updates as you type.</p>
-          <a class="btn primary" href="https://dandystrength.com" target="_blank" rel="noopener" style="justify-self:start">Join the board free</a>
-        </div>
-        <div class="calc-out">
-          <div class="card" style="display:grid;gap:12px">
-            <div class="score-big"><b id="oScore">0</b><div style="display:grid;gap:6px;padding-bottom:6px"><span class="eyebrow">Your DSI</span><span id="oTier" class="tier"></span></div></div>
-            <div class="meter" aria-hidden="true"><span id="oMeter" style="width:0"></span></div>
-            <p id="oRank" class="muted"></p>
-          </div>
-          <div class="card">
-            <h3 style="margin-bottom:8px">Suggested goals</h3>
-            <table class="goals"><thead><tr><th>Lift</th><th>Now</th><th>Suggested</th><th>Your goal</th></tr></thead><tbody id="goalBody"></tbody></table>
-            <p class="muted" style="font-size:.82rem;margin-top:10px" id="goalNote"></p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
 
 <section id="faq">
   <div class="wrap">
@@ -896,6 +767,140 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
   </div>
 </section>
 
+<section class="member-band" aria-labelledby="mbH">
+  <div class="wrap mb">
+    <div class="t"><span class="eyebrow">Already a member?</span><h2 id="mbH">Get more out of CFS</h2></div>
+    <nav class="mb-links" aria-label="Member extras"><a class="btn primary" href="#compete">Chase the board</a><a class="btn" href="#book" data-book="pt">Book a coach</a><a class="btn" href="https://dandystrength.com" target="_blank" rel="noopener">Member login</a></nav>
+  </div>
+</section>
+<section id="compete">
+  <div class="wrap">
+    <div class="sec-head"><div class="t"><span class="eyebrow">Compete · Dandy Strength Index</span><h2>Friendly rivalry, built in</h2></div><p class="d">The DSI scores your lifts for your age and size, so a first year member and a ten year veteran can chase the same board. Members choose whether they show up here. For bragging rights, not medical or training advice.</p></div>
+    <div class="tabs" role="tablist">
+      <button role="tab" type="button" aria-selected="true" data-panel="tBoard">The board</button>
+      <button role="tab" type="button" aria-selected="false" data-panel="tPrs">PR wall</button>
+      <button role="tab" type="button" aria-selected="false" data-panel="tDsi">Get your DSI</button>
+    </div>
+
+    <div id="tBoard" role="tabpanel">
+      <div class="board-grid">
+        <div class="board-main card">
+          <div class="board-ctl"><div class="pills" id="liftSeg" role="group" aria-label="Ranking"></div></div>
+          <div class="board-ctl"><div class="pills" id="divSeg" role="group" aria-label="Division"></div><span class="eyebrow" id="boardCount"></span></div>
+          
+          <div class="tablewrap"><table class="board" id="boardTbl"><thead><tr><th>#</th><th>Athlete</th><th>Tier</th><th id="valHead">DSI</th></tr></thead><tbody id="boardBody"></tbody></table></div>
+          <button class="btn" id="moreBtn" type="button" style="margin-top:12px">Show full board</button>
+        </div>
+        <aside class="board-side">
+          <div class="card" style="display:grid;gap:10px"><h3>Plate tiers</h3><p class="muted" style="font-size:.88rem">Climb from green to red, then take the Dandy.</p><div class="tiers" id="tierKey"></div></div>
+          <div class="card" style="display:grid;gap:10px"><h3>Get on the board</h3><p class="muted" style="font-size:.88rem">Members choose to show up here. Turn on "Show me on my gym's public website board" in your Dandy profile. Only your first name, last initial, DSI and lifts show.</p><a class="btn" href="https://dandystrength.com/me" target="_blank" rel="noopener" style="justify-self:start">Open my Dandy profile</a></div>
+        </aside>
+      </div>
+    </div>
+
+    <div id="tPrs" role="tabpanel" hidden>
+      <div class="board-ctl"><p class="muted">Every PR members on the board logged in the last 7 days.</p></div>
+      <div class="prwall" id="prWall"></div>
+    </div>
+
+    <div id="tDsi" role="tabpanel" hidden>
+      <div class="calc">
+        <div class="calc-in card">
+          <div class="row3">
+            <label for="cSex">Division<select id="cSex"><option value="M">Men</option><option value="F">Women</option></select></label>
+            <label for="cAge">Age<input id="cAge" type="number" inputmode="numeric" value="40" min="12" max="99"></label>
+            <label for="cBw">Bodyweight<input id="cBw" type="number" inputmode="numeric" value="212" min="70" max="500"></label>
+          </div>
+          <div class="row4">
+            <label for="cSquat">Squat<input id="cSquat" type="number" inputmode="numeric" value="245" min="0" step="5"></label>
+            <label for="cBench">Bench<input id="cBench" type="number" inputmode="numeric" value="200" min="0" step="5"></label>
+            <label for="cDead">Deadlift<input id="cDead" type="number" inputmode="numeric" value="275" min="0" step="5"></label>
+            <label for="cClean">Clean<input id="cClean" type="number" inputmode="numeric" value="195" min="0" step="5"></label>
+          </div>
+          <p class="muted" style="font-size:.82rem">All weights in pounds. Your score updates as you type.</p>
+          <a class="btn primary" href="https://dandystrength.com" target="_blank" rel="noopener" style="justify-self:start">Join the board free</a>
+        </div>
+        <div class="calc-out">
+          <div class="card" style="display:grid;gap:12px">
+            <div class="score-big"><b id="oScore">0</b><div style="display:grid;gap:6px;padding-bottom:6px"><span class="eyebrow">Your DSI</span><span id="oTier" class="tier"></span></div></div>
+            <div class="meter" aria-hidden="true"><span id="oMeter" style="width:0"></span></div>
+            <p id="oRank" class="muted"></p>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom:8px">Suggested goals</h3>
+            <table class="goals"><thead><tr><th>Lift</th><th>Now</th><th>Suggested</th><th>Your goal</th></tr></thead><tbody id="goalBody"></tbody></table>
+            <p class="muted" style="font-size:.82rem;margin-top:10px" id="goalNote"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- Hidden until the real events are loaded. Remove hidden to show it again. -->
+<section hidden id="events">
+  <div class="wrap">
+    <div class="sec-head"><div class="t"><span class="eyebrow">CFS events</span><h2>Mark your calendar</h2></div><p class="d">Partner workouts, max out days, holiday WODs and Murph on Memorial Day. Friends and family welcome. <span class="sample">Sample events</span></p></div>
+    <div class="strip-head">
+      <button class="btn" id="calToggle" type="button" aria-expanded="false" aria-controls="evPanel">Calendar view</button>
+      <div class="strip-ctl"><button class="arrow" type="button" data-strip="evList" data-dir="-1" aria-label="Earlier events">‹</button><button class="arrow" type="button" data-strip="evList" data-dir="1" aria-label="Later events">›</button></div>
+    </div>
+    <div class="strip" id="evList" aria-label="Upcoming events"></div>
+    <div class="ev-panel" id="evPanel" hidden>
+      <div class="ev-cal card">
+        <div class="cal-head"><button class="cal-nav" id="calPrev" type="button" aria-label="Previous month">‹</button><b id="calTitle">October</b><button class="cal-nav" id="calNext" type="button" aria-label="Next month">›</button></div>
+        <div class="cal" id="calGrid" role="group" aria-label="Event calendar"></div>
+      </div>
+      <div class="ev-form card"><div class="signup" id="signup"><span class="eyebrow">Sign up</span><p class="muted">Tap an event on the calendar or in the row above to save your spot.</p></div></div>
+    </div>
+  </div>
+</section>
+<!-- Hidden until the real products are loaded. Remove hidden to show it again. -->
+<section hidden id="store">
+  <div class="wrap">
+    <div class="sec-head"><div class="t"><span class="eyebrow">CFS store</span><h2>Rep the blue and yellow</h2></div><p class="d">Shirts, hoodies and gear in Symmetry colors. Order online and pick up at the front desk, free. <span class="sample">Sample products and prices</span></p></div>
+    <div class="strip-head">
+      <button class="btn" id="cartToggle" type="button" aria-expanded="false" aria-controls="cartPanel">Cart <span class="cartcount" id="cartCount">0</span> <span class="mono" id="cartTotal">$0</span></button>
+      <div class="strip-ctl"><button class="arrow" type="button" data-strip="products" data-dir="-1" aria-label="Previous products">‹</button><button class="arrow" type="button" data-strip="products" data-dir="1" aria-label="More products">›</button></div>
+    </div>
+    <div class="strip" id="products" aria-label="CFS gear"></div>
+    <div class="card cartpanel" id="cartPanel" hidden aria-live="polite">
+      <h3>Your cart</h3>
+      <div id="cartLines"></div>
+      <p class="muted" style="font-size:.8rem">Free pickup at the gym. Members pay in the app.</p>
+      <button class="btn primary" id="checkout" type="button" style="justify-self:start" disabled>Check out</button>
+      <p id="cartMsg" class="muted" style="font-size:.85rem" hidden></p>
+    </div>
+  </div>
+</section>
+<!-- Hidden until the recovery rooms open. Remove hidden to show it again. -->
+<section hidden id="recovery">
+  <div class="wrap recovery">
+    <div class="rec-copy">
+      <span class="eyebrow">Coming soon · The recovery rooms</span>
+      <h2>Train hard. Recover right here.</h2>
+      <p class="muted">We are turning the extra offices at Symmetry into private recovery rooms. Book a massage or a stretch session before or after class, without leaving the gym.</p>
+      <div class="floor" aria-label="Floor plan: main gym floor with two new recovery rooms beside the lobby">
+        <span class="gymf">Gym floor</span><span class="rm">Massage</span><span class="rm">Stretch</span><span class="lb">Lobby</span><span class="lb">Office</span>
+      </div>
+      <button class="btn" type="button" data-open-text style="justify-self:start">Text us to get on the list</button>
+    </div>
+    <div class="rec-cards">
+      <article class="card rec">
+        <span class="room">Room 1 · Opening soon</span><h3>Sports massage</h3>
+        <p>Licensed massage therapy for lifters and athletes. Work out the knots from heavy days and get back under the bar faster.</p>
+        <ul><li>30, 60 or 90 minute sessions</li><li>Book online, pay in the app</li><li>Member pricing</li></ul>
+        <button class="btn" type="button" data-open-text style="justify-self:start">Text us to get on the list</button>
+      </article>
+      <article class="card rec">
+        <span class="room">Room 2 · Opening soon</span><h3>Assisted stretching</h3>
+        <p>One on one stretching with a trained practitioner. Open up tight hips, shoulders and ankles so squats and overheads feel better.</p>
+        <ul><li>25 or 50 minute sessions</li><li>Great before or after class</li><li>Member pricing</li></ul>
+        <button class="btn" type="button" data-open-text style="justify-self:start">Text us to get on the list</button>
+      </article>
+    </div>
+  </div>
+</section>
+
 </main>
 
 <footer>
@@ -906,8 +911,8 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
       <span class="powered">Powered by Dandy Strength</span>
     </div>
     <div class="f2">
-      <div><span class="eyebrow">Train</span><a href="#classes">Schedule</a><a href="#classes" data-goto="workouts">Workouts</a><a href="#book" data-book="pt">Personal training</a><a href="#book" data-book="nutrition">Nutrition</a><a href="#recovery">Recovery rooms</a><a href="#plans">Plans</a><a href="#faq">FAQ</a></div>
-      <div><span class="eyebrow">Compete</span><a href="#compete">The board</a><a href="#compete" data-goto="prs">PR wall</a><a href="#events">Events and Murph</a><a href="#store">CFS store</a><a href="#coaches">Coaches</a><a href="https://dandystrength.com" target="_blank" rel="noopener">Member login</a></div>
+      <div><span class="eyebrow">Train</span><a href="#classes">Schedule</a><a href="#classes" data-goto="workouts">Workouts</a><a href="#book" data-book="pt">Personal training</a><a href="#book" data-book="nutrition">Nutrition</a><a href="#plans">Plans</a><a href="#faq">FAQ</a></div>
+      <div><span class="eyebrow">Compete</span><a href="#compete">The board</a><a href="#compete" data-goto="prs">PR wall</a><a href="#coaches">Coaches</a><a href="https://dandystrength.com" target="_blank" rel="noopener">Member login</a></div>
       <div id="fFollow"><span class="eyebrow">Follow</span><a href="https://www.instagram.com/crossfitsymmetry/" target="_blank" rel="noopener">Instagram</a><a href="https://www.facebook.com/people/CrossFit-Symmetry/100063663154017/" target="_blank" rel="noopener">Facebook</a><a href="https://www.crossfit.com/gym/7636/crossfit-symmetry" target="_blank" rel="noopener">CrossFit.com</a><a href="https://www.google.com/search?q=CrossFit+Symmetry+Milford+OH+reviews" target="_blank" rel="noopener">Google reviews</a><a href="#contact">Contact</a></div>
     </div>
     <div class="fine"><span>© <span id="yr">2026</span> CrossFit Symmetry · 1005 Lila Ave, Milford, OH 45150</span><span>DSI is for bragging rights, not medical or training advice.</span></div>
@@ -1012,8 +1017,6 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
     ['ig', 'Every level', 'Beginner · Intermediate · Rx', 'var(--p-green)', '#0f4f2c', 'Same workout, three versions. Everyone finishes together.', 5],
     ['fb', 'First class free', 'Book online', 'var(--accent)', '#6b1f0d', 'Never done CrossFit? Your first class is on us. Book it on our website.', 6],
     ['ig', 'Kids class', 'Ages 5 to 9', 'var(--p-blue)', '#3b1f6a', 'Our youngest athletes are moving, growing and having a blast.', 8],
-    ['ig', 'Recovery rooms', 'Coming soon', 'var(--p-teal)', '#0c4a45', 'Massage and stretching are coming to Symmetry. Get on the waitlist.', 9],
-    ['ig', 'Murph 2027', 'Memorial Day · Sign up', '#2F6BFF', '#7a5a06', 'Heats are open for Murph on Memorial Day. Grab a spot and a shirt.', 7],
     ['fb', 'The board', 'Who takes the Dandy?', 'var(--p-dandy)', '#5a4612', 'The October board is wide open. Log your lifts in the app.', 11],
   ];
   const IG_URL = 'https://www.instagram.com/crossfitsymmetry/', FB_URL = 'https://www.facebook.com/people/CrossFit-Symmetry/100063663154017/';
@@ -1194,83 +1197,58 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
     r.append(d, el('span', '', name), el('span', 'mono', i === 0 ? min + '+' : min + ' to ' + (arr[i - 1][0] - 1))); $('#tierKey').append(r);
   });
 
-  /* Sample athletes (not real members) */
+  /* Members who opted in to the public website board (site_board). Only name, DSI, lifts and a recent PR come back. */
   const daysAgo = (n) => { const d = new Date(now); d.setDate(d.getDate() - n); return d; };
-  const A = [
-    { n: 'Marcus T.', sex: 'M', age: 31, bw: 195, squat: 365, bench: 255, dead: 425, clean: 245, roast: 'Holds the Dandy title. Witnesses still dispute how he got it.' },
-    { n: 'Kyle M.', sex: 'M', age: 27, bw: 210, squat: 335, bench: 245, dead: 405, clean: 225, pr: ['dead', 405, 15, 1], protests: 3, roast: 'New deadlift PR. The lockout was more of a negotiation.' },
-    { n: 'Greg H.', sex: 'M', age: 52, bw: 205, squat: 275, bench: 215, dead: 335, clean: 165, pr: ['bench', 215, 5, 2], protests: 1, roast: 'Benches more than your car payment and reminds you weekly.' },
-    { n: 'Priya S.', sex: 'F', age: 29, bw: 135, squat: 185, bench: 105, dead: 235, clean: 125, pr: ['clean', 125, 10, 3] },
-    { n: 'Dana R.', sex: 'F', age: 34, bw: 150, squat: 205, bench: 115, dead: 255, clean: 135, roast: 'Has not missed a 5:30am since 2019. Still asks what the workout is.' },
-    { n: 'Nate P.', sex: 'M', age: 24, bw: 175, squat: 255, bench: 185, dead: 315, clean: 185, pr: ['clean', 185, 10, 0] },
-    { n: 'Lena K.', sex: 'F', age: 46, bw: 145, squat: 155, bench: 95, dead: 205, clean: 105, pr: ['squat', 155, 10, 4] },
-    { n: 'Ben A.', sex: 'M', age: 38, bw: 225, squat: 305, bench: 235, dead: 365, clean: 205 },
-    { n: 'Tasha W.', sex: 'F', age: 41, bw: 160, squat: 175, bench: 105, dead: 225, clean: 115 },
-    { n: 'Sam J.', sex: 'F', age: 57, bw: 140, squat: 125, bench: 75, dead: 165, clean: 85 },
-    { n: 'Owen D.', sex: 'M', age: 45, bw: 240, squat: 285, bench: 225, dead: 345, clean: 175 },
-    { n: 'Rich V.', sex: 'M', age: 61, bw: 190, squat: 185, bench: 155, dead: 225, clean: 105 },
-    { n: 'Tyler B.', sex: 'M', age: 29, bw: 185, squat: 225, bench: 175, dead: 275, clean: 155, roast: 'Has been on a deload since Labor Day.' },
-    { n: 'Maria G.', sex: 'F', age: 33, bw: 170, squat: 165, bench: 95, dead: 215, clean: 105 },
-    { n: 'Hannah L.', sex: 'F', age: 26, bw: 128, squat: 115, bench: 75, dead: 155, clean: 85, pr: ['dead', 155, 20, 2] },
-    { n: 'Dave C.', sex: 'M', age: 49, bw: 260, squat: 225, bench: 185, dead: 275, clean: 135, roast: 'Brings a protein shake to open gym. Leaves before the workout.' },
-    { n: 'Jen F.', sex: 'F', age: 38, bw: 175, squat: 115, bench: 75, dead: 165, clean: 75 },
-    { n: 'Alicia N.', sex: 'F', age: 30, bw: 155, squat: 85, bench: 65, dead: 115, clean: 65, pr: ['squat', 85, 10, 5] },
-  ];
-  A.forEach((a) => { a.dsi = dsiScore(a); a.protests = a.protests || 0; });
+  let A = [];
   const LIFTNAME = { dsi: 'DSI', squat: 'Squat', bench: 'Bench', dead: 'Deadlift', clean: 'Clean' };
-  const ageGroup = (g) => (g < 30 ? 'u30' : g < 40 ? '30s' : g < 50 ? '40s' : '50+');
-  const state = { lift: 'dsi', div: 'all', age: 'all', roast: false, all: false };
+  const state = { lift: 'dsi', div: 'all', all: false };
   pillGroup($('#liftSeg'), [['dsi', 'DSI'], ['squat', 'Squat'], ['bench', 'Bench'], ['dead', 'Deadlift'], ['clean', 'Clean']], (v) => { state.lift = v; drawBoard(); });
   pillGroup($('#divSeg'), [['all', 'Everyone'], ['M', 'Men'], ['F', 'Women']], (v) => { state.div = v; drawBoard(); });
-  pillGroup($('#ageSeg'), [['all', 'All ages'], ['u30', 'Under 30'], ['30s', '30s'], ['40s', '40s'], ['50+', '50+']], (v) => { state.age = v; drawBoard(); });
-  $('#roastToggle').addEventListener('change', (e) => { state.roast = e.target.checked; drawBoard(); });
   $('#moreBtn').addEventListener('click', () => { state.all = !state.all; drawBoard(); });
-  const protestBtn = (a) => { const p = el('button', 'protest', `Protest · ${a.protests}`); p.type = 'button'; p.setAttribute('aria-pressed', String(!!a.protested)); p.addEventListener('click', () => { a.protested = !a.protested; a.protests += a.protested ? 1 : -1; drawAll(); }); return p; };
 
   function drawBoard() {
-    pressed($('#liftSeg'), state.lift); pressed($('#divSeg'), state.div); pressed($('#ageSeg'), state.age);
+    pressed($('#liftSeg'), state.lift); pressed($('#divSeg'), state.div);
     $('#valHead').textContent = state.lift === 'dsi' ? 'DSI' : LIFTNAME[state.lift] + ' (lb)';
-    const rows = A.filter((a) => (state.div === 'all' || a.sex === state.div) && (state.age === 'all' || ageGroup(a.age) === state.age)).sort((x, y) => y[state.lift] - x[state.lift]);
-    $('#boardCount').textContent = rows.length + ' athletes';
+    const rows = A.filter((a) => (state.div === 'all' || a.sex === state.div) && a[state.lift] > 0).sort((x, y) => y[state.lift] - x[state.lift]);
+    $('#boardCount').textContent = rows.length ? rows.length + (rows.length === 1 ? ' member' : ' members') : '';
     $('#boardTbl').classList.toggle('all', state.all);
     $('#moreBtn').hidden = rows.length <= 10; $('#moreBtn').textContent = state.all ? 'Show top 10' : 'Show full board';
-    const crown = state.lift === 'dsi' && state.div === 'all' && state.age === 'all';
+    const crown = state.lift === 'dsi' && state.div === 'all' && rows.length > 1;
     const body = $('#boardBody'); body.replaceChildren();
     rows.forEach((a, i) => {
       const tr = el('tr', i === 0 && crown ? 'crown' : '');
       const who = el('td', 'who'); who.append(el('b', '', a.n));
-      if (a.pr && (state.lift === 'dsi' || state.lift === a.pr[0])) who.append(el('span', 'badge-pr', 'PR'));
+      if (a.pr && (state.lift === 'dsi' || state.lift === a.pr.lift)) who.append(el('span', 'badge-pr', 'PR'));
       if (i === 0 && crown) { const c = el('span', 'chip', 'Reigning Dandy'); c.style.marginLeft = '6px'; who.append(c); }
-      if (state.roast && a.roast) who.append(el('span', 'roast', a.roast));
       const t = el('td'); t.append(tierEl(a.dsi));
-      const pc = el('td'); if (a.pr) pc.append(protestBtn(a));
-      tr.append(el('td', 'rk', String(i + 1)), who, t, el('td', 'score', String(a[state.lift])), el('td', 'mono', a.bw + ' lb'), el('td', 'mono', String(a.age)), pc);
+      tr.append(el('td', 'rk', String(i + 1)), who, t, el('td', 'score', String(a[state.lift])));
       body.append(tr);
     });
-  }
-  function drawProtests() {
-    const host = $('#protestList'); host.replaceChildren();
-    A.filter((a) => a.protests > 0).sort((x, y) => y.protests - x.protests).forEach((a) => {
-      const r = el('div'); r.style.cssText = 'display:flex;justify-content:space-between;gap:10px;font-size:.9rem';
-      r.append(el('span', '', `${a.n} · ${LIFTNAME[a.pr[0]]} ${a.pr[1]}`), el('span', 'mono', a.protests >= 3 ? `${a.protests} · video required` : `${a.protests} protest${a.protests === 1 ? '' : 's'}`));
-      host.append(r);
-    });
-    if (!host.children.length) host.append(el('p', 'muted', 'No open protests this week.'));
+    if (!rows.length) { const tr = el('tr'); const td = el('td', 'muted', A.length ? 'Nobody on the board for this lift yet.' : 'No members on the public board yet. Members choose to show up here from their Dandy profile.'); td.colSpan = 4; td.style.padding = '18px 8px'; tr.append(td); body.append(tr); }
   }
   function drawPRs() {
     const wall = $('#prWall'); wall.replaceChildren();
-    const prs = A.filter((a) => a.pr).sort((x, y) => x.pr[3] - y.pr[3]);
+    const prs = A.filter((a) => a.pr).sort((x, y) => x.pr.ago - y.pr.ago);
     $('#prCount').textContent = prs.length;
+    const mini = document.querySelector('.pr-mini'); if (mini) mini.hidden = !prs.length;
     prs.forEach((a) => {
-      const [lift, w, delta, ago] = a.pr;
+      const { lift, w, delta, ago } = a.pr;
       const c = el('article', 'card pr'); c.style.setProperty('--pc', tierOf(a.dsi)[2]);
       const big = el('div', 'big', String(w)); big.append(el('small', '', 'lb'));
-      const row = el('div', 'row'); row.append(el('span', 'delta', `+${delta} lb`), protestBtn(a));
+      const row = el('div', 'row'); row.append(el('span', 'delta', `+${delta} lb`));
       c.append(el('span', 'date', daysAgo(ago).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })), big, el('div', 'lift', `${a.n} · ${LIFTNAME[lift]}`), row);
       wall.append(c);
     });
+    if (!prs.length) wall.append(el('p', 'muted', 'No PRs posted on the board this week yet.'));
   }
-  const drawAll = () => { drawBoard(); drawProtests(); drawPRs(); };
+  const drawAll = () => { drawBoard(); drawPRs(); };
+  fetch('https://fairfhgyrosjqualmhwu.supabase.co/rest/v1/rpc/site_board', { method: 'POST', headers: { apikey: 'sb_publishable_1qg2GRUgxGxVMhOaoGGGFw_lm0j_j4h', 'Content-Type': 'application/json' }, body: JSON.stringify({ p_key: 'cfs' }) })
+    .then((r) => (r.ok ? r.json() : [])).then((rows) => {
+      if (!Array.isArray(rows)) return;
+      A = rows.map((r) => ({ n: String(r.n || 'Member'), sex: r.sex === 'F' ? 'F' : 'M', dsi: +r.dsi || 0, squat: +r.squat || 0, bench: +r.bench || 0, dead: +r.dead || 0, clean: +r.clean || 0,
+        pr: r.pr && r.pr.lift ? { lift: r.pr.lift, w: +r.pr.w, delta: +r.pr.delta, ago: +r.pr.ago } : null }));
+      drawAll(); drawCalc();
+    }).catch(() => {});
 
   /* Get your DSI */
   const goalsSet = {};
@@ -1284,7 +1262,7 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
     const field = A.filter((a) => a.sex === me.sex);
     const rank = 1 + field.filter((a) => a.dsi > me.dsi).length;
     const nt = nextTier(me.dsi);
-    $('#oRank').textContent = `You would rank #${rank} of ${field.length + 1} in the ${me.sex === 'M' ? "men's" : "women's"} division on the sample board.` + (nt ? ` ${nt[0] - me.dsi} points to ${nt[1]}.` : ' You hold the top tier.');
+    $('#oRank').textContent = (field.length ? `You would rank #${rank} of ${field.length + 1} in the ${me.sex === 'M' ? "men's" : "women's"} division on the CFS board.` : 'Be the first on the CFS board.') + (nt ? ` ${nt[0] - me.dsi} points to ${nt[1]}.` : ' You hold the top tier.');
     const gb = $('#goalBody'); gb.replaceChildren();
     const goalMe = { ...me };
     const updNote = () => { ['squat', 'bench', 'dead', 'clean'].forEach((k) => { goalMe[k] = +$('#goal_' + k).value || 0; }); const g = dsiScore(goalMe); $('#goalNote').textContent = `Hit these goals and your DSI becomes ${g} (${tierOf(g)[1]}), up ${g - me.dsi} points.`; };
