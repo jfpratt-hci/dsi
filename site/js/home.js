@@ -12,7 +12,7 @@ export function install(X) {
   const { sb, S, VIEWS, $, esc, fmt, paint, go } = X;
 
   const TIERS = [
-    { k: 'run', n: 'Run', p: 249, who: 'Everything to run the gym', line: 'Booking, billing on your Stripe, waivers, staff, Dandy TV, AI programming, the DSI and the Growth game.' },
+    { k: 'run', n: 'Run', p: 249, who: 'Everything to run the gym', line: 'Booking, billing on your Stripe, waivers, staff, Dandy TV, DI programming, the DSI and the Growth game.' },
     { k: 'grow', n: 'Grow', p: 499, who: 'Run, plus a website that sells', line: 'A new website built and run by us, lead texting, your store and events online, and DSI Pro for every Unlimited member.' },
   ];
   X.TIERS = TIERS;
@@ -63,7 +63,7 @@ export function install(X) {
   const demoMember = () => `<div class="dmPanel">${SAMPLE}<div class="dmGrid3">
       <div class="formCard dmCard"><span class="grLbl">Alex R. · DSI</span><b class="grBig">612</b><span class="pill up">Up 64 since May</span><p class="hint">Bench, squat, deadlift and clean, scored against lifters the same age and size. 500 is the median.</p>${spark([548, 556, 561, 575, 590, 597, 612], 0, 300, 70, 'DSI over 6 months, 548 to 612')}</div>
       <div class="formCard dmCard"><span class="grLbl">Today's targets</span><table class="inT"><tbody>${[['Back squat 5 x 3', '225 lb'], ['Strict press 5 x 5', '95 lb'], ['Clean, build to heavy', '205 lb']].map(([a, b]) => `<tr><td>${a}</td><td class="r n"><b>${b}</b></td></tr>`).join('')}</tbody></table><p class="hint">Worked out from Alex's own PRs. The same numbers show on the class TV.</p></div>
-      <div class="formCard dmCard"><span class="grLbl">DSI Pro</span><ul class="hmTicks"><li>Progress charts for every lift</li><li>A goal plan to the next number</li><li>An AI coach that knows Alex's numbers</li><li>Readiness from WHOOP or Apple Health</li></ul><p class="hint">Included with Unlimited at gyms on Grow.</p></div></div></div>`;
+      <div class="formCard dmCard"><span class="grLbl">DSI Pro</span><ul class="hmTicks"><li>Progress charts for every lift</li><li>A goal plan to the next number</li><li>A DI coach that knows Alex's numbers</li><li>Readiness from WHOOP or Apple Health</li></ul><p class="hint">Included with Unlimited at gyms on Grow.</p></div></div></div>`;
   const DEMOS = [['growth', 'Growth game', demoGrowth], ['insights', 'Insights', demoInsights], ['tv', 'Dandy TV', demoTv], ['member', 'Member app', demoMember]];
   const demoTabs = (id, only) => { const ds = only ? DEMOS.filter(d => only.includes(d[0])) : DEMOS;
     return `<div class="dmTabs" role="tablist" aria-label="Sample gym dashboards" data-dm="${id}">${ds.map(([k, n], i) => `<button type="button" role="tab" id="${id}-t-${k}" aria-controls="${id}-p-${k}" aria-selected="${i === 0}" tabindex="${i ? -1 : 0}" data-dmtab="${k}">${n}</button>`).join('')}</div>
@@ -83,7 +83,7 @@ export function install(X) {
   const planCards = (cta = true) => `<div class="dmPlans">${TIERS.map(t => `<article class="plCard${t.k === 'grow' ? ' dmPick' : ''}">${t.k === 'grow' ? '<span class="dmBadge">Most growth</span>' : ''}<b class="plName">${t.n}</b><span class="hmAmt">$${t.p}<small>/mo</small></span><span class="hmWho2">${esc(t.who)}</span>
       <ul class="plList">${CARD[t.k].map(x => `<li>${esc(x)}</li>`).join('')}</ul>${cta ? `<a class="btn${t.k === 'grow' ? '' : ' ghost'}" href="/start?tier=${t.k}">Book a setup call</a>` : ''}</article>`).join('')}</div>`;
   const CARD = {
-    run: ['Class booking, check in and attendance', 'Billing and autopay on your own Stripe', 'Waivers and contracts signed online', 'Staff, coach swaps, hours and pay', 'Dandy TV for the class and the lobby', 'Workouts in Parts A to D with every member\'s target', 'Dandy Plan AI programming', 'The DSI, the member app and the Growth game', 'Month to month'],
+    run: ['Class booking, check in and attendance', 'Billing and autopay on your own Stripe', 'Waivers and contracts signed online', 'Staff, coach swaps, hours and pay', 'Dandy TV for the class and the lobby', 'Workouts in Parts A to D with every member\'s target', 'Dandy Plan DI programming', 'The DSI, the member app and the Growth game', 'Month to month'],
     grow: ['Everything in Run', 'A new website, built and run by us, on your domain', 'A text us line and a lead inbox', 'Store, events and appointments on your site', 'Review requests after class', 'DSI Pro for every Unlimited member', 'A growth plan we set with you each season', '2 month minimum, no setup fee'],
   };
   const endCta = (h = 'See what Dandy can do for your gym', p = 'Book a 20 minute setup call. We look at your gym with you and show you the plan.') => `<section class="sec plEnd"><div><h2 class="hmH2">${h}</h2><p class="hmSideSub">${p}</p></div><div class="row"><a class="btn" href="/start">Book a setup call</a><a class="btn ghost" href="/tour">Tour the sample gym</a></div></section>`;
@@ -160,7 +160,7 @@ export function install(X) {
   /* ---------- pricing ---------- */
   const ROWS = [
     ['Running the gym', [['Class schedule, booking, check in and attendance', 'y', 'y'], ['Billing, invoices and autopay on your own Stripe', 'y', 'y'], ['Waivers and membership contracts signed online', 'y', 'y'], ['Staff, coach swaps, hours and pay', 'y', 'y'], ['Front desk store for drinks, snacks and gear', 'y', 'y']]],
-    ['The floor', [['Workouts in Parts A to D with every member\'s target', 'y', 'y'], ['Dandy Plan AI programming', 'y', 'y'], ['Dandy TV for the class and the lobby', 'y', 'y'], ['Log a class: coaches type weights live', 'y', 'y']]],
+    ['The floor', [['Workouts in Parts A to D with every member\'s target', 'y', 'y'], ['Dandy Plan DI programming', 'y', 'y'], ['Dandy TV for the class and the lobby', 'y', 'y'], ['Log a class: coaches type weights live', 'y', 'y']]],
     ['Members', [['The DSI, boards and the member app', 'y', 'y'], ['DSI Pro', '$4 a member', 'Included for Unlimited members']]],
     ['Growth', [['Growth game and Insights', 'y', 'y'], ['New website, built and run by us', '', 'y'], ['Text us line and lead inbox', '', 'y'], ['Store, events and appointments on your website', '', 'y'], ['Review requests after class', '', 'y'], ['A growth plan we set with you each season', '', 'y']]],
     ['Terms', [['Commitment', 'Month to month', '2 month minimum'], ['Setup fee', 'None', 'None'], ['Moving your members over', 'We do it', 'We do it']]],
@@ -173,13 +173,14 @@ export function install(X) {
     ['Who moves my members?', 'We do. Send your member list, plans and schedule from Kilo, Wodify, PushPress or a spreadsheet, and we set everything up with you.'],
     ['What do card payments cost?', 'Stripe\'s standard rates, paid to Stripe. Money goes straight to your own Stripe account, and we add nothing.'],
     ['Do members pay for the app?', 'No. The DSI and the member app are free. On Grow, every Unlimited member gets DSI Pro included.'],
+    ['What is DI?', 'DI is Dandy Intelligence, the AI built into Dandy Strength. It writes your programming from your goals and coaches members on their own numbers.'],
     ['Who owns the website and the data?', 'You do. Your domain stays yours, and you can export your members and history any time.'],
   ];
   VIEWS.pricing = async (_, tok) => {
     if (!paint(tok, `
       <section class="plHero"><div><div class="kicker">Pricing</div><h1 class="plH">Two plans. Pick how fast you want to grow.</h1>
         <p class="hmSub">Run has everything to run the gym. Grow adds the website and the tools that bring in members. No setup fee, and we move you over.</p></div>
-        <div class="plEvery"><b>Both plans include</b><ul><li>Booking, billing and waivers</li><li>Dandy TV for the class and the lobby</li><li>AI programming with member targets</li><li>The DSI and the member app</li><li>The Growth game and Insights</li></ul></div></section>
+        <div class="plEvery"><b>Both plans include</b><ul><li>Booking, billing and waivers</li><li>Dandy TV for the class and the lobby</li><li>DI programming with member targets</li><li>The DSI and the member app</li><li>The Growth game and Insights</li></ul></div></section>
       <section class="sec">${planCards()}<p class="hmSeat">Card payments run on your own Stripe account at Stripe's standard rates. We add no markup.</p></section>
       <section class="sec" id="compare"><h2 class="hmH2">Compare</h2>
         <div class="tablewrap"><table class="hmCmp plCmp dmCmp"><thead><tr><th><span class="vh">Feature</span></th>${TIERS.map(t => `<th>${t.n}<small>$${t.p}/mo</small></th>`).join('')}</tr></thead>
@@ -229,7 +230,7 @@ export function install(X) {
       <section class="sec dmDash">${demoTabs('mb', ['member', 'tv'])}</section>
       <section class="sec"><dl class="hmFaq plFaq">
         <div><dt>Is it free?</dt><dd>Yes. The DSI, the boards and the app are free for every member of a Dandy gym.</dd></div>
-        <div><dt>What is DSI Pro?</dt><dd>Progress charts, goal plans, an AI coach and readiness from your wearable. It comes with Unlimited at gyms on Grow.</dd></div>
+        <div><dt>What is DSI Pro?</dt><dd>Progress charts, goal plans, a DI coach and readiness from your wearable. It comes with Unlimited at gyms on Grow.</dd></div>
         <div><dt>Who sees my numbers?</dt><dd>Members of your gym. Boards and PRs are behind sign in, not on the open web.</dd></div>
         <div><dt>My gym is not on Dandy yet</dt><dd>Tell your owner about us, or <a href="/start">send us their details</a>.</dd></div></dl></section>`)) return;
     wireDemos();

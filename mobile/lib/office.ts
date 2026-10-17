@@ -127,7 +127,7 @@ export type OfficeKey = 'today' | 'schedule' | 'wod' | 'results' | 'plan' | 'cla
 export const OFFICE: [OfficeKey, string, string, boolean?][] = [
   ['today', 'Check in', "Today's classes and who is here"], ['schedule', 'Schedule', 'Classes, times and coaches'],
   ['wod', 'Workouts', 'Write the week, Parts A to D'], ['results', 'Results', 'Enter scores for the day'],
-  ['plan', 'Plan builder', 'AI cycles from a day to a quarter'], ['class', 'Log a class', 'Type weights live, straight to the board'],
+  ['plan', 'Plan builder', 'DI cycles from a day to a quarter'], ['class', 'Log a class', 'Type weights live, straight to the board'],
   ['members', 'Members', 'Profiles, waivers and attendance'], ['billing', 'Billing', 'Plans, invoices and payments', true],
   ['docs', 'Documents', 'Waiver and membership contract', true], ['staff', 'Staff', 'Coaches, swaps, hours and pay'],
   ['settings', 'Settings', 'Gym details and board link'],

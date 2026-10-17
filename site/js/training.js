@@ -33,7 +33,7 @@ export function install(X) {
         <div class="trStats"><div><b>${thisWeek.length}</b><span>${thisWeek.length === 1 ? "session" : "sessions"} this week</span></div><div><b>${fmt(thisWeek.reduce((t, w) => t + total(w), 0))}</b><span>lb moved this week</span></div><div><b>${wks.length}</b><span>sessions logged</span></div></div>
       </section>
       ${wr && !wr.off ? `<section class="sec">${X.wear.card(D.readiness(wr.rows, today()), wr.links)}</section>` : ''}
-      ${pro ? insights(wks) : `<section class="sec"><div class="formCard trTease"><b>See your training trend with DSI Pro</b><p>Weekly volume, your best estimated max on every exercise, and the AI coach reading your sessions.</p><p><a class="btn sm" href="/pro">See DSI Pro</a></p></div></section>`}
+      ${pro ? insights(wks) : `<section class="sec"><div class="formCard trTease"><b>See your training trend with DSI Pro</b><p>Weekly volume, your best estimated max on every exercise, and the DI coach reading your sessions.</p><p><a class="btn sm" href="/pro">See DSI Pro</a></p></div></section>`}
       <section class="sec"><h3 class="hmH3">Sessions</h3>
         ${wks.length ? `<ol class="trList">${wks.map(w => `<li><a href="/training/${w.id}"><span class="trDay">${esc(fmtDW(w.day))}</span><b>${esc(w.title)}</b><span class="trEx">${(w.exercises || []).map(ex => esc(ex.name)).join(', ') || 'No exercises'}</span><span class="trVol">${fmt(total(w))} lb</span></a></li>`).join('')}</ol>`
           : `<div class="prEmpty"><b>No sessions yet</b><p>Log your first one. It takes about a minute.</p><p><a class="btn" href="/training/new">Log a session</a></p></div>`}
