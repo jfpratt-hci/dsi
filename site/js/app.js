@@ -756,6 +756,7 @@ VIEWS.me = async (_, tok) => {
         <div class="field"><label for="pf-bw">Bodyweight (lb)</label><input id="pf-bw" type="number" min="80" max="450" step="0.1" value="${esc(m.bodyweight || '')}" required></div>
         <div class="field"><label for="pf-sex">Sex</label><select id="pf-sex">${[['male', 'Male'], ['female', 'Female'], ['unspecified', 'Prefer not to say']].map(o => `<option value="${o[0]}"${m.sex === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select></div>
         <div class="field"><label for="pf-div">Division</label><select id="pf-div">${[['men', 'Men'], ['women', 'Women'], ['open', 'Open']].map(o => `<option value="${o[0]}"${m.division === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select></div>
+        ${m.gym_id ? `<div class="field w2"><span class="lbl">Gym website</span><label class="check" style="text-transform:none;letter-spacing:0;font:500 15px var(--sans);color:var(--ink)"><input type="checkbox" id="pf-site"${m.site_board ? ' checked' : ''}><span>Show me on my gym's public website board. Only your first name, last initial, DSI and lifts show.</span></label></div>` : ''}
         <div class="field w2"><span class="lbl">Roasts</span><label class="check" style="text-transform:none;letter-spacing:0;font:500 15px var(--sans);color:var(--ink)"><input type="checkbox" id="pf-roast"${m.roast_opt_in ? ' checked' : ''}${pro ? '' : ' disabled'}><span>Roast me. Show the savage verdict on my card and put a 🔥 by my name.${pro ? '' : ' <a href="/pro">DSI Pro</a>'}</span></label></div>
       </div>
       <div class="row"><button class="btn" type="submit">${first ? 'Join the board' : 'Save'}</button><span class="hint" id="pf-msg"></span></div>
@@ -795,6 +796,7 @@ VIEWS.me = async (_, tok) => {
     e.preventDefault();
     const msg = $('#pf-msg'), b = e.target.querySelector('button'); b.disabled = true; msg.textContent = 'Saving…';
     const upd = { display_name: $('#pf-n').value.trim(), birth_year: +$('#pf-by').value, bodyweight: +$('#pf-bw').value, sex: $('#pf-sex').value, division: $('#pf-div').value, roast_opt_in: $('#pf-roast').checked };
+    if ($('#pf-site')) upd.site_board = $('#pf-site').checked;
     const { data, error } = await sb.from('profiles').update(upd).eq('id', m.id).select().single();
     b.disabled = false;
     if (error) { msg.textContent = error.code === '23505' ? 'That name is taken. Try another.' : error.message; return; }
