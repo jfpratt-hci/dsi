@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="The Bahl Index: the weighted pull up score JB31 started. Formula, tiers, the board, the rules and the Bahl Sack.">
+<meta property="og:title" content="The Bahl Index">
+<meta property="og:description" content="Iron over body, times 31. Get your Bahl Card.">
+<!-- Unlisted crew page. Source of truth: the Bahl Index artifact; republish by replacing this file. -->
+<title>The Bahl Index</title>
+<link rel="icon" href="/assets/icon-32.png" sizes="32x32">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Big+Shoulders+Display:wght@700;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: full width bands alternating cast iron (knurled) and gym chalk, each with a 960px inner grid.
+   Committed single look: iron + chalk + bumper plate colors (green 10, yellow 15, blue 20, red 25). */
+:root{
+  --iron:#121417; --iron2:#1C1F24; --iron3:#272B31;
+  --chalk:#ECEDE9; --chalk2:#F8F8F5;
+  --ink:#16181B; --mute:#596067; --mute-i:#9AA1A8;
+  --line:#CBCEC9; --line-i:#32373E;
+  --red:#D7262F; --green:#23803F; --yellow:#F0B90B; --blue:#2F6FD6; --gold:#D4A82A;
+  --fd:"Big Shoulders Display", Impact, "Arial Narrow Bold", "Arial Narrow", sans-serif;
+  --fb:"Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fm:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme:light;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+body{margin:0;background:var(--iron);color:var(--ink);font-family:var(--fb);font-size:17px;line-height:1.5;-webkit-text-size-adjust:100%}
+h1,h2,h3,p,dl,dd,dt,ol,ul,figure{margin:0}
+ol,ul{padding:0;list-style:none}
+b,strong{font-weight:700}
+
+.band{
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:72px;
+}
+.band > .in{max-width:960px;margin:0 auto;display:grid;gap:24px;min-width:0}
+.chalk{background:var(--chalk);color:var(--ink)}
+.iron{background:var(--iron);color:var(--chalk);color-scheme:dark}
+.knurl{
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.028) 0 2px, transparent 2px 9px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,.028) 0 2px, transparent 2px 9px);
+}
+.eyebrow{font-family:var(--fm);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.14em;color:var(--red)}
+h2{font-family:var(--fd);font-weight:900;text-transform:uppercase;font-size:clamp(2.4rem,8vw,3.8rem);line-height:.9;letter-spacing:.005em;text-wrap:balance}
+.sub{max-width:40em;font-size:1.08rem}
+.iron .sub{color:#C9CDD1}
+.chalk .sub{color:var(--mute)}
+
+/* Hero */
+.hero{padding-block:56px 64px}
+.hero .in{grid-template-columns:minmax(0,1fr) 300px;align-items:center;column-gap:40px}
+.hero-text{display:grid;gap:16px;min-width:0}
+h1{font-family:var(--fd);font-weight:900;text-transform:uppercase;font-size:clamp(4.2rem,17vw,8.6rem);line-height:.8;letter-spacing:.004em}
+h1 span{color:var(--red)}
+.pron{font-family:var(--fm);font-size:.92rem;color:var(--mute-i)}
+.pron b{color:var(--chalk);margin-right:.6em}
+.lede{font-size:1.15rem;max-width:32em;color:#D8DBDE}
+.record{display:inline-flex;align-items:center;gap:16px;justify-self:start;background:var(--iron2);border:2px solid var(--line-i);border-radius:10px;padding:10px 18px 10px 16px;flex-wrap:wrap}
+.record .rk{font-family:var(--fm);font-size:.7rem;text-transform:uppercase;letter-spacing:.14em;color:var(--mute-i)}
+.record .rv{font-family:var(--fd);font-weight:900;font-size:2.8rem;line-height:1;color:var(--red);font-variant-numeric:tabular-nums}
+.record .rh{font-family:var(--fm);font-size:.8rem;color:var(--chalk)}
+.bells{width:300px;height:auto;display:block;overflow:visible}
+.b-strap{fill:none;stroke:var(--red);stroke-width:10;stroke-linecap:round}
+.b-ring{fill:none;stroke:var(--mute-i);stroke-width:4}
+.b-chain{fill:none;stroke:#80878F;stroke-width:5;stroke-linecap:round;stroke-dasharray:6 5}
+.b-handle{fill:none;stroke:#4C535B;stroke-width:10;stroke-linecap:round}
+.b-body{fill:url(#bellg);stroke:#6A727B;stroke-width:1.5}
+.b-base{fill:#24282D}
+.b-shine{fill:#FFFFFF;opacity:.14}
+.swing{transform-origin:100px 43px;animation:swing 3s ease-in-out .5s 1 both}
+@keyframes swing{0%{transform:rotate(0)}16%{transform:rotate(6deg)}38%{transform:rotate(-4.5deg)}58%{transform:rotate(2.6deg)}78%{transform:rotate(-1deg)}100%{transform:rotate(0)}}
+@media (max-width:760px){
+  .hero .in{grid-template-columns:minmax(0,1fr)}
+  .bells{width:190px;justify-self:center}
+}
+
+/* Ticker */
+.ticker{background:var(--red);color:#FFFFFF;overflow:hidden;white-space:nowrap;padding-block:12px;border-block:3px solid var(--iron)}
+.track{display:inline-flex;animation:tick 34s linear infinite}
+.track span{font-family:var(--fd);font-weight:900;font-size:1.35rem;text-transform:uppercase;letter-spacing:.02em;padding-right:1.4rem}
+.track i{font-style:normal;opacity:.6;padding-right:1.4rem}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* Math */
+.eq{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px 18px;padding-block:22px;border-block:3px solid var(--ink)}
+.term{display:grid;gap:6px;justify-items:start}
+.term .v{font-family:var(--fd);font-weight:900;font-size:clamp(3rem,11vw,5.4rem);line-height:.85;font-variant-numeric:tabular-nums}
+.term .l{font-family:var(--fm);font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--mute);max-width:11em}
+.term.k .v{color:var(--red)}
+.term.ans .v{background:var(--ink);color:var(--chalk);padding:4px 12px 2px;border-radius:6px}
+.op{font-family:var(--fd);font-weight:700;font-size:clamp(2.2rem,8vw,3.8rem);line-height:1;color:var(--mute)}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.fact{background:var(--chalk2);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:2px}
+.fact b{font-family:var(--fd);font-weight:900;font-size:2rem;line-height:1;font-variant-numeric:tabular-nums}
+.fact span{color:var(--mute);font-size:.95rem}
+@media (max-width:640px){.facts{grid-template-columns:minmax(0,1fr)}}
+
+/* Calculator */
+.calc{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:32px;align-items:start}
+.calc-left{display:grid;gap:18px;min-width:0}
+.inputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.inputs .wide{grid-column:1 / -1}
+.inputs label{display:grid;gap:6px;font-family:var(--fm);font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--mute-i)}
+.field{display:flex;align-items:center;border:2px solid var(--line-i);border-radius:8px;background:var(--iron2)}
+.field:focus-within{border-color:var(--red)}
+.field input{
+  flex:1;min-width:0;width:100%;border:0;background:transparent;color:var(--chalk);
+  font-family:var(--fd);font-weight:900;font-size:2rem;line-height:1;padding:10px 12px;outline:none;
+  font-variant-numeric:tabular-nums;-moz-appearance:textfield;appearance:textfield;
+}
+.field input#nm{font-family:var(--fb);font-weight:600;font-size:1.2rem;padding:14px 12px}
+.field input::placeholder{color:#6B737B}
+.field input::-webkit-outer-spin-button,.field input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.field span{padding-right:12px;font-family:var(--fm);font-size:.85rem;color:var(--mute-i);text-transform:none;letter-spacing:0}
+.hint{font-size:.9rem;color:var(--mute-i)}
+.gaps{display:grid;gap:8px}
+.gaps li{border-top:1px solid var(--line-i);padding-top:8px;color:#D8DBDE}
+.gaps b{font-family:var(--fm);font-weight:600;color:var(--chalk);font-variant-numeric:tabular-nums}
+
+.scale{display:grid;min-width:0;margin-top:4px}
+.mrow{position:relative;height:30px}
+.stem{position:absolute;width:2px;height:10px;margin-left:-1px;background:var(--chalk)}
+.mrow.top .stem{bottom:0}
+.mrow.bottom .stem{top:0}
+.pin{position:absolute;transform:translateX(calc(var(--p, 0) * -1%))}
+.mrow.top .pin{top:0}
+.mrow.bottom .pin{bottom:0}
+.tag{display:inline-block;font-family:var(--fm);font-weight:600;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;padding:1px 6px;border:1.5px solid var(--chalk);border-radius:3px;background:var(--iron2);color:var(--chalk);white-space:nowrap}
+.tag.you{background:var(--chalk);color:var(--ink)}
+.bar{position:relative;height:18px;border-radius:4px;overflow:hidden}
+.bar i{position:absolute;top:0;bottom:0}
+.ticks{position:relative;height:20px;margin-top:4px;font-family:var(--fm);font-size:.72rem;color:var(--mute-i);font-variant-numeric:tabular-nums}
+.ticks span{position:absolute;top:0;transform:translateX(-50%)}
+.ticks span:first-child{transform:none}
+
+.card{
+  --c:var(--blue); --on:#FFFFFF;
+  background:var(--chalk2);color:var(--ink);border-radius:16px;overflow:hidden;
+  box-shadow:0 0 0 2px var(--iron3), 0 18px 40px rgba(0,0,0,.45);
+  display:grid;justify-self:center;width:100%;max-width:340px;
+}
+.card-top{background:var(--c);color:var(--on);display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px}
+.card-top .ct-l{font-family:var(--fm);font-weight:600;font-size:.7rem;text-transform:uppercase;letter-spacing:.14em}
+.card-top .ct-r{font-family:var(--fd);font-weight:900;font-size:1.35rem;text-transform:uppercase;line-height:1;text-align:right}
+.card-mid{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:14px 16px 4px;
+  background-image:repeating-linear-gradient(45deg, rgba(0,0,0,.035) 0 2px, transparent 2px 9px), repeating-linear-gradient(-45deg, rgba(0,0,0,.035) 0 2px, transparent 2px 9px)}
+.card-pair{width:100%;max-width:150px;height:auto;display:block}
+.card-pair .ch{fill:none;stroke:var(--mute);stroke-width:2;stroke-linecap:round;stroke-dasharray:3 2.5}
+.card-pair .hd{fill:none;stroke:var(--c)}
+.card-pair circle{fill:var(--c)}
+.card-score{font-family:var(--fd);font-weight:900;font-size:5rem;line-height:.82;font-variant-numeric:tabular-nums;text-align:right}
+.card-name{font-family:var(--fd);font-weight:900;font-size:1.9rem;text-transform:uppercase;line-height:1;padding:8px 16px 0;overflow-wrap:anywhere}
+.card-quip{padding:4px 16px 12px;color:var(--mute);font-size:.95rem;min-height:3.2em}
+.card-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line)}
+.card-stats div{padding:10px 12px 12px 16px;display:grid;gap:2px}
+.card-stats div + div{border-left:1px solid var(--line)}
+.card-stats dt{font-family:var(--fm);font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--mute)}
+.card-stats dd{font-family:var(--fd);font-weight:900;font-size:1.5rem;line-height:1;font-variant-numeric:tabular-nums}
+.card-foot{background:var(--ink);color:var(--chalk);font-family:var(--fm);font-size:.78rem;padding:10px 16px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.card-foot span:last-child{color:var(--mute-i)}
+
+.share{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+.share input{width:100%;min-width:0;border:1px solid var(--line-i);border-radius:8px;background:var(--iron2);color:var(--chalk);font-family:var(--fm);font-size:.8rem;padding:12px}
+.btn{border:0;border-radius:8px;background:var(--red);color:#FFFFFF;font-family:var(--fb);font-weight:700;font-size:1rem;padding:12px 18px;cursor:pointer;white-space:nowrap}
+.btn:hover{filter:brightness(1.08)}
+.btn:focus-visible,.share input:focus-visible{outline:3px solid var(--chalk);outline-offset:2px}
+@media (max-width:860px){.calc{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:520px){.share{grid-template-columns:minmax(0,1fr)}.inputs{grid-template-columns:minmax(0,1fr)}}
+
+/* Ladder */
+.tiers{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.tiers.reserved{grid-template-columns:repeat(2,minmax(0,1fr))}
+.tier.dark{background:var(--iron);color:var(--chalk);background-image:repeating-linear-gradient(45deg, rgba(255,255,255,.03) 0 2px, transparent 2px 9px), repeating-linear-gradient(-45deg, rgba(255,255,255,.03) 0 2px, transparent 2px 9px)}
+.tier.dark .t-quip,.tier.dark .t-floor small{color:var(--mute-i)}
+.tier.dark .pair .ch{stroke:var(--mute-i)}
+.tier.dark .jb{border-color:var(--chalk)}
+.pair .sw{fill:none;stroke:var(--c);stroke-width:2.5;stroke-linecap:round}
+.ladder-label{font-family:var(--fm);font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.14em;color:var(--mute);display:flex;align-items:center;gap:12px;margin-top:8px}
+.ladder-label::after{content:"";flex:1;height:1px;background:var(--line)}
+.tier{
+  --c:var(--green);
+  background:var(--chalk2);border:1px solid var(--line);border-top:8px solid var(--c);border-radius:12px;
+  padding:14px 14px 16px;display:grid;gap:8px;align-content:start;min-width:0;
+}
+.tier .pair{width:100%;max-width:150px;height:auto;display:block}
+.pair .ch{fill:none;stroke:var(--mute);stroke-width:2;stroke-linecap:round;stroke-dasharray:3 2.5}
+.pair .hd{fill:none;stroke:var(--c)}
+.pair circle{fill:var(--c)}
+.t-name{font-family:var(--fd);font-weight:900;font-size:1.6rem;text-transform:uppercase;line-height:.95;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.t-floor{font-family:var(--fm);font-weight:600;font-size:.8rem;font-variant-numeric:tabular-nums}
+.t-floor small{color:var(--mute);font-weight:500}
+.t-quip{color:var(--mute);font-size:.95rem;line-height:1.4}
+.jb{font-family:var(--fm);font-weight:600;font-size:.62rem;letter-spacing:.08em;border:1.5px solid var(--ink);border-radius:3px;padding:1px 5px;line-height:1.4}
+@media (max-width:900px){
+  .tiers,.tiers.reserved{grid-template-columns:minmax(0,1fr)}
+  .tier{grid-template-columns:100px minmax(0,1fr);column-gap:16px;align-items:center;border-top-width:1px;border-left:8px solid var(--c)}
+  .tier .pair{grid-row:span 3}
+}
+
+/* Board */
+.board-wrap{overflow-x:auto;border:2px solid var(--line-i);border-radius:12px;background:var(--iron2)}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th{font-family:var(--fm);font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--mute-i);text-align:left;padding:12px 14px;border-bottom:1px solid var(--line-i)}
+td{padding:14px;border-bottom:1px solid var(--line-i);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.rank{font-family:var(--fd);font-weight:900;font-size:1.6rem;color:var(--mute-i);width:3rem}
+tr.lead td.rank{color:var(--red)}
+td.who{font-family:var(--fd);font-weight:900;font-size:1.5rem;text-transform:uppercase}
+td.num{font-family:var(--fm);font-size:.95rem}
+td.bahl{font-family:var(--fd);font-weight:900;font-size:1.9rem;color:var(--chalk)}
+tr.open td{color:#6F777F}
+tr.open td.who{font-family:var(--fb);font-weight:500;font-size:1rem;text-transform:none;font-style:italic}
+.chip{--c:var(--blue);display:inline-flex;align-items:center;gap:8px;border:2px solid var(--c);border-radius:999px;padding:3px 12px 3px 8px;font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}
+.chip i{width:11px;height:11px;border-radius:50%;background:var(--c);flex:none}
+.board-note{font-size:.95rem;color:var(--mute-i)}
+@media (max-width:600px){.hide-sm{display:none}}
+
+/* Story + lexicon */
+.story{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:40px;align-items:start}
+.story p.big{font-size:1.25rem;line-height:1.5}
+.story p + p{margin-top:14px}
+.lexicon{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 28px}
+.lexicon div{border-top:3px solid var(--ink);padding-top:12px;display:grid;gap:4px;align-content:start;min-width:0}
+.lexicon dt{font-family:var(--fd);font-weight:900;font-size:1.8rem;text-transform:uppercase;line-height:1}
+.lexicon .pos{font-family:var(--fm);font-size:.74rem;color:var(--mute)}
+.lexicon .pos em{font-style:normal;color:var(--red)}
+@media (max-width:820px){.story{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:520px){.lexicon{grid-template-columns:minmax(0,1fr)}}
+
+/* Bahl Sack teaser */
+.sack{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:center}
+.sack-art{position:relative;background:var(--iron2);border:2px solid var(--line-i);border-radius:14px;padding:24px 20px 18px;min-width:0}
+.sack-art svg{width:100%;height:auto;display:block}
+.stamp{
+  position:absolute;top:14px;right:14px;transform:rotate(8deg);
+  font-family:var(--fd);font-weight:900;font-size:1.1rem;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--red);border:3px solid var(--red);border-radius:6px;padding:4px 10px;background:rgba(18,20,23,.75)
+}
+.parts{display:flex;flex-wrap:wrap;gap:10px}
+.parts span{font-family:var(--fm);font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.1em;border:1.5px solid var(--line-i);border-radius:999px;padding:6px 12px;color:var(--chalk)}
+.y-strap{fill:var(--red)}
+.y-steel{fill:#8A9096;stroke:#C3C8CC;stroke-width:1}
+.y-eye{fill:none;stroke:#B4BAC0;stroke-width:3.5}
+.y-link{fill:none;stroke:#B4BAC0;stroke-width:3}
+.y-db{fill:url(#dbg);stroke:#6A727B;stroke-width:1.2}
+.y-facet{stroke:#4C535B;stroke-width:1.5}
+.y-floor{fill:none;stroke:#4A5057;stroke-width:1.5;stroke-dasharray:6 6}
+@media (max-width:820px){.sack{grid-template-columns:minmax(0,1fr)}}
+
+/* Rules + FAQ */
+.rf{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px;align-items:start}
+.rf section{display:grid;gap:16px;min-width:0}
+h3{font-family:var(--fd);font-weight:900;font-size:2rem;text-transform:uppercase;line-height:1}
+.rules{counter-reset:rule;display:grid}
+.rules li{counter-increment:rule;display:grid;grid-template-columns:2.4rem minmax(0,1fr);gap:10px;padding-block:11px;border-top:1px solid var(--line);align-items:baseline}
+.rules li::before{content:counter(rule);font-family:var(--fd);font-weight:900;font-size:1.6rem;color:var(--red);line-height:1}
+.faq{display:grid}
+.faq div{border-top:1px solid var(--line);padding-block:12px;display:grid;gap:4px}
+.faq dt{font-weight:700}
+.faq dd{color:var(--mute)}
+@media (max-width:820px){.rf{grid-template-columns:minmax(0,1fr)}}
+
+footer.band{padding-block:40px}
+.foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px 24px;align-items:baseline}
+.foot .mark{font-family:var(--fd);font-weight:900;font-size:2rem;text-transform:uppercase;line-height:1}
+.foot .mark span{color:var(--red)}
+.foot p{font-family:var(--fm);font-size:.78rem;color:var(--mute-i)}
+
+@media (prefers-reduced-motion: reduce){.swing,.track{animation:none}}
+</style>
+</head>
+<body>
+<header class="band iron knurl hero">
+  <div class="in">
+    <div class="hero-text">
+      <p class="eyebrow">Weighted pull up standard · Est. October 2026</p>
+      <h1>The <span>Bahl</span> Index</h1>
+      <p class="pron"><b>[ bawl ]</b>Rhymes with exactly what you think.</p>
+      <p class="lede">Strap kettlebells to a belt, hang them between your legs, do one strict pull up. Then we find out how big a pair you are really carrying, measured against your own bodyweight.</p>
+      <div class="record"><span class="rk">Record</span><span class="rv">22.1</span><span class="rh">JB31 · Low Hangers</span></div>
+    </div>
+    <svg class="bells" viewBox="0 0 200 222" role="img" aria-label="Two kettlebells hanging side by side from a belt chain">
+      <defs>
+        <radialGradient id="bellg" cx="35%" cy="32%" r="75%">
+          <stop offset="0" stop-color="#5E656D"/>
+          <stop offset="1" stop-color="#1D2025"/>
+        </radialGradient>
+      </defs>
+      <path class="b-strap" d="M18 24 Q100 62 182 24"/>
+      <g class="swing">
+        <circle class="b-ring" cx="100" cy="47" r="7"/>
+        <path class="b-chain" d="M100 55 L100 96"/>
+        <path class="b-chain" d="M100 96 L66 122"/>
+        <path class="b-chain" d="M100 96 L134 122"/>
+        <path class="b-handle" d="M42 152 C42 112 86 112 86 152"/>
+        <circle class="b-body" cx="64" cy="176" r="36"/>
+        <rect class="b-base" x="44" y="203" width="40" height="10" rx="3"/>
+        <ellipse class="b-shine" cx="51" cy="164" rx="8" ry="13" transform="rotate(-28 51 164)"/>
+        <path class="b-handle" d="M114 152 C114 112 158 112 158 152"/>
+        <circle class="b-body" cx="136" cy="176" r="36"/>
+        <rect class="b-base" x="116" y="203" width="40" height="10" rx="3"/>
+        <ellipse class="b-shine" cx="123" cy="164" rx="8" ry="13" transform="rotate(-28 123 164)"/>
+      </g>
+    </svg>
+  </div>
+</header>
+
+<div class="ticker" aria-hidden="true">
+  <div class="track">
+    <span>Bahl Index</span><i>●</i><span>31 is the standard</span><i>●</i><span>JB31 holds 22.1</span><i>●</i><span>One chin hair counts</span><i>●</i><span>Bahls Deep or go home</span><i>●</i><span>Protests default to no</span><i>●</i><span>Over bodyweight is Wrecking Balls</span><i>●</i>
+    <span>Bahl Index</span><i>●</i><span>31 is the standard</span><i>●</i><span>JB31 holds 22.1</span><i>●</i><span>One chin hair counts</span><i>●</i><span>Bahls Deep or go home</span><i>●</i><span>Protests default to no</span><i>●</i><span>Over bodyweight is Wrecking Balls</span><i>●</i>
+  </div>
+</div>
+
+<section class="band chalk" aria-labelledby="math-h">
+  <div class="in">
+    <p class="eyebrow">The math</p>
+    <h2 id="math-h">Iron over body, times 31</h2>
+    <div class="eq" aria-label="140 divided by 196 times 31 equals 22.1">
+      <div class="term"><span class="v">140</span><span class="l">Pounds of iron hanging off JB31</span></div>
+      <span class="op">÷</span>
+      <div class="term"><span class="v">196</span><span class="l">Pounds of JB31</span></div>
+      <span class="op">×</span>
+      <div class="term k"><span class="v">31</span><span class="l">Fixed. Non negotiable.</span></div>
+      <span class="op">=</span>
+      <div class="term ans"><span class="v">22.1</span><span class="l">The Bahl</span></div>
+    </div>
+    <div class="facts">
+      <div class="fact"><b>15.5</b><span>Hang half of yourself</span></div>
+      <div class="fact"><b>31</b><span>Hang exactly yourself. A perfect score. Bahls Deep.</span></div>
+      <div class="fact"><b>31+</b><span>Hang more than yourself. Next level. Wrecking Balls.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="band iron knurl" aria-labelledby="calc-h">
+  <div class="in">
+    <p class="eyebrow">Score yourself</p>
+    <h2 id="calc-h">Get your Bahl Card</h2>
+    <div class="calc">
+      <div class="calc-left">
+        <div class="inputs">
+          <label class="wide" for="nm">Name on the card
+            <span class="field"><input id="nm" type="text" maxlength="24" placeholder="Your name" autocomplete="nickname"></span>
+          </label>
+          <label for="bw">Bodyweight
+            <span class="field"><input id="bw" type="number" inputmode="decimal" min="0" step="any" value="185"><span>lb</span></span>
+          </label>
+          <label for="hung">Iron hung
+            <span class="field"><input id="hung" type="number" inputmode="decimal" min="0" step="any" value="100"><span>lb</span></span>
+          </label>
+        </div>
+        <p class="hint">Example numbers loaded. Put in yours. Any unit works as long as both match.</p>
+        <ul class="gaps" id="gaps">
+          <li><b>24 lb</b> more to reach Low Hangers</li>
+          <li><b>33 lb</b> more to catch JB31</li>
+          <li><b>85 lb</b> more to go Bahls Deep</li>
+        </ul>
+        <div class="scale" aria-hidden="true">
+          <div class="mrow top">
+            <div class="pin" id="pin-jb" style="left:63.265%;--p:63.265"><span class="tag">JB31</span></div>
+            <i class="stem" id="stem-jb" style="left:63.265%"></i>
+          </div>
+          <div class="bar">
+            <i style="left:0;width:22.143%;background:var(--green)"></i>
+            <i style="left:22.143%;width:22.143%;background:var(--yellow)"></i>
+            <i style="left:44.286%;width:14.762%;background:var(--blue)"></i>
+            <i style="left:59.048%;width:29.123%;background:var(--red)"></i>
+            <i style="left:88.171%;width:0.8%;background:var(--chalk)"></i>
+            <i style="left:88.971%;width:11.029%;background:var(--gold)"></i>
+          </div>
+          <div class="mrow bottom">
+            <i class="stem" id="stem-you" style="left:47.886%"></i>
+            <div class="pin" id="pin-you" style="left:47.886%;--p:47.886"><span class="tag you">You</span></div>
+          </div>
+          <div class="ticks">
+            <span style="left:0">0</span>
+            <span style="left:22.143%">7.75</span>
+            <span style="left:44.286%">15.5</span>
+            <span style="left:59.048%">20.67</span>
+            <span style="left:88.571%">31</span>
+          </div>
+        </div>
+        <div class="share">
+          <input id="share" readonly aria-label="Your score, ready to paste" value="You: Bahl Index 16.8 (Brass Pair). 185 lb body, 100 lb hung. JB31 holds 22.1.">
+          <button class="btn" id="copy" type="button">Copy for the group chat</button>
+        </div>
+      </div>
+
+      <figure class="card" id="card" aria-label="Your Bahl Card">
+        <div class="card-top"><span class="ct-l">Bahl Index</span><span class="ct-r" id="c-tier">Brass Pair</span></div>
+        <div class="card-mid">
+          <svg class="card-pair" viewBox="0 0 120 90" aria-hidden="true">
+            <path class="ch" id="c-chain" d="M60 4V16M60 16L44 26M60 16L76 26"/>
+            <path class="hd" id="c-hd" stroke-width="4.8" d="M36.5 32.75Q44 19.25 51.5 32.75M68.5 32.75Q76 19.25 83.5 32.75"/>
+            <circle id="c-l" cx="44" cy="43.25" r="15"/>
+            <circle id="c-r" cx="76" cy="43.25" r="15"/>
+          </svg>
+          <div class="card-score" id="c-score">16.8</div>
+        </div>
+        <div class="card-name" id="c-name">You</div>
+        <p class="card-quip" id="c-quip">Real hardware. Clanks on the way up.</p>
+        <dl class="card-stats">
+          <div><dt>Body</dt><dd id="c-bw">185</dd></div>
+          <div><dt>Iron</dt><dd id="c-hung">100</dd></div>
+          <div><dt>Of you</dt><dd id="c-pct">54%</dd></div>
+        </dl>
+        <div class="card-foot"><span id="c-vs">5.3 behind JB31</span><span>Screenshot it</span></div>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="band chalk" aria-labelledby="tier-h">
+  <div class="in">
+    <p class="eyebrow">The ladder</p>
+    <h2 id="tier-h">How big is your pair</h2>
+    <p class="sub">Set by how much of your own bodyweight is swinging under you. The top two are reserved: a perfect 31 and anything over bodyweight.</p>
+    <p class="ladder-label">Reserved</p>
+    <ol class="tiers reserved">
+      <li class="tier dark" style="--c:var(--gold)">
+        <svg class="pair" viewBox="0 0 120 90" aria-hidden="true"><path class="sw" d="M9 46Q3 56 9 66M111 46Q117 56 111 66"/><path class="ch" d="M60 4V16M60 16L33 26M60 16L87 26"/><path class="hd" stroke-width="8.3" d="M20 37.7Q33 14.3 46 37.7M74 37.7Q87 14.3 100 37.7"/><circle cx="33" cy="55.9" r="26"/><circle cx="87" cy="55.9" r="26"/></svg>
+        <p class="t-name">Wrecking Balls</p>
+        <p class="t-floor">31+ <small>· more than you · next level</small></p>
+        <p class="t-quip">More iron than man. Stand clear of the swing. The Commissioner wants video.</p>
+      </li>
+      <li class="tier dark" style="--c:var(--chalk)">
+        <svg class="pair" viewBox="0 0 120 90" aria-hidden="true"><path class="ch" d="M60 4V16M60 16L35 26M60 16L85 26"/><path class="hd" stroke-width="7.7" d="M23 36.8Q35 15.2 47 36.8M73 36.8Q85 15.2 97 36.8"/><circle cx="35" cy="53.6" r="24"/><circle cx="85" cy="53.6" r="24"/></svg>
+        <p class="t-name">Bahls Deep</p>
+        <p class="t-floor">31 <small>· exactly you · the perfect score</small></p>
+        <p class="t-quip">Your exact bodyweight swinging between your legs. Not a pound short.</p>
+      </li>
+    </ol>
+    <p class="ladder-label">The ladder</p>
+    <ol class="tiers">
+      <li class="tier" style="--c:var(--red)">
+        <svg class="pair" viewBox="0 0 120 90" aria-hidden="true"><path class="ch" d="M60 4V16M60 16L40 26M60 16L80 26"/><path class="hd" stroke-width="6.1" d="M30.5 34.55Q40 17.45 49.5 34.55M70.5 34.55Q80 17.45 89.5 34.55"/><circle cx="40" cy="47.85" r="19"/><circle cx="80" cy="47.85" r="19"/></svg>
+        <p class="t-name">Low Hangers <span class="jb">JB31</span></p>
+        <p class="t-floor">20.67 <small>· ⅔ of you</small></p>
+        <p class="t-quip">They swing when you walk. Your inseam files a complaint. JB31 lives here.</p>
+      </li>
+      <li class="tier" style="--c:var(--blue)">
+        <svg class="pair" viewBox="0 0 120 90" aria-hidden="true"><path class="ch" d="M60 4V16M60 16L44 26M60 16L76 26"/><path class="hd" stroke-width="4.8" d="M36.5 32.75Q44 19.25 51.5 32.75M68.5 32.75Q76 19.25 83.5 32.75"/><circle cx="44" cy="43.25" r="15"/><circle cx="76" cy="43.25" r="15"/></svg>
+        <p class="t-name">Brass Pair</p>
+        <p class="t-floor">15.5 <small>· ½ of you</small></p>
+        <p class="t-quip">Real hardware. Clanks on the way up.</p>
+      </li>
+      <li class="tier" style="--c:var(--yellow)">
+        <svg class="pair" viewBox="0 0 120 90" aria-hidden="true"><path class="ch" d="M60 4V16M60 16L48 26M60 16L72 26"/><path class="hd" stroke-width="3.5" d="M42.5 30.95Q48 21.05 53.5 30.95M66.5 30.95Q72 21.05 77.5 30.95"/><circle cx="48" cy="38.65" r="11"/><circle cx="72" cy="38.65" r="11"/></svg>
+        <p class="t-name">Jingle Bells</p>
+        <p class="t-floor">7.75 <small>· ¼ of you</small></p>
+        <p class="t-quip">Something is down there. You can hear it when the gym is quiet.</p>
+      </li>
+      <li class="tier" style="--c:var(--green)">
+        <svg class="pair" viewBox="0 0 120 90" aria-hidden="true"><path class="ch" d="M60 4V16M60 16L52 26M60 16L68 26"/><path class="hd" stroke-width="2.2" d="M48.5 29.15Q52 22.85 55.5 29.15M64.5 29.15Q68 22.85 71.5 29.15"/><circle cx="52" cy="34.05" r="7"/><circle cx="68" cy="34.05" r="7"/></svg>
+        <p class="t-name">Shrinkage</p>
+        <p class="t-floor">0 <small>· under ¼ of you</small></p>
+        <p class="t-quip">Cold pool energy. It happens to everybody. Keep training.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="band iron knurl" aria-labelledby="board-h">
+  <div class="in">
+    <p class="eyebrow">The board</p>
+    <h2 id="board-h">Who is carrying the most</h2>
+    <div class="board-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Lifter</th><th class="hide-sm">Body</th><th class="hide-sm">Iron</th><th>Bahl</th><th>Tier</th></tr>
+        </thead>
+        <tbody>
+          <tr class="lead"><td class="rank">1</td><td class="who">JB31</td><td class="num hide-sm">196 lb</td><td class="num hide-sm">140 lb</td><td class="bahl">22.1</td><td><span class="chip" style="--c:var(--red)"><i></i>Low Hangers</span></td></tr>
+          <tr class="open"><td class="rank">2</td><td class="who">Unclaimed</td><td class="num hide-sm">·</td><td class="num hide-sm">·</td><td class="bahl">·</td><td>·</td></tr>
+          <tr class="open"><td class="rank">3</td><td class="who">Unclaimed</td><td class="num hide-sm">·</td><td class="num hide-sm">·</td><td class="bahl">·</td><td>·</td></tr>
+          <tr class="open"><td class="rank">4</td><td class="who">Unclaimed</td><td class="num hide-sm">·</td><td class="num hide-sm">·</td><td class="bahl">·</td><td>·</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="board-note">Want on the board? Hang it, film it, send the video to the Commissioner. Weigh in the same day.</p>
+  </div>
+</section>
+
+<section class="band chalk" aria-labelledby="story-h">
+  <div class="in">
+    <p class="eyebrow">How it started</p>
+    <div class="story">
+      <div>
+        <h2 id="story-h">One pull up. One very obvious silhouette.</h2>
+      </div>
+      <div>
+        <p class="big">JB31 weighs 196 pounds. He strapped 140 pounds of kettlebells to a belt and pulled his chin over the bar. Everybody watching saw the same thing at the same time: two giant iron balls swinging between his legs.</p>
+        <p>A formula followed. Then a name. Then rules, tiers, a board and a whole family of lifts. Ed Zercher got one squat named after him. Bahl gets a dynasty.</p>
+      </div>
+    </div>
+    <dl class="lexicon">
+      <div><dt>Bahl Pull</dt><dd class="pos">noun</dd><dd>A pull up with iron hung from a belt, kettlebells or the Bahl Sack, starting on the floor. One chin hair on the bar counts. The test behind the index.</dd></div>
+      <div><dt>Bahl Squat</dt><dd class="pos">noun</dd><dd>A belt squat with dumbbells hanging from the belt. Named after the man, the same way the Zercher squat was.</dd></div>
+      <div><dt>Bahl Sack</dt><dd class="pos">noun · <em>on the drawing board</em></dd><dd>The rig behind the Bahl Squat. A hip belt, a strap and a steel yoke that hangs two dumbbells side by side.</dd></div>
+      <div><dt>Bahl Drop</dt><dd class="pos">noun</dd><dd>How low your bells hang. Set it before every set. "What's your Bahl Drop?"</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section class="band iron knurl" aria-labelledby="sack-h">
+  <div class="in">
+    <div class="sack">
+      <div class="sack-art">
+        <span class="stamp">Coming soon</span>
+        <svg viewBox="0 0 300 210" role="img" aria-label="The Bahl Sack: a strap holding a steel yoke with two dumbbells hanging from it">
+          <defs>
+            <linearGradient id="dbg" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#1D2025"/>
+              <stop offset=".35" stop-color="#5A6169"/>
+              <stop offset="1" stop-color="#1D2025"/>
+            </linearGradient>
+          </defs>
+          <rect class="y-strap" x="145" y="0" width="10" height="58"/>
+          <rect class="y-link" x="144" y="56" width="12" height="16" rx="6"/>
+          <circle class="y-eye" cx="150" cy="80" r="6"/>
+          <rect class="y-steel" x="148" y="86" width="4" height="14"/>
+          <rect class="y-db" x="99" y="100" width="8" height="49"/>
+          <rect class="y-db" x="193" y="100" width="8" height="49"/>
+          <rect class="y-steel" x="87" y="100" width="126" height="6"/>
+          <rect class="y-db" x="69" y="69" width="68" height="31" rx="3"/>
+          <rect class="y-db" x="163" y="69" width="68" height="31" rx="3"/>
+          <rect class="y-db" x="69" y="149" width="68" height="31" rx="3"/>
+          <rect class="y-db" x="163" y="149" width="68" height="31" rx="3"/>
+          <line class="y-facet" x1="86" y1="72" x2="86" y2="97"/><line class="y-facet" x1="120" y1="72" x2="120" y2="97"/>
+          <line class="y-facet" x1="180" y1="72" x2="180" y2="97"/><line class="y-facet" x1="214" y1="72" x2="214" y2="97"/>
+          <line class="y-facet" x1="86" y1="152" x2="86" y2="177"/><line class="y-facet" x1="120" y1="152" x2="120" y2="177"/>
+          <line class="y-facet" x1="180" y1="152" x2="180" y2="177"/><line class="y-facet" x1="214" y1="152" x2="214" y2="177"/>
+          <path class="y-floor" d="M30 200 H270"/>
+        </svg>
+      </div>
+      <div style="display:grid;gap:18px;min-width:0">
+        <p class="eyebrow">New gear</p>
+        <h2 id="sack-h">The Bahl Sack</h2>
+        <p class="sub">A belt squat rig that hangs two dumbbells between your legs from a steel yoke with locking seats. The Bahl Squat finally gets its own equipment. Prototype is on the drawing board now.</p>
+        <div class="parts"><span>Bahl Belt</span><span>Bahl Drop</span><span>Bahl Yoke</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band chalk" aria-label="Rules and questions">
+  <div class="in">
+    <div class="rf">
+      <section aria-labelledby="rules-h">
+        <p class="eyebrow">Official rules</p>
+        <h3 id="rules-h">How a Bahl Pull counts</h3>
+        <ol class="rules">
+          <li>Weigh in the same day. Bodyweight is what the scale says, not what you remember.</li>
+          <li>Iron hangs from a belt: kettlebells or a loaded Bahl Sack. It starts on the floor with the chain just tight.</li>
+          <li>Start from a dead hang with straight arms. No pinning the iron with your feet.</li>
+          <li>One chin hair touching the bar counts. One clean rep is a score.</li>
+          <li>Video or two witnesses, or it did not happen.</li>
+          <li>Protests go to the Commissioner. His rulings default to no.</li>
+        </ol>
+      </section>
+      <section aria-labelledby="faq-h">
+        <p class="eyebrow">Locker room questions</p>
+        <h3 id="faq-h">Asked and answered</h3>
+        <dl class="faq">
+          <div><dt>Why 31?</dt><dd>Because JB31 said so. Also, hanging your exact bodyweight comes out to a perfect 31.</dd></div>
+          <div><dt>Kilograms?</dt><dd>Fine. Use the same unit for both numbers and the math still works.</dd></div>
+          <div><dt>What if I hang more than my bodyweight?</dt><dd>Then you are Wrecking Balls. Next level. The Commissioner will want video.</dd></div>
+          <div><dt>Can I protest a score?</dt><dd>You can. It will be no.</dd></div>
+        </dl>
+      </section>
+    </div>
+  </div>
+</section>
+
+<footer class="band iron">
+  <div class="in">
+    <div class="foot">
+      <p class="mark">The <span>Bahl</span> Index</p>
+      <p>Unlisted page · Made by the crew, October 2026 · Keep it in the group chat</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var TH=[0,7.75,15.5,62/3], MAX=35;
+  var TIERS=[
+    {name:'Shrinkage',      c:'var(--green)',  on:'#FFFFFF', r:7,  quip:'Cold pool energy. It happens to everybody. Keep training.'},
+    {name:'Jingle Bells',   c:'var(--yellow)', on:'#16181B', r:11, quip:'Something is down there. You can hear it when the gym is quiet.'},
+    {name:'Brass Pair',     c:'var(--blue)',   on:'#FFFFFF', r:15, quip:'Real hardware. Clanks on the way up.'},
+    {name:'Low Hangers',    c:'var(--red)',    on:'#FFFFFF', r:19, quip:'They swing when you walk. Your inseam files a complaint.'},
+    {name:'Bahls Deep',     c:'var(--ink)',    on:'#ECEDE9', r:24, quip:'A perfect 31. Your exact bodyweight swinging between your legs.'},
+    {name:'Wrecking Balls', c:'var(--gold)',   on:'#16181B', r:26, quip:'More iron than man. Next level. Stand clear of the swing.'}
+  ];
+  var JB=140/196*31;
+  function $(id){return document.getElementById(id);}
+  var nmEl=$('nm'), bwEl=$('bw'), hungEl=$('hung'), gapsEl=$('gaps'), shareEl=$('share'), copyBtn=$('copy'), card=$('card');
+
+  function tierOf(bw,hung){
+    var d=hung-bw;
+    if(Math.abs(d)<0.5) return 4;
+    if(d>=0.5) return 5;
+    var s=hung/bw*31, i=0;
+    for(var k=1;k<TH.length;k++){if(s>=TH[k]-1e-9)i=k;}
+    return i;
+  }
+  function one(n){return (Math.round(n*10)/10).toFixed(1);}
+  function lb(n){return Math.max(1,Math.ceil(n-1e-9));}
+  function num(v){return String(Math.round(v*10)/10);}
+  function r2(n){return Math.round(n*100)/100;}
+  function place(id,s){
+    var p=Math.max(0,Math.min(s,MAX))/MAX*100;
+    var pin=$('pin-'+id), stem=$('stem-'+id);
+    stem.style.left=p+'%'; pin.style.left=p+'%'; pin.style.setProperty('--p',p);
+  }
+  function li(b,t){return '<li><b>'+b+'</b> '+t+'</li>';}
+  function setPair(r){
+    var L=60-(r+1), R=60+(r+1), cy=26+1.15*r;
+    var y0=r2(cy-0.7*r), yc=r2(cy-1.6*r), h=r*0.5;
+    $('c-chain').setAttribute('d','M60 4V16M60 16L'+L+' 26M60 16L'+R+' 26');
+    $('c-hd').setAttribute('d','M'+r2(L-h)+' '+y0+'Q'+L+' '+yc+' '+r2(L+h)+' '+y0+'M'+r2(R-h)+' '+y0+'Q'+R+' '+yc+' '+r2(R+h)+' '+y0);
+    $('c-hd').setAttribute('stroke-width',r2(Math.max(2,r*0.32)));
+    var cl=$('c-l'), cr=$('c-r');
+    cl.setAttribute('cx',L); cl.setAttribute('cy',r2(cy)); cl.setAttribute('r',r);
+    cr.setAttribute('cx',R); cr.setAttribute('cy',r2(cy)); cr.setAttribute('r',r);
+  }
+  function displayName(){var n=(nmEl.value||'').trim();return n||'You';}
+
+  function update(){
+    var bw=parseFloat(bwEl.value), hung=parseFloat(hungEl.value);
+    var ok=bw>0 && hung>=0, name=displayName();
+    $('pin-you').hidden=!ok; $('stem-you').hidden=!ok;
+    $('c-name').textContent=name;
+    if(!ok){
+      $('c-score').textContent='?'; $('c-tier').textContent='Enter both numbers';
+      $('c-quip').textContent='Bodyweight and iron hung, both in the same unit.';
+      $('c-bw').textContent='?'; $('c-hung').textContent='?'; $('c-pct').textContent='?'; $('c-vs').textContent='No score yet';
+      gapsEl.innerHTML=''; shareEl.value=''; return;
+    }
+    var t=tierOf(bw,hung), s=(t===4)?31:hung/bw*31, T=TIERS[t], html='';
+    card.style.setProperty('--c',T.c); card.style.setProperty('--on',T.on);
+    $('c-score').textContent=one(s);
+    $('c-tier').textContent=T.name;
+    $('c-quip').textContent=T.quip;
+    $('c-bw').textContent=num(bw);
+    $('c-hung').textContent=num(hung);
+    $('c-pct').textContent=Math.round(hung/bw*100)+'%';
+    setPair(T.r);
+
+    if(t<3){ html+=li(lb(TH[t+1]/31*bw-hung)+' lb','more to reach '+TIERS[t+1].name); }
+    else if(t===3){ html+=li(lb(bw-hung-0.5)+' lb','more to go Bahls Deep'); }
+    else if(t===4){ html+=li('Perfect 31.','One more pound and you are Wrecking Balls.'); }
+    else { html+=li('Wrecking Balls.','Next level. The Commissioner wants video.'); }
+    var vs;
+    if(s<JB-0.05){ html+=li(lb(JB/31*bw-hung)+' lb','more to catch JB31'); vs=one(JB-s)+' behind JB31'; }
+    else if(s>JB+0.05){ html+=li('Ahead of JB31.','Tell him. Then duck.'); vs=one(s-JB)+' ahead of JB31'; }
+    else { html+=li('Dead even','with JB31.'); vs='Dead even with JB31'; }
+    if(t<3){ html+=li(lb(bw-hung-0.5)+' lb','more to go Bahls Deep'); }
+    gapsEl.innerHTML=html;
+    $('c-vs').textContent=vs;
+    place('you',s);
+    shareEl.value=name+': Bahl Index '+one(s)+' ('+T.name+'). '+num(bw)+' lb body, '+num(hung)+' lb hung. JB31 holds 22.1.';
+    try{ localStorage.setItem('bahl-inputs', JSON.stringify({nm:nmEl.value,bw:bwEl.value,hung:hungEl.value})); }catch(e){}
+  }
+
+  try{
+    var saved=JSON.parse(localStorage.getItem('bahl-inputs')||'null');
+    if(saved && saved.bw){ bwEl.value=saved.bw; hungEl.value=saved.hung; nmEl.value=saved.nm||''; }
+  }catch(e){}
+
+  nmEl.addEventListener('input',update);
+  bwEl.addEventListener('input',update);
+  hungEl.addEventListener('input',update);
+  place('jb',JB);
+  update();
+
+  copyBtn.addEventListener('click',function(){
+    var text=shareEl.value; if(!text) return;
+    function fallback(){ shareEl.focus(); shareEl.select(); copyBtn.textContent='Selected. Copy it'; }
+    function done(){ copyBtn.textContent='Copied'; setTimeout(function(){copyBtn.textContent='Copy for the group chat';},1800); }
+    try{ navigator.clipboard.writeText(text).then(done,fallback); }catch(e){ fallback(); }
+  });
+})();
+</script>
+</body>
+</html>
