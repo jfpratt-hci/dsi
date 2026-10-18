@@ -229,8 +229,8 @@ export function install(X) {
       <section class="sec"><form id="wodF" class="wodEd">
         <div class="field"><label for="wd-t">Title</label><input id="wd-t" maxlength="80" value="${esc((w && w.title) || '')}" placeholder="Front squat + Grace"></div>
         ${old ? '<p class="hint" style="color:var(--flat)">This day still has the old lift list. Saving switches it to Parts, so pick the weight each part logs.</p>' : ''}
-        <div class="wodGrid">${ps.map(box).join('')}</div>
         <div class="formCard wodPlan" id="wodPlan"><div class="wodPlanH"><b>Class plan</b><label for="wd-gap">Between parts</label><input id="wd-gap" type="number" inputmode="numeric" min="0" max="15" value="${(ps.find(x => x.gap != null) || {}).gap ?? GAP}"><span>min</span><label for="wd-len">Class</label><input id="wd-len" type="number" inputmode="numeric" min="15" max="180" value="${classLen}"><span>min</span></div><div class="wodBar" id="wodBar"></div><p class="hint" id="wodPlanMsg"></p></div>
+        <div class="wodGrid">${ps.map(box).join('')}</div>
         <div class="row wodAdd"><button type="button" class="btn ghost sm" id="addFirst">+ Add a part at the start</button><button type="button" class="btn ghost sm" id="addD">+ Add a part at the end</button><span class="hint" id="addMsg"></span></div>
         <div class="row" style="margin-top:16px"><button class="btn" type="submit">${w ? 'Save changes' : 'Post the workout'}</button><a class="btn ghost" href="${dest}">See it on the week</a>${dsi ? '' : `<a class="btn ghost" href="/results/${gid}?day=${day}">Enter results</a><a class="btn ghost" href="/tv/${gid}" target="_blank">Dandy TV</a>`}<span class="hint" id="wd-msg">${nLogs ? `${nLogs} logged already. Their weights stay with each part letter.` : ''}</span></div>
       </form></section>`)) return;

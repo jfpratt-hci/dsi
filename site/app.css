@@ -1254,7 +1254,7 @@ td.nowrap{white-space:nowrap}
 .wodClock{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
 .wodClock>span:first-child{font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11px}
 .wodClock select{height:36px;max-width:140px}.wodClock input{height:36px;width:72px;text-align:right}
-.wodPlan{display:grid;gap:10px;margin-top:14px}
+.wodPlan{display:grid;gap:10px;margin:4px 0 16px}
 .wodPlanH{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
 .wodPlanH b{font:800 18px var(--disp);text-transform:uppercase;color:var(--ink);margin-right:auto}
 .wodPlanH input{height:34px;width:64px;text-align:right}
