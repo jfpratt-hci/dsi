@@ -54,25 +54,96 @@ export function install(X) {
   const fakeQr = () => { const n = 21; const on = (x, y) => { for (const [a, b] of [[0, 0], [14, 0], [0, 14]]) if (x >= a && x < a + 7 && y >= b && y < b + 7) { const dx = x - a, dy = y - b; return dx === 0 || dy === 0 || dx === 6 || dy === 6 || (dx > 1 && dx < 5 && dy > 1 && dy < 5); } return ((x * 7 + y * 13 + x * y * 3) % 5) < 2; };
     let r = ''; for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (on(x, y)) r += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
     return `<svg viewBox="-2 -2 25 25" aria-hidden="true" shape-rendering="crispEdges"><rect x="-2" y="-2" width="25" height="25" fill="#fff"/><g fill="#0E1420">${r}</g></svg>`; };
-  const demoTv = () => `<div class="dmPanel">${SAMPLE}<div class="dmGrid2">
-      <figure class="dmFig"><div class="hmTv" aria-hidden="true"><div class="hmTvTop"><b>Part B · Back squat</b><span>5 x 3 at 85%</span></div>
-        <ol class="hmTvRows">${TV_ROWS.map(([n, w, c]) => `<li><i style="--c:${c}"></i><span>${n}</span><b>${w}</b></li>`).join('')}</ol>
-        <div class="hmTvFoot"><span>6:30am class · 23:40 class time</span><span>Part B now</span></div></div><figcaption><b>Class TV.</b> Every member's own weight for today and the class clock, live from the schedule.</figcaption></figure>
-      <figure class="dmFig"><div class="hmTv hmSign" aria-hidden="true"><div class="hmSignL"><span class="hmSignK">Gym gear</span><b>Rep the gym</b><span class="hmSignN">Tees $25 · Hoodies $50</span><span class="hmSignBar"><i></i></span></div>
-        <div class="hmSignQ">${fakeQr()}<span>Scan to order</span></div></div><figcaption><b>Lobby TV.</b> Schedule, PRs, events, merch and offers, each with a QR code.</figcaption></figure></div></div>`;
   const demoMember = () => `<div class="dmPanel">${SAMPLE}<div class="dmGrid3">
       <div class="formCard dmCard"><span class="grLbl">Alex R. · DSI</span><b class="grBig">612</b><span class="pill up">Up 64 since May</span><p class="hint">Bench, squat, deadlift and clean, scored against lifters the same age and size. 500 is the median.</p>${spark([548, 556, 561, 575, 590, 597, 612], 0, 300, 70, 'DSI over 6 months, 548 to 612')}</div>
       <div class="formCard dmCard"><span class="grLbl">Today's targets</span><table class="inT"><tbody>${[['Back squat 5 x 3', '225 lb'], ['Strict press 5 x 5', '95 lb'], ['Clean, build to heavy', '205 lb']].map(([a, b]) => `<tr><td>${a}</td><td class="r n"><b>${b}</b></td></tr>`).join('')}</tbody></table><p class="hint">Worked out from Alex's own PRs. The same numbers show on the class TV.</p></div>
       <div class="formCard dmCard"><span class="grLbl">DSI Pro</span><ul class="hmTicks"><li>Progress charts for every lift</li><li>A goal plan to the next number</li><li>A DI coach that knows Alex's numbers</li><li>Readiness from WHOOP or Apple Health</li></ul><p class="hint">Included with Unlimited at gyms on Grow.</p></div></div></div>`;
-  const DEMOS = [['growth', 'Growth game', demoGrowth], ['insights', 'Insights', demoInsights], ['tv', 'Dandy TV', demoTv], ['member', 'Member app', demoMember]];
+  /* ---------- Dandy TV, drawn like the real screens (sizes are shares of the TV's width) ---------- */
+  const tvLogo = '<span class="txLogo" aria-hidden="true"><i style="--c:var(--bench)"></i><i style="--c:var(--squat)"></i><i style="--c:var(--dead)"></i><i style="--c:var(--clean)"></i></span>';
+  const tvPlan = (on) => `<div class="txPlan">${[['A', 'Warmup', 12, 'done'], ['', '', 3, 'gap'], ['B', 'Strength', 12, on === 'B' ? 'now' : ''], ['', '', 3, 'gap'], ['C', 'Conditioning', 15, ''], ['', 'Open', 15, 'open']].map(([L, n, m, k]) => `<span class="txSeg ${k}" style="flex:${m}">${L ? `<b>${L}</b> ` : ''}${n ? `${n}${k === 'gap' ? '' : ' · ' + m + ' min'}` : m + '′'}</span>`).join('')}<i class="txNeedle" style="left:43%"></i></div><div class="txPlanT"><span>5:30 PM start</span><span>6:30 PM end</span></div>`;
+  const TVS = {
+    wod: ['Class: the plan', 'Every part of today\'s workout, with the class clock running from the start time.', () => `<div class="tx txWod">
+        <div class="txTop"><b class="txTitle">Back squat + Fran</b><div class="txClock"><span>Class time</span><b>23:40</b><em>37 min left · B Strength now</em></div></div>${tvPlan('B')}
+        <div class="txParts">${[['A', 'Warmup', '3 rounds: 200m row, 10 PVC pass throughs, 10 goblet squats', ''], ['B', 'Strength', 'Back squat 5 x 3 at 80%. Rest 2 min.', 'Log your squat weight'], ['C', 'Conditioning', 'Fran: 21, 15, 9 thrusters and pull ups', 'Log your time']].map(([L, n, t, f], i) => `<div class="txPart${i === 1 ? ' now' : ''}"><div class="txPH"><i>${L}</i>${n}</div><p>${t}</p>${f ? `<small>${f}</small>` : ''}</div>`).join('')}</div>
+        <div class="txFoot">${tvLogo}<span class="txDots"><i class="on"></i><i></i><i></i><i></i></span><span class="txDate">Tue, Oct 20 <b>5:53 PM</b></span></div></div>`],
+    focus: ['Class: one part, every target', 'Tap a part and the TV runs its clock and lists each member\'s own weight, worked out from their PRs.', () => `<div class="tx txFoc">
+        <div class="txTop"><div class="txTabs"><span><i>A</i>Warmup</span><span class="on"><i>B</i>Strength</span><span><i>C</i>Conditioning</span></div><div class="txClock sm"><span>Class time</span><b>23:40</b></div></div>${tvPlan('B')}
+        <div class="txFocusB"><div><p class="txBig">Back squat 5 x 3 at 80%. Rest 2 min.</p><small>Back squat · 80% of your best</small></div>
+          <div class="txSide"><div class="txTimer"><b>1:42</b><span>Rest · set 3 of 5</span></div>
+            <div class="txTargets"><b>Your targets</b>${[['Jordan K.', 265], ['Sam T.', 225], ['Riley M.', 185], ['Alex R.', 175], ['Casey L.', 135]].map(([n, w]) => `<span><em>${n}</em>${w}</span>`).join('')}</div></div></div></div>`],
+    sched: ['Lobby: today', 'The day\'s classes, coaches and open spots, with a QR code to book.', () => `<div class="tx txLob">
+        <div class="txLH">${tvLogo}<div><b>Your Gym</b><span>Milford, OH</span></div><span class="txDate">Tue, Oct 20 <b>4:35 PM</b></span></div>
+        <div class="txSched"><div class="txList"><b class="txK">Today's classes</b>${[['6:00 AM', 'CrossFit', 'Coach Dana', 'Done'], ['12:00 PM', 'CrossFit', 'Coach Sam', 'Done'], ['4:30 PM', 'Teens', 'Coach Riley', 'Now'], ['5:30 PM', 'CrossFit', 'Coach Dana', '3 spots'], ['6:30 PM', 'CrossFit', 'Coach Sam', '8 spots']].map(([t, n, c, x]) => `<div class="txRow${x === 'Now' ? ' now' : x === 'Done' ? ' done' : ''}"><b>${t}</b><span>${n}<small>${c}</small></span><em>${x}</em></div>`).join('')}</div>
+          <div class="txQr">${fakeQr()}<b>Scan to book</b></div></div>
+        <div class="txLF"><span class="txLive"></span><b>Next class · 5:30 PM</b><span>CrossFit with Coach Dana · in 55 min</span></div></div>`],
+    prs: ['Lobby: PRs and the board', 'This week\'s PRs and the gym\'s DSI board, so every new number gets seen.', () => `<div class="tx txLob">
+        <div class="txLH">${tvLogo}<div><b>Your Gym</b><span>Milford, OH</span></div><span class="txDate">Tue, Oct 20 <b>4:35 PM</b></span></div>
+        <div class="txPrs"><div><b class="txK">New PRs this week</b><div class="txPrGrid">${[['Morgan P.', 'Deadlift', 315, 'var(--dead)'], ['Chris D.', 'Bench', 225, 'var(--bench)'], ['Taylor B.', 'Back squat', 185, 'var(--squat)'], ['Sam T.', 'Clean', 205, 'var(--clean)']].map(([n, l, w, c]) => `<div class="txPr" style="--c:${c}"><span>${l}</span><b>${w}<small>lb</small></b><em>${n}</em></div>`).join('')}</div></div>
+          <div class="txBoard"><b class="txK">DSI board</b>${SAMPLE_BOARD.slice(0, 5).map(([n, , sc], i) => `<div><i>${i + 1}</i><span>${n}</span><b>${sc}</b></div>`).join('')}</div></div>
+        <div class="txLF"><span class="txLive"></span><b>Next class · 5:30 PM</b><span>CrossFit with Coach Dana · in 55 min</span></div></div>`],
+    merch: ['Lobby: offers and events', 'Gear, events and offers, each with its own QR code, pictures you upload, or anything else.', () => `<div class="tx txLob">
+        <div class="txLH">${tvLogo}<div><b>Your Gym</b><span>Milford, OH</span></div><span class="txDate">Tue, Oct 20 <b>4:35 PM</b></span></div>
+        <div class="txMerch"><div class="txEv"><span class="txK">Saturday 9 AM</span><b>Partner WOD</b><p>Bring a friend. Their first class is free.</p></div>
+          <div class="txGear">${[['Gym tee', '$25'], ['Hoodie', '$50'], ['Shaker', '$12']].map(([n, pr]) => `<div><i class="txShirt" aria-hidden="true"></i><b>${n}</b><span>${pr}</span></div>`).join('')}</div>
+          <div class="txQr">${fakeQr()}<b>Scan to sign up</b></div></div>
+        <div class="txLF"><span class="txLive"></span><b>Next class · 5:30 PM</b><span>CrossFit with Coach Dana · in 55 min</span></div></div>`],
+  };
+  const tvShow = id => `<div class="txShow" data-tvshow="${id}"><div class="txFrame" role="img" aria-label="A sample Dandy TV screen"><div class="txScreen">${Object.entries(TVS).map(([k, [, , f]], i) => `<div class="txSlide" data-tvk="${k}"${i ? ' hidden' : ''}>${f()}</div>`).join('')}</div></div>
+      <div class="txPick" role="tablist" aria-label="Dandy TV screens">${Object.entries(TVS).map(([k, [n, d]], i) => `<button type="button" role="tab" aria-selected="${i === 0}" data-tvpick="${k}"><b>${n}</b><span>${d}</span></button>`).join('')}</div></div>`;
+  const wireTv = () => document.querySelectorAll('[data-tvshow]').forEach(box => {
+    const bs = [...box.querySelectorAll('[data-tvpick]')], ss = [...box.querySelectorAll('[data-tvk]')];
+    let i = 0, timer = null;
+    const show = n => { i = (n + bs.length) % bs.length; bs.forEach((b, j) => b.setAttribute('aria-selected', j === i)); ss.forEach((x, j) => { x.hidden = j !== i; }); };
+    const auto = () => { clearInterval(timer); if (!matchMedia('(prefers-reduced-motion: reduce)').matches) timer = setInterval(() => { if (!document.body.contains(box)) return clearInterval(timer); show(i + 1); }, 6000); };
+    bs.forEach((b, j) => { b.onclick = () => { show(j); auto(); }; });
+    auto();
+  });
+  const demoTv = () => `<div class="dmPanel">${SAMPLE}${tvShow('dt' + Math.random().toString(36).slice(2, 6))}</div>`;
+
+  /* ---------- attendance and growth ---------- */
+  const HEAT_H = ['6a', '7a', '9a', '12p', '4:30p', '5:30p', '6:30p'], HEAT_D = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const HEAT = [[14, 9, 0, 7, 6, 18, 12], [12, 8, 0, 5, 7, 16, 11], [15, 10, 0, 8, 6, 17, 13], [11, 7, 0, 4, 5, 15, 9], [10, 6, 0, 6, 0, 11, 4], [0, 0, 19, 0, 0, 0, 0]];
+  const M_MONTHS = ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'], M_ACT = [98, 100, 103, 105, 108, 112], M_JOIN = [5, 6, 7, 6, 7, 8], M_LEFT = [4, 4, 4, 4, 4, 4];
+  const COHORT = [['May', 6, [100, 100, 83, 83, 83]], ['Jun', 6, [100, 83, 83, 83]], ['Jul', 7, [100, 86, 86]], ['Aug', 6, [100, 100]], ['Sep', 7, [100]]];
+  const demoAttend = () => {
+    const hmax = 19, mx = Math.max(...M_ACT), mn = Math.min(...M_ACT) - 6, bw = 640, bh = 150;
+    const x = i => 40 + i * ((bw - 80) / (M_ACT.length - 1)), y = v => bh - 10 - ((v - mn) / (mx - mn)) * (bh - 30);
+    return `<div class="dmPanel">${SAMPLE}<div class="atGrid">
+      <div class="formCard atCard atWide"><div class="atH"><b>Members, month by month</b><span class="hint">112 active · up 14 since May</span></div>
+        <svg class="atChart" viewBox="0 0 ${bw} ${bh + 46}" role="img" aria-label="Active members rising from 98 in May to 112 in October, with 5 to 8 joining and 4 leaving each month">
+          <polyline points="${M_ACT.map((v, i) => `${x(i)},${y(v)}`).join(' ')}" class="atLine"/>${M_ACT.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="3" class="atDot"/><text x="${x(i)}" y="${y(v) - 7}" text-anchor="middle" class="atV">${v}</text>`).join('')}
+          ${M_MONTHS.map((m, i) => `<rect x="${x(i) - 13}" y="${bh + 14 - M_JOIN[i] * 3}" width="12" height="${M_JOIN[i] * 3}" class="atJoin"/><rect x="${x(i) + 1}" y="${bh + 14 - M_LEFT[i] * 3}" width="12" height="${M_LEFT[i] * 3}" class="atLeft"/><text x="${x(i)}" y="${bh + 32}" text-anchor="middle" class="atM">${m}</text>`).join('')}
+        </svg><p class="atKey"><i class="j"></i>Joined <i class="l"></i>Left <span class="hint">Net +2 to +4 a month</span></p></div>
+      <div class="formCard atCard"><div class="atH"><b>When people come</b><span class="hint">Average check ins per class, last 8 weeks</span></div>
+        <div class="atHeat" role="table" aria-label="Average attendance by day and class time"><span></span>${HEAT_H.map(h => `<span class="atHh">${h}</span>`).join('')}
+          ${HEAT.map((r, d) => `<span class="atHd">${HEAT_D[d]}</span>${r.map(v => `<span class="atC" style="--a:${v ? (0.15 + v / hmax * 0.85).toFixed(2) : 0}" title="${v || 'No class'}">${v || ''}</span>`).join('')}`).join('')}</div>
+        <p class="hint">Saturday 9am and weeknight 5:30 fill up. Friday 6:30 is the one to rethink.</p></div>
+      <div class="formCard atCard"><div class="atH"><b>Do new members stay?</b><span class="hint">Share still coming, by the month they joined</span></div>
+        <table class="inT atCo"><thead><tr><th>Joined</th><th class="r">New</th>${['1st', '2nd', '3rd', '4th', '5th'].map(m => `<th class="r">${m} mo</th>`).join('')}</tr></thead><tbody>
+          ${COHORT.map(([m, n, r]) => `<tr><td>${m}</td><td class="r n">${n}</td>${[0, 1, 2, 3, 4].map(i => r[i] != null ? `<td class="r n"><span class="atPct" style="--a:${(r[i] / 100).toFixed(2)}">${r[i]}%</span></td>` : '<td></td>').join('')}</tr>`).join('')}</tbody></table>
+        <p class="hint">About 84% of new members are still training 3 months in.</p></div>
+      <div class="formCard atCard"><div class="atH"><b>Slipping away</b><span class="hint">Regulars with no class lately</span></div>
+        <ul class="atSlip">${[['Morgan P.', '12 days', '3x a week before', 'Text sent'], ['Chris D.', '16 days', '2x a week before', 'Text sent'], ['Jamie R.', '24 days', '4x a week before', 'Coach to call'], ['Drew P.', '31 days', '2x a week before', 'Coach to call']].map(([n, d, w, a]) => `<li><span><b>${n}</b><small>${w}</small></span><em>${d}</em><span class="pill ${a === 'Text sent' ? 'up' : 'acc'}">${a}</span></li>`).join('')}</ul></div>
+      <div class="formCard atCard"><div class="atH"><b>Where members come from</b><span class="hint">Last 90 days</span></div>
+        <ul class="atSrc">${[['A member brought them', 9], ['Website', 6], ['Google', 4], ['Instagram', 2], ['Walked in', 1]].map(([n, v]) => `<li><span>${n}</span><i><em style="width:${v / 9 * 100}%"></em></i><b>${v}</b></li>`).join('')}</ul></div>
+    </div></div>`;
+  };
+  const TRACK = [
+    ['They check in', 'From the app, the QR code at the door, or the coach on the class iPad. One tap, every class.'],
+    ['Dandy keeps the count', 'Every visit lands on the member\'s record, the class roster, and the gym\'s numbers. Nobody types anything up.'],
+    ['You see the trend', 'Members, joins, cancels, busy hours and who is slipping, updated every day.'],
+    ['The game keeps score', 'The Growth game turns those numbers into a weekly score against par for a gym your size.'],
+  ];
+
+  const DEMOS = [['growth', 'Growth game', demoGrowth], ['insights', 'Insights', demoInsights], ['attend', 'Attendance', demoAttend], ['tv', 'Dandy TV', demoTv], ['member', 'Member app', demoMember]];
   const demoTabs = (id, only) => { const ds = only ? DEMOS.filter(d => only.includes(d[0])) : DEMOS;
     return `<div class="dmTabs" role="tablist" aria-label="Sample gym dashboards" data-dm="${id}">${ds.map(([k, n], i) => `<button type="button" role="tab" id="${id}-t-${k}" aria-controls="${id}-p-${k}" aria-selected="${i === 0}" tabindex="${i ? -1 : 0}" data-dmtab="${k}">${n}</button>`).join('')}</div>
       ${ds.map(([k, , f], i) => `<div role="tabpanel" id="${id}-p-${k}" aria-labelledby="${id}-t-${k}"${i ? ' hidden' : ''}>${f()}</div>`).join('')}`; };
-  const wireDemos = () => document.querySelectorAll('[data-dm]').forEach(list => {
+  const wireDemos = () => { wireTv(); document.querySelectorAll('[data-dm]').forEach(list => {
     const id = list.dataset.dm, tabs = [...list.querySelectorAll('[data-dmtab]')];
     const pick = b => tabs.forEach(t => { const on = t === b; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; document.getElementById(`${id}-p-${t.dataset.dmtab}`).hidden = !on; });
     tabs.forEach((b, i) => { b.onclick = () => pick(b); b.onkeydown = e => { const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0; if (!d) return; const n = tabs[(i + d + tabs.length) % tabs.length]; pick(n); n.focus(); }; });
-  });
+  }); };
   // A made up board for visitors, in place of real names and numbers.
   const SAMPLE_BOARD = [['Jordan K.', 'Your Gym', 742], ['Sam T.', 'Your Gym', 701], ['Riley M.', 'Your Gym', 668], ['Alex R.', 'Your Gym', 612], ['Casey L.', 'Your Gym', 574], ['Drew P.', 'Your Gym', 531]];
   const sampleBoard = () => `<aside class="hmBoard" aria-label="Sample DSI leaderboard"><div class="hmBoardH"><b>The DSI board</b>${SAMPLE}</div>
@@ -173,6 +244,11 @@ export function install(X) {
         ${crewBoard()}</section>
       <section class="sec dmDash"><div class="secHead"><div><div class="kicker">Member dashboards</div><h2 class="hmH2">Every member sees their progress</h2><p class="hmSideSub">Classes, streaks, PRs and their DSI, all in one place on the app and the gym's website. People who can see themselves getting better keep coming back.</p></div><a class="btn ghost sm" href="/members">For members</a></div>
         ${memberDash()}</section>
+      <section class="sec dxTv"><div class="secHead"><div><div class="kicker">Dandy TV</div><h2 class="hmH2">Two screens that <span>run the room</span></h2><p class="hmSideSub">Any TV with a browser becomes a Dandy screen. The class TV runs the workout, the clock and every member's own weight. The lobby TV sells: today's classes, new PRs, the board, events and gear, each with a QR code.</p></div></div>
+        ${tvShow('home')}</section>
+      <section class="sec"><div class="secHead"><div><div class="kicker">Attendance and growth</div><h2 class="hmH2">Every check in counts</h2><p class="hmSideSub">Attendance is the number that tells you if the gym is growing, long before the bank account does. Dandy tracks it without anyone keeping a spreadsheet.</p></div></div>
+        <ol class="atSteps">${TRACK.map(([h, p], i) => `<li><span class="dmNum">${i + 1}</span><b>${h}</b><p>${p}</p></li>`).join('')}</ol>
+        ${demoAttend()}</section>
       <section class="sec dmDash"><div class="secHead"><div><div class="kicker">The sample gym</div><h2 class="hmH2">See it run a gym</h2><p class="hmSideSub">Every screen an owner and a member uses, filled with a made up gym so you can look around.</p></div><a class="btn ghost sm" href="/tour">Full tour</a></div>
         ${demoTabs('hm')}</section>
       <section class="sec dxSmall"><div class="kicker">Why we built this</div><h2 class="hmH2">Every small gym <span>should be growing</span></h2>
