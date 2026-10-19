@@ -691,6 +691,7 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
               <label for="bHome">Home gym, if visiting<input id="bHome" placeholder="Optional"></label>
             </div>
             <label for="bNote">Anything we should know?<textarea id="bNote" placeholder="Injuries, goals, questions"></textarea></label>
+            <p class="muted" style="font-size:.8rem;margin:0">Add your mobile and CFS can text you a reminder and follow up about your class. Msg and data rates may apply. Reply STOP to opt out.</p>
             <p id="bErr" style="color:var(--bad);font-size:.9rem" hidden></p>
             <button class="btn primary" type="submit" id="bSubmit" style="justify-self:start">Confirm booking</button>
           </form>
@@ -953,6 +954,11 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
   </form>
 </div>
 
+<script>
+// Posts a website form to the gym's Dandy Strength inbox. Errors come back as a message to show.
+window.rpc = (fn, args) => fetch('https://fairfhgyrosjqualmhwu.supabase.co/rest/v1/rpc/' + fn, { method: 'POST', headers: { apikey: 'sb_publishable_1qg2GRUgxGxVMhOaoGGGFw_lm0j_j4h', 'Content-Type': 'application/json' }, body: JSON.stringify(args) })
+  .then(async (r) => { const j = await r.json().catch(() => null); if (!r.ok) throw new Error((j && j.message) || 'That did not go through.'); return j; });
+</script>
 <script>
 (() => {
   const $ = (s) => document.querySelector(s);
@@ -1364,17 +1370,26 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
     const err = $('#bErr');
     if (!bk.time) { err.textContent = 'Pick a time first.'; err.hidden = false; return; }
     if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Add your name and a valid email so we can confirm.'; err.hidden = false; return; }
-    err.hidden = true; bk.done = true;
+    err.hidden = true;
+    const at = dayAt(bk.day); at.setHours(0, 0, 0, 0); at.setMinutes(bk.time.m);
+    const btn = $('#bSubmit'); btn.disabled = true;
+    rpc('site_book_trial', { p_key: 'cfs', p_name: name, p_phone: $('#bPhone').value.trim() || null, p_email: email, p_at: at.toISOString(), p_what: s.name,
+      p_note: [$('#bExp') && !$('#extraRow').hidden ? 'Experience: ' + $('#bExp').value : '', $('#bHome') && $('#bHome').value.trim() ? 'Home gym: ' + $('#bHome').value.trim() : '', $('#bNote').value.trim(), 'Coach ' + bk.time.coach].filter(Boolean).join('. '), p_sms_ok: true })
+      .then(() => { btn.disabled = false; booked(); })
+      .catch((x) => { btn.disabled = false; err.textContent = x.message || 'That did not go through. Text or call us instead.'; err.hidden = false; });
+  });
+  function booked() {
+    const s = SERVICES[bk.svc], name = $('#bName').value.trim();
+    bk.done = true;
     const first = name.split(' ')[0];
     const ok = $('#bOk'); ok.replaceChildren();
     const d = dayAt(bk.day).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
     const who = s.kind === 'consult' ? 'your nutrition coach' : 'Coach ' + bk.time.coach;
     ok.append(el('b', '', s.kind === 'class' ? "You're booked" : s.kind === 'pt' ? 'Session requested' : 'Nutrition session requested'), el('p', '', `${first}, see you ${d} at ${bk.time.t} with ${who}. ${s.kind === 'class' ? 'We will text you a reminder the night before.' : 'We will text you to confirm. The hour is $60.'}`));
-    ok.append(el('p', 'muted', 'Preview only: on the live site this sends your confirmation and adds you to the class roster.'));
     const again = el('button', 'btn', 'Book something else'); again.type = 'button'; again.style.justifySelf = 'start';
     again.addEventListener('click', () => { bk.done = false; bk.time = null; drawBook(); }); ok.append(again);
     drawBook();
-  });
+  }
 
   /* Events calendar with signups (sample events; the gym manages the real list) */
   const EVENTS = [
@@ -1589,10 +1604,11 @@ footer .fine{grid-column:1 / -1;color:var(--muted);font-size:.8rem;border-top:1p
     if (!msg.value.trim()) { msg.focus(); return; }
     const q = document.getElementById('txQuick'); if (q) q.remove();
     bubble(msg.value.trim(), 'me');
-    meta('Sent to 513 809 1452 · we will text ' + digits.slice(-10).replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3'));
-    const first = name.value.trim().split(' ')[0];
-    setTimeout(() => bubble('Thanks ' + first + '! Got it. A CFS coach will text you back at this number shortly. (Demo: nothing was actually sent.)', 'them'), 700);
+    const first = name.value.trim().split(' ')[0], text = msg.value.trim();
     msg.value = ''; syncNative();
+    rpc('site_text_us', { p_key: 'cfs', p_name: name.value.trim(), p_phone: digits.slice(-10), p_message: text })
+      .then(() => { meta('Sent · we will text ' + digits.slice(-10).replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3')); setTimeout(() => bubble('Thanks ' + first + '! Got it. A CFS coach will text you back at this number shortly.', 'them'), 500); })
+      .catch((x) => meta(x.message || 'That did not send. Try the texting app link below.'));
   });
 })();
 </script>

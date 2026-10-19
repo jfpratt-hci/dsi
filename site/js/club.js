@@ -608,13 +608,14 @@ export function install(X) {
           <div class="field w2"><label for="md-p">Phone</label><input id="md-p" type="tel" maxlength="40" value="${esc(det ? det.phone || '' : '')}"></div>
           <div class="field w2"><label for="md-en">Emergency contact</label><input id="md-en" maxlength="120" value="${esc(det ? det.emergency_name || '' : '')}"></div>
           <div class="field w2"><label for="md-ep">Emergency phone</label><input id="md-ep" type="tel" maxlength="40" value="${esc(det ? det.emergency_phone || '' : '')}"></div></div>
+          <label class="check"><input type="checkbox" id="md-sms"${det && det.sms_ok ? ' checked' : ''}><span>Text me from ${esc(g.name)}: PR shout outs, a nudge if I miss a while, and billing notes. Msg and data rates may apply. Reply STOP any time.</span></label>
           <div class="row"><button class="btn sm">Save</button><span class="hint" id="md-msg"></span></div></form>
       </div></section>`)) return;
     const busy = async (b, fn) => { const t = b.textContent; b.disabled = true; b.textContent = 'Opening…'; try { await fn(); } catch (e) { toast(e.message); b.disabled = false; b.textContent = t; } };
     $$('[data-pay]').forEach(b => b.onclick = () => busy(b, async () => { location.href = (await call('pay', { invoice: b.dataset.pay })).url; }));
     $$('[data-join]').forEach(b => b.onclick = () => busy(b, async () => { location.href = (await call('subscribe', { plan: b.dataset.join })).url; }));
     if ($('#portal')) $('#portal').onclick = e => busy(e.target, async () => { location.href = (await call('portal', { gym: g.id })).url; });
-    $('#mdF').onsubmit = async e => { e.preventDefault(); const { error } = await sb.from('member_details').upsert({ profile_id: S.me.id, legal_name: $('#md-n').value.trim() || null, email: $('#md-e').value.trim() || null, phone: $('#md-p').value.trim() || null, emergency_name: $('#md-en').value.trim() || null, emergency_phone: $('#md-ep').value.trim() || null, updated_at: new Date().toISOString() }); $('#md-msg').textContent = error ? error.message : 'Saved.'; };
+    $('#mdF').onsubmit = async e => { e.preventDefault(); const { error } = await sb.from('member_details').upsert({ profile_id: S.me.id, legal_name: $('#md-n').value.trim() || null, email: $('#md-e').value.trim() || null, phone: $('#md-p').value.trim() || null, emergency_name: $('#md-en').value.trim() || null, emergency_phone: $('#md-ep').value.trim() || null, ...($('#md-sms') ? { sms_ok: $('#md-sms').checked } : {}), updated_at: new Date().toISOString() }); $('#md-msg').textContent = error ? error.message : 'Saved.'; };
   };
   VIEWS.billing = VIEWS.mygym;
 
