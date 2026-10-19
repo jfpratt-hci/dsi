@@ -94,6 +94,57 @@ export function install(X) {
     ['Keep the ones you have', 'Every member gets a score that proves they are getting stronger, their own weight on the TV, and a coach who notices when they slip.', '/grow#stay'],
     ['Earn more from each one', 'Memberships between $0 and Unlimited, a store, events and merch, all paid through your own Stripe.', '/grow#spend'],
   ];
+  // Follow up on autopilot: what Dandy texts, and when. Members and leads opt in and can reply STOP.
+  const AUTO = [
+    ['Within 2 minutes', 'New lead', 'Someone fills in the website or texts the gym. They get a reply with class times and a free first class link.'],
+    ['Night before', 'Trial booked', 'A reminder with the address, where to park and what to bring.'],
+    ['After class', 'First visit', '"How was it?" from the coach, with the membership options one tap away.'],
+    ['Day 3, 7, 14', 'Not joined yet', 'A friendly nudge, then a second free class, then a last check in. It stops the moment they join.'],
+    ['10 days quiet', 'Member slipping', 'A note from their coach, and the owner sees it on the dashboard.'],
+    ['Same day', 'New PR', 'A congrats with their new DSI, and once a season, a link to leave a Google review.'],
+    ['When a card fails', 'Billing', 'A private text with a link to update the card. No awkward front desk talk.'],
+  ];
+  const phone = () => `<div class="dxPhone" role="img" aria-label="A sample text thread between the gym and a new lead"><div class="dxPhoneTop"><b>Your Gym</b><span>Text us line</span></div>
+      <ol class="dxThread">
+        <li class="in">Hi, do you have anything for beginners? I have never done CrossFit<time>6:42 pm</time></li>
+        <li class="out">Hi Taylor, every class here is for beginners, the coach scales it for you. Your first class is free. Thursday 5:30 or Saturday 9?<time>6:43 pm · automatic</time></li>
+        <li class="in">Saturday works!<time>6:51 pm</time></li>
+        <li class="out">You are booked for Saturday 9am. Morgan will be your buddy, she will meet you at the door. Wear anything you can move in.<time>6:51 pm · automatic</time></li>
+        <li class="out coach">Great to meet you today Taylor! You crushed it. Want to come back Tuesday?<time>Sat 10:14 am · Coach Dana</time></li>
+      </ol></div>`;
+  const DAYS30 = [
+    ['Day 0', 'Books a free class', 'From the website, a text or a friend\'s invite link.', 'auto'],
+    ['Day 0', 'Gets an answer fast', 'A text back in minutes, any hour.', 'auto'],
+    ['Day 1', 'Meets a buddy', 'A member greets them at the door and shows them around.', 'crew'],
+    ['Week 1', 'Joins', 'Picks a plan that fits their week, signs and pays online.', 'coach'],
+    ['Week 2', 'Sees their name on the TV', 'Their own target weight on the class screen.', 'auto'],
+    ['Day 30', 'Gets a DSI', 'A first score, a next goal and a shout out from the gym.', 'crew'],
+  ];
+  const WHO = { auto: 'Dandy does it', coach: 'Coach', crew: 'Members' };
+  const CREW = [
+    ['Bring a friend pass', 'Every member has their own invite link and QR code. A friend\'s first class is free, and the member sees when they come.'],
+    ['A buddy for every new member', 'New people get paired with a regular for their first two weeks. Nobody walks in alone.'],
+    ['Crew points', 'Members earn points for invites, buddy shifts and reviews. The owner sets the reward: a free month, a tee, a spot on the board.'],
+    ['One goal for the whole gym', 'The lobby TV shows the season goal. 120 members by March, 8 to go. Everyone pulls the same way.'],
+  ];
+  const CREW_BOARD = [['Morgan P.', 4, 3, 220], ['Sam T.', 3, 2, 160], ['Riley M.', 2, 2, 120], ['Chris D.', 2, 1, 90], ['Alex R.', 1, 1, 50]];
+  const crewBoard = () => `<div class="formCard dxCrewBoard">${SAMPLE}<div class="dxCBH"><b>Welcome crew</b><span class="hint">This season</span></div>
+      <table class="inT"><thead><tr><th>Member</th><th class="r">Invited</th><th class="r">Joined</th><th class="r">Points</th></tr></thead><tbody>${CREW_BOARD.map(([n, i, j, p]) => `<tr><td>${n}</td><td class="r n">${i}</td><td class="r n">${j}</td><td class="r n"><b>${p}</b></td></tr>`).join('')}</tbody></table>
+      <div class="dxGoal"><span>Gym goal</span><b>112 of 120 members</b><i><em style="width:93%"></em></i><small>9 of the last 14 new members came from a member's invite</small></div></div>`;
+  const memberDash = () => `<div class="dmPanel">${SAMPLE}<div class="dxMD">
+      <div class="formCard dxT"><span class="grLbl">Classes this month</span><b class="grBig">13</b><span class="pill up">Best month yet</span><div class="dxDots" aria-label="13 of 31 days">${Array.from({ length: 28 }, (_, i) => `<i class="${[1, 3, 4, 6, 8, 10, 11, 13, 15, 17, 18, 20, 22].includes(i) ? 'on' : ''}"></i>`).join('')}</div></div>
+      <div class="formCard dxT"><span class="grLbl">Streak</span><b class="grBig">9</b><span class="hint">weeks with 3 or more classes</span></div>
+      <div class="formCard dxT"><span class="grLbl">DSI</span><b class="grBig">612</b><span class="pill up">Up 64 since May</span>${spark([548, 556, 561, 575, 590, 597, 612], 0, 300, 50, 'DSI rising from 548 to 612')}</div>
+      <div class="formCard dxT"><span class="grLbl">Next goal</span><b class="grBig">635</b><span class="hint">Add 10 lb to the deadlift. About 6 weeks at this pace.</span></div>
+      <div class="formCard dxT dxW2"><span class="grLbl">Latest PRs</span><table class="inT"><tbody>${[['Deadlift', '335 lb', 'Oct 14'], ['Clean', '205 lb', 'Oct 2'], ['Bench', '215 lb', 'Sep 25']].map(([a, b, c]) => `<tr><td>${a}</td><td class="r n"><b>${b}</b></td><td class="r hint">${c}</td></tr>`).join('')}</tbody></table></div>
+      <div class="formCard dxT dxW2"><span class="grLbl">Welcome crew</span><p class="dxCrewMe"><b>2</b> friends brought · <b>1</b> joined · <b>80</b> crew points</p><span class="hint">Invite link and QR code, ready to share</span></div>
+    </div></div>`;
+  const SMALL = [
+    ['Big gyms have marketing teams', 'You have a coach who knows every name. Dandy does the marketing work in the background so that is all you need.'],
+    ['Your members already sell for you', 'A lot of people join a small gym because a friend brought them. Dandy gives every member a way to do that, and a reason to.'],
+    ['Growth is good for everyone', 'More members means fuller classes, more coaches, better equipment and a gym that is still open in ten years.'],
+  ];
+
   VIEWS[''] = async (_, tok) => {
     const m = me(), office = (S.myGyms || [])[0];
     const ctas = office ? `<a class="btn" href="/club/${office.gym_id}?tab=today">Open your gym office</a><a class="btn ghost" href="/growth/${office.gym_id}">Your Growth game</a>`
@@ -109,8 +160,23 @@ export function install(X) {
         <div class="dmHeroDash">${demoGrowth()}</div>
       </section>
       <section class="dmWays">${WAYS.map(([h, p, href], i) => `<a class="dmWay" href="${href}"><span class="dmNum">${i + 1}</span><b>${h}</b><p>${p}</p><span class="dmGo">How it works</span></a>`).join('')}</section>
+      <section class="sec dxAuto"><div class="dxAutoL"><div class="kicker">Follow up on autopilot</div><h2 class="hmH2">Every lead gets a text back. <span>Every member gets noticed.</span></h2>
+          <p class="hmSideSub">Most gyms lose people in the gaps: a question nobody answered, a trial nobody followed up, a regular who quietly stopped coming. Dandy sends the right text at the right time, from your gym's number, and hands the conversation to a coach when it matters.</p>
+          <ol class="dxAutoList">${AUTO.map(([w, k, t]) => `<li><span class="dxWhen">${w}</span><b>${k}</b><p>${t}</p></li>`).join('')}</ol>
+          <p class="hint">People opt in and can reply STOP any time. You edit every message, or turn any of them off.</p></div>
+        <div class="dxAutoR">${phone()}</div></section>
+      <section class="sec"><div class="secHead"><div><div class="kicker">The first 30 days</div><h2 class="hmH2">From stranger to regular</h2><p class="hmSideSub">The first month decides if someone stays. Dandy, your coaches and your members each take a part.</p></div></div>
+        <ol class="dx30">${DAYS30.map(([d, h, p, w]) => `<li class="w-${w}"><span class="dxDay">${d}</span><b>${h}</b><p>${p}</p><span class="dxWho">${WHO[w]}</span></li>`).join('')}</ol></section>
+      <section class="sec dxCrew"><div><div class="kicker">The welcome crew</div><h2 class="hmH2">Your members grow the gym <span>with you</span></h2>
+          <p class="hmSideSub">Nobody sells a small gym better than the people who already train there. Dandy turns that into a game the whole gym plays.</p>
+          <div class="dxCrewGrid">${CREW.map(([h, p]) => `<div class="formCard"><b>${h}</b><p>${p}</p></div>`).join('')}</div></div>
+        ${crewBoard()}</section>
+      <section class="sec dmDash"><div class="secHead"><div><div class="kicker">Member dashboards</div><h2 class="hmH2">Every member sees their progress</h2><p class="hmSideSub">Classes, streaks, PRs and their DSI, all in one place on the app and the gym's website. People who can see themselves getting better keep coming back.</p></div><a class="btn ghost sm" href="/members">For members</a></div>
+        ${memberDash()}</section>
       <section class="sec dmDash"><div class="secHead"><div><div class="kicker">The sample gym</div><h2 class="hmH2">See it run a gym</h2><p class="hmSideSub">Every screen an owner and a member uses, filled with a made up gym so you can look around.</p></div><a class="btn ghost sm" href="/tour">Full tour</a></div>
         ${demoTabs('hm')}</section>
+      <section class="sec dxSmall"><div class="kicker">Why we built this</div><h2 class="hmH2">Every small gym <span>should be growing</span></h2>
+        <div class="dxSmallGrid">${SMALL.map(([h, p], i) => `<div><span class="dmNum">${i + 1}</span><b>${h}</b><p>${p}</p></div>`).join('')}</div></section>
       <section class="hmPrice"><div class="hmPriceHead"><h2 class="hmH2">Two plans</h2><p class="hmSideSub">Card payments run on your own Stripe at Stripe's rates. We add no markup.</p></div>${planCards()}
         <p class="hmSeat">Paying for a website today? On Grow the website comes with everything that runs the gym, for one price.</p></section>
       <section class="hmSwitch"><div><h2 class="hmH2">Coming from Kilo, Wodify or PushPress?</h2><p class="hmSideSub">We move your members, plans, schedule and history for you. Switching usually takes about a week.</p></div><a class="btn" href="/switch">How switching works</a></section>
