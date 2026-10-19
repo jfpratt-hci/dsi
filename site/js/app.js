@@ -185,7 +185,7 @@ async function route() {
   document.body.classList.toggle('tvMode', r === 'tv' || r === 'lobby');
   updateChrome(r);
   const tok = ++S.tok;
-  main.innerHTML = '<p class="empty">Loading…</p>';
+  main.innerHTML = '<p class="empty">DI is on it…</p>';
   try {
     await VIEWS[r](parts[1], tok);
   } catch (e) {
@@ -476,7 +476,7 @@ VIEWS.week = async (day, tok) => {
   else {
     const prog = `<div class="wkProg"><div class="eyebrow">${esc(fmtDW(w.day))}${w.day === tdy ? ' · Today' : ''}${w.source ? ' · ' + esc(w.source) : ''}</div><h3>${esc(w.title)}</h3>
       ${w.rest_note ? `<p class="rest">${esc(w.rest_note)}</p>` : ''}
-      ${P().shownParts(w).map(p => `<div class="wkSec"><b>${P().isParts(w) ? `<i class="wkL">${p.L}</i>` : ''}${esc(p.name)}</b><p>${esc(p.text)}</p>${P().logWords(p) ? `<div class="sub">Log your ${P().logWords(p)}</div>` : ''}</div>`).join('')}
+      ${P().shownParts(w).map(p => `<div class="wkSec"><b>${P().isParts(w) ? `<i class="wkL">${p.L}</i>` : ''}${esc(p.name)}</b><p>${esc(p.text)}</p>${P().levelsHtml ? P().levelsHtml(p, 'wkLv') : ''}${P().logWords(p) ? `<div class="sub">Log your ${P().logWords(p)}</div>` : ''}</div>`).join('')}
       <div class="row">${canEdit(w) ? `<a class="btn sm" href="/wod/${w.gym_id || 'dsi'}?day=${w.day}">Edit workout</a>` : ''}<button class="btn ghost sm" data-thread="workout" data-ref="${w.id}" data-title="${esc(fmtD(w.day) + ' · ' + w.title)}">Day thread</button>${w.benchmark ? `<a class="chip" href="/benchmarks/${encodeURIComponent(w.benchmark)}">Benchmark: ${esc(w.benchmark)}</a>` : ''}${w.gym_id && S.myGyms.some(g => g.gym_id === w.gym_id) ? `<a class="btn sm" href="/results/${w.gym_id}?day=${w.day}">Enter results</a><a class="btn ghost sm" href="/tv/${w.gym_id}">Dandy TV</a>` : ''}</div>
       ${isStaff() ? `<form class="row" id="bmF"><label class="vh" for="bm-n">Benchmark name</label><input id="bm-n" maxlength="40" value="${esc(w.benchmark || '')}" placeholder="Name it as a benchmark, like Fran" style="max-width:260px"><button class="btn ghost sm">Save</button></form>` : ''}</div>`;
     let mine = '';

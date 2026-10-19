@@ -18,6 +18,9 @@ export function install(X) {
   X.TIERS = TIERS;
   const me = () => S.me && S.me.display_name ? S.me : null;
   const SAMPLE = '<span class="dmTag">Sample gym · made up numbers</span>';
+  // DI, Dandy Intelligence: the part of Dandy that does the math and notices things. Funny name, serious work.
+  const DI = '<abbr class="diTag" title="Dandy Intelligence">DI</abbr>';
+  X.DI = DI;
   const plates = '<span class="hmPlates" aria-hidden="true"><i style="--c:var(--bench)"></i><i style="--c:var(--squat)"></i><i style="--c:var(--dead)"></i><i style="--c:var(--clean)"></i></span>';
 
   /* ---------- the sample gym ---------- */
@@ -56,26 +59,28 @@ export function install(X) {
     return `<svg viewBox="-2 -2 25 25" aria-hidden="true" shape-rendering="crispEdges"><rect x="-2" y="-2" width="25" height="25" fill="#fff"/><g fill="#0E1420">${r}</g></svg>`; };
   const demoMember = () => `<div class="dmPanel">${SAMPLE}<div class="dmGrid3">
       <div class="formCard dmCard"><span class="grLbl">Alex R. · DSI</span><b class="grBig">612</b><span class="pill up">Up 64 since May</span><p class="hint">Bench, squat, deadlift and clean, scored against lifters the same age and size. 500 is the median.</p>${spark([548, 556, 561, 575, 590, 597, 612], 0, 300, 70, 'DSI over 6 months, 548 to 612')}</div>
-      <div class="formCard dmCard"><span class="grLbl">Today's targets</span><table class="inT"><tbody>${[['Back squat 5 x 3', '225 lb'], ['Strict press 5 x 5', '95 lb'], ['Clean, build to heavy', '205 lb']].map(([a, b]) => `<tr><td>${a}</td><td class="r n"><b>${b}</b></td></tr>`).join('')}</tbody></table><p class="hint">Worked out from Alex's own PRs. The same numbers show on the class TV.</p></div>
+      <div class="formCard dmCard"><span class="grLbl">Today's targets</span><table class="inT"><tbody>${[['Back squat 5 x 3', '225 lb'], ['Strict press 5 x 5', '95 lb'], ['Clean, build to heavy', '205 lb']].map(([a, b]) => `<tr><td>${a}</td><td class="r n"><b>${b}</b></td></tr>`).join('')}</tbody></table><p class="hint">Worked out by DI from Alex's own PRs. The same numbers show on the class TV.</p></div>
       <div class="formCard dmCard"><span class="grLbl">DSI Pro</span><ul class="hmTicks"><li>Progress charts for every lift</li><li>A goal plan to the next number</li><li>A DI coach that knows Alex's numbers</li><li>Readiness from WHOOP or Apple Health</li></ul><p class="hint">Included with Unlimited at gyms on Grow.</p></div></div></div>`;
   /* ---------- Dandy TV, drawn like the real screens (sizes are shares of the TV's width) ---------- */
   const tvLogo = '<span class="txLogo" aria-hidden="true"><i style="--c:var(--bench)"></i><i style="--c:var(--squat)"></i><i style="--c:var(--dead)"></i><i style="--c:var(--clean)"></i></span>';
   const tvPlan = (on) => `<div class="txPlan">${[['A', 'Warmup', 12, 'done'], ['', '', 3, 'gap'], ['B', 'Strength', 12, on === 'B' ? 'now' : ''], ['', '', 3, 'gap'], ['C', 'Conditioning', 15, ''], ['', 'Open', 15, 'open']].map(([L, n, m, k]) => `<span class="txSeg ${k}" style="flex:${m}">${L ? `<b>${L}</b> ` : ''}${n ? `${n}${k === 'gap' ? '' : ' · ' + m + ' min'}` : m + '′'}</span>`).join('')}<i class="txNeedle" style="left:43%"></i></div><div class="txPlanT"><span>5:30 PM start</span><span>6:30 PM end</span></div>`;
+  const LV = { B: [['#3ccf7a', 'Beginner', '5 x 5 goblet squat'], ['var(--accent)', 'Rx', 'As written'], ['#f0566a', 'Comp', '5 x 3 at 85%']],
+    C: [['#3ccf7a', 'Beginner', '45/35 lb, ring rows'], ['var(--accent)', 'Rx', '95/65 lb, pull ups'], ['#f0566a', 'Comp', '115/80 lb, chest to bar']] };
   const TVS = {
-    wod: ['Class: the plan', 'Every part of today\'s workout, with the class clock running from the start time.', () => `<div class="tx txWod">
+    wod: ['Class: the plan', 'Every part of today\'s workout with Beginner, Rx and Comp versions, and the class clock running from the start time.', () => `<div class="tx txWod">
         <div class="txTop"><b class="txTitle">Back squat + Fran</b><div class="txClock"><span>Class time</span><b>23:40</b><em>37 min left · B Strength now</em></div></div>${tvPlan('B')}
-        <div class="txParts">${[['A', 'Warmup', '3 rounds: 200m row, 10 PVC pass throughs, 10 goblet squats', ''], ['B', 'Strength', 'Back squat 5 x 3 at 80%. Rest 2 min.', 'Log your squat weight'], ['C', 'Conditioning', 'Fran: 21, 15, 9 thrusters and pull ups', 'Log your time']].map(([L, n, t, f], i) => `<div class="txPart${i === 1 ? ' now' : ''}"><div class="txPH"><i>${L}</i>${n}</div><p>${t}</p>${f ? `<small>${f}</small>` : ''}</div>`).join('')}</div>
-        <div class="txFoot">${tvLogo}<span class="txDots"><i class="on"></i><i></i><i></i><i></i></span><span class="txDate">Tue, Oct 20 <b>5:53 PM</b></span></div></div>`],
+        <div class="txParts">${[['A', 'Warmup', '3 rounds: 200m row, 10 PVC pass throughs, 10 goblet squats', ''], ['B', 'Strength', 'Back squat 5 x 3 at 80%. Rest 2 min.', 'Log your squat weight'], ['C', 'Conditioning', 'Fran: 21, 15, 9 thrusters and pull ups', 'Log your time']].map(([L, n, t, f], i) => `<div class="txPart${i === 1 ? ' now' : ''}"><div class="txPH"><i>${L}</i>${n}</div><p>${t}</p>${LV[L] ? `<div class="txLv">${LV[L].map(([k, nm, v]) => `<span style="--lc:${k}"><b>${nm}</b>${v}</span>`).join('')}</div>` : ''}${f ? `<small>${f}</small>` : ''}</div>`).join('')}</div>
+        <div class="txFoot">${tvLogo}<span class="txDots"><i class="on"></i><i></i><i></i><i></i></span><span class="txDiSay">DI says: B is running 2 min long. That is fine.</span><span class="txDate">Tue, Oct 20 <b>5:53 PM</b></span></div></div>`],
     focus: ['Class: one part, every target', 'Tap a part and the TV runs its clock and lists each member\'s own weight, worked out from their PRs.', () => `<div class="tx txFoc">
         <div class="txTop"><div class="txTabs"><span><i>A</i>Warmup</span><span class="on"><i>B</i>Strength</span><span><i>C</i>Conditioning</span></div><div class="txClock sm"><span>Class time</span><b>23:40</b></div></div>${tvPlan('B')}
-        <div class="txFocusB"><div><p class="txBig">Back squat 5 x 3 at 80%. Rest 2 min.</p><small>Back squat · 80% of your best</small></div>
+        <div class="txFocusB"><div><p class="txBig">Back squat 5 x 3 at 80%. Rest 2 min.</p><div class="txLv big">${LV.B.map(([k, nm, v]) => `<span style="--lc:${k}"><b>${nm}</b>${v}</span>`).join('')}</div><small>Back squat · 80% of your best · targets by ${DI}</small></div>
           <div class="txSide"><div class="txTimer"><b>1:42</b><span>Rest · set 3 of 5</span></div>
-            <div class="txTargets"><b>Your targets</b>${[['Jordan K.', 265], ['Sam T.', 225], ['Riley M.', 185], ['Alex R.', 175], ['Casey L.', 135]].map(([n, w]) => `<span><em>${n}</em>${w}</span>`).join('')}</div></div></div></div>`],
+            <div class="txTargets"><b>Your targets <em class="txDi">by DI</em></b>${[['Jordan K.', 265], ['Sam T.', 225], ['Riley M.', 185], ['Alex R.', 175], ['Casey L.', 135]].map(([n, w]) => `<span><em>${n}</em>${w}</span>`).join('')}</div></div></div></div>`],
     sched: ['Lobby: today', 'The day\'s classes, coaches and open spots, with a QR code to book.', () => `<div class="tx txLob">
         <div class="txLH">${tvLogo}<div><b>Your Gym</b><span>Milford, OH</span></div><span class="txDate">Tue, Oct 20 <b>4:35 PM</b></span></div>
         <div class="txSched"><div class="txList"><b class="txK">Today's classes</b>${[['6:00 AM', 'CrossFit', 'Coach Dana', 'Done'], ['12:00 PM', 'CrossFit', 'Coach Sam', 'Done'], ['4:30 PM', 'Teens', 'Coach Riley', 'Now'], ['5:30 PM', 'CrossFit', 'Coach Dana', '3 spots'], ['6:30 PM', 'CrossFit', 'Coach Sam', '8 spots']].map(([t, n, c, x]) => `<div class="txRow${x === 'Now' ? ' now' : x === 'Done' ? ' done' : ''}"><b>${t}</b><span>${n}<small>${c}</small></span><em>${x}</em></div>`).join('')}</div>
           <div class="txQr">${fakeQr()}<b>Scan to book</b></div></div>
-        <div class="txLF"><span class="txLive"></span><b>Next class · 5:30 PM</b><span>CrossFit with Coach Dana · in 55 min</span></div></div>`],
+        <div class="txLF"><span class="txLive"></span><b>Next class · 5:30 PM</b><span>CrossFit with Coach Dana · in 55 min</span><span class="txDiSay">DI says: 5:30 fills first. Book now.</span></div></div>`],
     prs: ['Lobby: PRs and the board', 'This week\'s PRs and the gym\'s DSI board, so every new number gets seen.', () => `<div class="tx txLob">
         <div class="txLH">${tvLogo}<div><b>Your Gym</b><span>Milford, OH</span></div><span class="txDate">Tue, Oct 20 <b>4:35 PM</b></span></div>
         <div class="txPrs"><div><b class="txK">New PRs this week</b><div class="txPrGrid">${[['Morgan P.', 'Deadlift', 315, 'var(--dead)'], ['Chris D.', 'Bench', 225, 'var(--bench)'], ['Taylor B.', 'Back squat', 185, 'var(--squat)'], ['Sam T.', 'Clean', 205, 'var(--clean)']].map(([n, l, w, c]) => `<div class="txPr" style="--c:${c}"><span>${l}</span><b>${w}<small>lb</small></b><em>${n}</em></div>`).join('')}</div></div>
@@ -117,12 +122,12 @@ export function install(X) {
       <div class="formCard atCard"><div class="atH"><b>When people come</b><span class="hint">Average check ins per class, last 8 weeks</span></div>
         <div class="atHeat" role="table" aria-label="Average attendance by day and class time"><span></span>${HEAT_H.map(h => `<span class="atHh">${h}</span>`).join('')}
           ${HEAT.map((r, d) => `<span class="atHd">${HEAT_D[d]}</span>${r.map(v => `<span class="atC" style="--a:${v ? (0.15 + v / hmax * 0.85).toFixed(2) : 0}" title="${v || 'No class'}">${v || ''}</span>`).join('')}`).join('')}</div>
-        <p class="hint">Saturday 9am and weeknight 5:30 fill up. Friday 6:30 is the one to rethink.</p></div>
+        <p class="hint">${DI} noticed: Saturday 9am and weeknight 5:30 fill up. Friday 6:30 is the one to rethink.</p></div>
       <div class="formCard atCard"><div class="atH"><b>Do new members stay?</b><span class="hint">Share still coming, by the month they joined</span></div>
         <table class="inT atCo"><thead><tr><th>Joined</th><th class="r">New</th>${['1st', '2nd', '3rd', '4th', '5th'].map(m => `<th class="r">${m} mo</th>`).join('')}</tr></thead><tbody>
           ${COHORT.map(([m, n, r]) => `<tr><td>${m}</td><td class="r n">${n}</td>${[0, 1, 2, 3, 4].map(i => r[i] != null ? `<td class="r n"><span class="atPct" style="--a:${(r[i] / 100).toFixed(2)}">${r[i]}%</span></td>` : '<td></td>').join('')}</tr>`).join('')}</tbody></table>
-        <p class="hint">About 84% of new members are still training 3 months in.</p></div>
-      <div class="formCard atCard"><div class="atH"><b>Slipping away</b><span class="hint">Regulars with no class lately</span></div>
+        <p class="hint">About 84% of new members are still training 3 months in. ${DI} would like that to be 90.</p></div>
+      <div class="formCard atCard"><div class="atH"><b>Slipping away</b><span class="hint">Regulars with no class lately, spotted by ${DI}</span></div>
         <ul class="atSlip">${[['Morgan P.', '12 days', '3x a week before', 'Text sent'], ['Chris D.', '16 days', '2x a week before', 'Text sent'], ['Jamie R.', '24 days', '4x a week before', 'Coach to call'], ['Drew P.', '31 days', '2x a week before', 'Coach to call']].map(([n, d, w, a]) => `<li><span><b>${n}</b><small>${w}</small></span><em>${d}</em><span class="pill ${a === 'Text sent' ? 'up' : 'acc'}">${a}</span></li>`).join('')}</ul></div>
       <div class="formCard atCard"><div class="atH"><b>Where members come from</b><span class="hint">Last 90 days</span></div>
         <ul class="atSrc">${[['A member brought them', 9], ['Website', 6], ['Google', 4], ['Instagram', 2], ['Walked in', 1]].map(([n, v]) => `<li><span>${n}</span><i><em style="width:${v / 9 * 100}%"></em></i><b>${v}</b></li>`).join('')}</ul></div>
@@ -130,7 +135,7 @@ export function install(X) {
   };
   const TRACK = [
     ['They check in', 'From the app, the QR code at the door, or the coach on the class iPad. One tap, every class.'],
-    ['Dandy keeps the count', 'Every visit lands on the member\'s record, the class roster, and the gym\'s numbers. Nobody types anything up.'],
+    ['DI keeps the count', 'Every visit lands on the member\'s record, the class roster, and the gym\'s numbers. Nobody types anything up. DI does not get bored.'],
     ['You see the trend', 'Members, joins, cancels, busy hours and who is slipping, updated every day.'],
     ['The game keeps score', 'The Growth game turns those numbers into a weekly score against par for a gym your size.'],
   ];
@@ -154,7 +159,7 @@ export function install(X) {
   const planCards = (cta = true) => `<div class="dmPlans">${TIERS.map(t => `<article class="plCard${t.k === 'grow' ? ' dmPick' : ''}">${t.k === 'grow' ? '<span class="dmBadge">Most growth</span>' : ''}<b class="plName">${t.n}</b><span class="hmAmt">$${t.p}<small>/mo</small></span><span class="hmWho2">${esc(t.who)}</span>
       <ul class="plList">${CARD[t.k].map(x => `<li>${esc(x)}</li>`).join('')}</ul>${cta ? `<a class="btn${t.k === 'grow' ? '' : ' ghost'}" href="/start?tier=${t.k}">Book a setup call</a>` : ''}</article>`).join('')}</div>`;
   const CARD = {
-    run: ['Class booking, check in and attendance', 'Billing and autopay on your own Stripe', 'Waivers and contracts signed online', 'Staff, coach swaps, hours and pay', 'Dandy TV for the class and the lobby', 'Workouts in Parts A to D with every member\'s target', 'Dandy Plan DI programming', 'The DSI, the member app and the Growth game', 'Month to month'],
+    run: ['Class booking, check in and attendance', 'Billing and autopay on your own Stripe', 'Waivers and contracts signed online', 'Staff, coach swaps, hours and pay', 'Dandy TV for the class and the lobby', 'Workouts in Parts A to D, each with Beginner, Rx and Comp', 'Every member\'s target, set by DI', 'Dandy Plan DI programming', 'The DSI, the member app and the Growth game', 'Month to month'],
     grow: ['Everything in Run', 'A new website, built and run by us, on your domain', 'A text us line and a lead inbox', 'Store, events and appointments on your site', 'Review requests after class', 'DSI Pro for every Unlimited member', 'A growth plan we set with you each season', '2 month minimum, no setup fee'],
   };
   const endCta = (h = 'See what Dandy can do for your gym', p = 'Book a 20 minute setup call. We look at your gym with you and show you the plan.') => `<section class="sec plEnd"><div><h2 class="hmH2">${h}</h2><p class="hmSideSub">${p}</p></div><div class="row"><a class="btn" href="/start">Book a setup call</a><a class="btn ghost" href="/tour">Tour the sample gym</a></div></section>`;
@@ -191,7 +196,7 @@ export function install(X) {
     ['Week 2', 'Sees their name on the TV', 'Their own target weight on the class screen.', 'auto'],
     ['Day 30', 'Gets a DSI', 'A first score, a next goal and a shout out from the gym.', 'crew'],
   ];
-  const WHO = { auto: 'Dandy does it', coach: 'Coach', crew: 'Members' };
+  const WHO = { auto: 'DI does it', coach: 'Coach', crew: 'Members' };
   const CREW = [
     ['Bring a friend pass', 'Every member has their own invite link and QR code. A friend\'s first class is free, and the member sees when they come.'],
     ['A buddy for every new member', 'New people get paired with a regular for their first two weeks. Nobody walks in alone.'],
@@ -206,12 +211,18 @@ export function install(X) {
       <div class="formCard dxT"><span class="grLbl">Classes this month</span><b class="grBig">13</b><span class="pill up">Best month yet</span><div class="dxDots" aria-label="13 of 31 days">${Array.from({ length: 28 }, (_, i) => `<i class="${[1, 3, 4, 6, 8, 10, 11, 13, 15, 17, 18, 20, 22].includes(i) ? 'on' : ''}"></i>`).join('')}</div></div>
       <div class="formCard dxT"><span class="grLbl">Streak</span><b class="grBig">9</b><span class="hint">weeks with 3 or more classes</span></div>
       <div class="formCard dxT"><span class="grLbl">DSI</span><b class="grBig">612</b><span class="pill up">Up 64 since May</span>${spark([548, 556, 561, 575, 590, 597, 612], 0, 300, 50, 'DSI rising from 548 to 612')}</div>
-      <div class="formCard dxT"><span class="grLbl">Next goal</span><b class="grBig">635</b><span class="hint">Add 10 lb to the deadlift. About 6 weeks at this pace.</span></div>
+      <div class="formCard dxT"><span class="grLbl">Next goal · plan by DI</span><b class="grBig">635</b><span class="hint">Add 10 lb to the deadlift. About 6 weeks at this pace.</span></div>
       <div class="formCard dxT dxW2"><span class="grLbl">Latest PRs</span><table class="inT"><tbody>${[['Deadlift', '335 lb', 'Oct 14'], ['Clean', '205 lb', 'Oct 2'], ['Bench', '215 lb', 'Sep 25']].map(([a, b, c]) => `<tr><td>${a}</td><td class="r n"><b>${b}</b></td><td class="r hint">${c}</td></tr>`).join('')}</tbody></table></div>
       <div class="formCard dxT dxW2"><span class="grLbl">Welcome crew</span><p class="dxCrewMe"><b>2</b> friends brought · <b>1</b> joined · <b>80</b> crew points</p><span class="hint">Invite link and QR code, ready to share</span></div>
     </div></div>`;
+  const MEET_DI = [
+    ['DI writes the programming', 'Tell it your goals and your calendar. It builds the cycle, the weeks and Parts A to D. You edit anything you want.'],
+    ['DI sets every target', 'Each member\'s weight for the day, worked out from their own PRs, on the TV and in the app.'],
+    ['DI notices things', 'Who is slipping, which class is half empty, which trial never came back. It tells you before it shows up in the bank account.'],
+    ['DI keeps score', 'The Growth Index, the Reputation Index and the DSI. It does not round up.'],
+  ];
   const SMALL = [
-    ['Big gyms have marketing teams', 'You have a coach who knows every name. Dandy does the marketing work in the background so that is all you need.'],
+    ['Big gyms have marketing teams', 'You have a coach who knows every name, and now DI. Dandy does the marketing work in the background so the coach can coach.'],
     ['Your members already sell for you', 'A lot of people join a small gym because a friend brought them. Dandy gives every member a way to do that, and a reason to.'],
     ['Growth is good for everyone', 'More members means fuller classes, more coaches, better equipment and a gym that is still open in ten years.'],
   ];
@@ -224,7 +235,7 @@ export function install(X) {
       <section class="hmHero">
         <div class="hmLead">
           <h1 class="hmH">Grow your gym.${plates}</h1>
-          <p class="hmSub">Dandy Strength runs your classes, billing and screens, builds the website that brings in members, and keeps score of your growth every week.</p>
+          <p class="hmSub">Dandy Strength runs your classes, billing and screens, builds the website that brings in members, and keeps score of your growth every week. Powered by DI, Dandy Intelligence, which is exactly as serious as it sounds.</p>
           <div class="row hmCta">${ctas}</div>
           ${m && !office ? '<p class="hint">Here for your own numbers? <a href="/boards">See the boards</a>.</p>' : ''}
         </div>
@@ -251,6 +262,10 @@ export function install(X) {
         ${demoAttend()}</section>
       <section class="sec dmDash"><div class="secHead"><div><div class="kicker">The sample gym</div><h2 class="hmH2">See it run a gym</h2><p class="hmSideSub">Every screen an owner and a member uses, filled with a made up gym so you can look around.</p></div><a class="btn ghost sm" href="/tour">Full tour</a></div>
         ${demoTabs('hm')}</section>
+      <section class="sec diMeet"><div><div class="kicker">Meet DI</div><h2 class="hmH2">DI. <span>Dandy Intelligence.</span></h2>
+          <p class="hmSideSub">Yes, we named the AI after ourselves. It is still very good at its job. DI is the part of Dandy that does the math, remembers everything and never takes a rest day.</p>
+          <p class="diFine">DI does not lift. You still have to lift.</p></div>
+        <div class="diGrid">${MEET_DI.map(([h, p]) => `<div class="formCard"><span class="diTag big">DI</span><b>${h}</b><p>${p}</p></div>`).join('')}</div></section>
       <section class="sec dxSmall"><div class="kicker">Why we built this</div><h2 class="hmH2">Every small gym <span>should be growing</span></h2>
         <div class="dxSmallGrid">${SMALL.map(([h, p], i) => `<div><span class="dmNum">${i + 1}</span><b>${h}</b><p>${p}</p></div>`).join('')}</div></section>
       <section class="hmPrice"><div class="hmPriceHead"><h2 class="hmH2">Two plans</h2><p class="hmSideSub">Card payments run on your own Stripe at Stripe's rates. We add no markup.</p></div>${planCards()}
@@ -315,7 +330,7 @@ export function install(X) {
     ['Who moves my members?', 'We do. Send your member list, plans and schedule from Kilo, Wodify, PushPress or a spreadsheet, and we set everything up with you.'],
     ['What do card payments cost?', 'Stripe\'s standard rates, paid to Stripe. Money goes straight to your own Stripe account, and we add nothing.'],
     ['Do members pay for the app?', 'No. The DSI and the member app are free. On Grow, every Unlimited member gets DSI Pro included.'],
-    ['What is DI?', 'DI is Dandy Intelligence, the AI built into Dandy Strength. It writes your programming from your goals and coaches members on their own numbers.'],
+    ['What is DI?', 'DI is Dandy Intelligence, the AI built into Dandy Strength. Yes, we named it after ourselves. It writes your programming from your goals, sets every member\'s target, notices who is slipping and coaches members on their own numbers.'],
     ['Who owns the website and the data?', 'You do. Your domain stays yours, and you can export your members and history any time.'],
   ];
   VIEWS.pricing = async (_, tok) => {

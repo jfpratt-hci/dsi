@@ -1618,3 +1618,32 @@ td.nowrap{white-space:nowrap}
 .txRow{grid-template-columns:12cqw minmax(0,1fr) auto;padding:1.1cqw 1.6cqw}.txRow b,.txRow span{font-size:2.2cqw}.txRow small{font-size:1.3cqw}.txRow em{font-size:1.6cqw}
 .txPr b{font-size:5cqw}.txPr em{font-size:2.2cqw}.txBoard span{font-size:2cqw}.txBoard b{font-size:2.5cqw}.txBoard>div{padding:1cqw 1.4cqw}
 .txK{font-size:1.5cqw}.txLF{font-size:1.7cqw}.txLF b{font-size:2.4cqw}.txEv p{font-size:2.2cqw}.txGear b{font-size:1.8cqw}.txGear span{font-size:2.4cqw}
+/* DI, Dandy Intelligence */
+abbr.diTag,.diTag{display:inline-block;font:800 .72em/1 var(--mono);letter-spacing:.06em;color:#141414;background:var(--accent);border-radius:3px;padding:.18em .32em .14em;text-decoration:none;vertical-align:.08em;cursor:help}
+.diTag.big{font-size:14px;justify-self:start}
+.txDi{font:700 .6em var(--mono);font-style:normal;color:#8E9AB0;margin-left:.6em;letter-spacing:.1em;text-transform:uppercase}
+.txDiSay{font:700 1.2cqw var(--mono);color:var(--accent);margin-left:auto;margin-right:2cqw;letter-spacing:.04em}
+.txLF .txDiSay{font-size:1.4cqw;margin-right:0}
+.diMeet{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:40px;align-items:start}
+.diGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.diGrid .formCard{gap:8px;align-content:start}.diGrid b{font:800 20px var(--disp);text-transform:uppercase}.diGrid p{margin:0;color:var(--muted);font-size:14px}
+.diFine{font:600 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:14px}
+@media (max-width:900px){.diMeet{grid-template-columns:1fr;gap:20px}}@media (max-width:560px){.diGrid{grid-template-columns:1fr}}
+.tvDiBy{font:700 .5em var(--mono);letter-spacing:.1em;color:#8E9AB0;text-transform:uppercase;margin-left:.4em}
+/* Beginner, Rx and Comp levels on a part */
+.lvRow{display:grid;gap:6px;margin-top:8px}
+.lv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:baseline;font-size:14px;border-left:3px solid var(--lc);padding:2px 0 2px 8px}
+.lv b{font:700 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--lc);min-width:6.5em}
+.lv-beg{--lc:#3ccf7a}.lv-rx{--lc:var(--accent)}.lv-comp{--lc:#f0566a}
+.tvLv{margin-top:auto;gap:.5cqw;flex:none}.tvLv .lv{font-size:1.25cqw;border-left-width:.3cqw;padding-left:.7cqw;gap:.7cqw}.tvLv .lv b{font-size:.95cqw}
+.tvLv.big{margin-top:1.2cqw;grid-template-columns:repeat(3,minmax(0,1fr))}.tvLv.big .lv{font-size:1.7cqw;grid-template-columns:1fr}.tvLv.big .lv b{font-size:1.15cqw}
+.wodLv{display:grid;gap:6px}.wodLv>span{font:700 11px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}.wodLv small{text-transform:none;letter-spacing:0;font-weight:500}
+.wodLv input{font-size:13px;padding:7px 9px}
+.wodLv input:nth-of-type(1){border-left:3px solid #3ccf7a}.wodLv input:nth-of-type(2){border-left:3px solid var(--accent)}.wodLv input:nth-of-type(3){border-left:3px solid #f0566a}
+.wkLv{margin:6px 0 4px}
+/* Home TV mock: the same three levels */
+.txLv{display:grid;gap:.4cqw;margin-top:auto}.txLv span{display:grid;grid-template-columns:7cqw 1fr;font:600 1.2cqw/1.25 var(--sans);border-left:.3cqw solid var(--lc);padding-left:.6cqw}.txLv b{font:700 .95cqw var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--lc)}
+.txPart{display:flex;flex-direction:column}.txPart p{flex:1}.txPart small{margin-top:.6cqw}
+.txLv.big{grid-template-columns:repeat(3,minmax(0,1fr));gap:1cqw;margin:1.2cqw 0}.txLv.big span{grid-template-columns:1fr;font-size:1.7cqw}.txLv.big b{font-size:1.1cqw}
+.txFocusB>div:first-child{grid-template-rows:auto auto 1fr auto}.txFocusB>div:first-child small{align-self:end}
+.txFoot .txDiSay{margin-left:0}.txFoot .txDots{margin:0 auto}
+.tvLv .lv{font-family:var(--sans);font-weight:600;line-height:1.25}.tvLv.big .lv{align-content:start;font-size:2cqw;gap:.3cqw}.tvLv.big .lv b{font-size:1.2cqw}

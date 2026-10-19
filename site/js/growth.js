@@ -176,7 +176,7 @@ export function install(X) {
           <button class="btn ghost sm" type="button" id="grSetB">${goal ? 'Change goal' : 'Set a goal'}</button></div>
       </div>
       <div class="grMain">
-        <div class="formCard grQuests"><div class="grQHead"><h3 class="inH">Quests</h3>
+        <div class="formCard grQuests"><div class="grQHead"><h3 class="inH">Quests <small class="hint">picked with DI</small></h3>
           <nav class="chips"><a class="chip" href="/growth/${gid}" aria-pressed="${qtab === 'open'}">Open ${open.length}</a><a class="chip" href="/growth/${gid}?q=done" aria-pressed="${qtab === 'done'}">Done ${done.length}</a></nav>
           <button class="btn ghost sm" type="button" id="grIdeas">Ideas</button><button class="btn ghost sm" type="button" id="grAdd">Add a quest</button></div>
           <div id="grPanel"></div>

@@ -134,7 +134,7 @@ export function install(X) {
           <label class="vh" for="fr-${k}">${esc(n)} message</label><textarea id="fr-${k}" rows="4" maxlength="480" data-body placeholder="${esc(defs[k])}"${canEdit ? '' : ' disabled'}>${esc(r.body || '')}</textarea>
           <p class="fuPrev" data-prev aria-live="polite"></p>
           <div class="row"><button class="btn sm" type="button" data-save${canEdit ? '' : ' disabled'}>Save</button><button class="btn ghost sm" type="button" data-reset${canEdit && r.body ? '' : ' disabled'}>Use the default</button><span class="hint" data-n></span></div></article>`; };
-      if (!paint(tok, `${head}<p class="secSub">Each text fills in the person's first name and your gym's details. Leave a message blank to use the default shown in grey. Words in braces fill in: ${esc(VARS)}.</p>
+      if (!paint(tok, `${head}<p class="secSub">DI sends these so nobody has to remember to. Each text fills in the person's first name and your gym's details. Leave a message blank to use the default shown in grey. Words in braces fill in: ${esc(VARS)}.</p>
         <h3 class="fuG">New people</h3><div class="fuRules">${RULES.filter(r => r[4] !== 'member').map(card).join('')}</div>
         <h3 class="fuG">Members</h3><div class="fuRules">${RULES.filter(r => r[4] === 'member').map(card).join('')}</div>
         <p class="hint">People only get texts after they agree to them, and every text honors STOP. Members turn texts on in their membership page.</p></section>`)) return;

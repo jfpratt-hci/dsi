@@ -18,7 +18,7 @@ export function install(X) {
   const isParts = w => !!w && ((w.sections || []).some(s => s.part) || (w.lifts || []).some(l => l.part));
   function partsOf(w, withD) {
     const secs = (w && w.sections) || [], lifts = (w && w.lifts) || [], np = isParts(w);
-    return LET.map((L, i) => { const s = (np ? secs.find(x => x.part === L) : secs[i]) || {}; return { L, name: s.name || '', text: s.text || '', clock: s.clock || null, gap: s.gap ?? null, time: !!s.time, reps: !!s.reps, lift: lifts.find(l => l.part === L) || null }; })
+    return LET.map((L, i) => { const s = (np ? secs.find(x => x.part === L) : secs[i]) || {}; return { L, name: s.name || '', text: s.text || '', levels: s.levels || null, clock: s.clock || null, gap: s.gap ?? null, time: !!s.time, reps: !!s.reps, lift: lifts.find(l => l.part === L) || null }; })
       .filter(p => p.L !== 'D' || withD || p.text || p.lift || p.time || p.reps);
   }
   // What a screen shows: the parts with something in them. Older days keep every section they had.
@@ -59,7 +59,11 @@ export function install(X) {
   const rankKey = w => { const its = items(w), it = its.find(i => i.lift && i.lift.max) || its[0]; return it || null; };
   // Part D only shows on a board once somebody logged it.
   const boardItems = (w, logs) => items(w).filter(it => it.L !== 'D' || logs.some(x => num((x.entries || {})[it.key])));
-  X.parts = { isParts, partsOf, shownParts, liftLabel, items, fmtT, parseT, cell, rankKey, boardItems, logWords };
+  // Beginner, Rx and Comp: the same part three ways. Shown wherever the part is, only the levels the coach wrote.
+  const LEVELS = [['beg', 'Beginner'], ['rx', 'Rx'], ['comp', 'Comp']];
+  const levelsHtml = (p, cls = '') => { const v = p && p.levels; if (!v || !LEVELS.some(([k]) => v[k])) return '';
+    return `<div class="lvRow ${cls}">${LEVELS.filter(([k]) => v[k]).map(([k, n]) => `<span class="lv lv-${k}"><b>${n}</b>${esc(v[k])}</span>`).join('')}</div>`; };
+  X.parts = { levelsHtml, LEVELS, isParts, partsOf, shownParts, liftLabel, items, fmtT, parseT, cell, rankKey, boardItems, logWords };
 
   // A gym can be reached by its id or its short big screen name (gyms.slug).
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -203,6 +207,7 @@ export function install(X) {
           <span class="wodMv"><button type="button" class="btn ghost sm" data-mv="-1" aria-label="Move this part earlier">◀</button><button type="button" class="btn ghost sm" data-mv="1" aria-label="Move this part later">▶</button><button type="button" class="btn ghost sm" data-rm aria-label="Remove this part">✕</button></span></div>
         <label class="vh" for="wt-${p.L}">Part ${p.L} workout</label><textarea id="wt-${p.L}" data-text rows="7" maxlength="2000" placeholder="${p.L === 'A' ? 'Warmup, skill or mobility' : 'Sets, reps and movements'}">${esc(p.text)}</textarea>
         ${(() => { const c = p.clock && p.clock.mode ? p.clock : suggestClock(p.text); return `<div class="wodClock" role="group" aria-label="Part ${p.L} clock"${p.clock && p.clock.mode ? '' : ' data-auto'}><span>Clock</span><label class="vh" for="wcm-${p.L}">Part ${p.L} clock type</label><select id="wcm-${p.L}" data-cm>${[['down', 'Count down'], ['up', 'Count up'], ['emom', 'EMOM'], ['none', 'No clock']].map(([v, n]) => `<option value="${v}"${c.mode === v ? ' selected' : ''}>${n}</option>`).join('')}</select><label class="vh" for="wcn-${p.L}">Part ${p.L} minutes</label><input id="wcn-${p.L}" data-cmin type="number" inputmode="numeric" min="0" max="90" value="${c.min || ''}" placeholder="min"${c.mode === 'none' ? ' disabled' : ''}><span>min</span></div>`; })()}
+        <div class="wodLv" role="group" aria-label="Part ${p.L} levels"><span>Levels <small>optional</small></span>${[['beg', 'Beginner', 'Ring rows, 45/35 lb'], ['rx', 'Rx', 'As written'], ['comp', 'Comp', 'Chest to bar, 115/80 lb']].map(([k, n, ph]) => `<label class="vh" for="wl${k}-${p.L}">Part ${p.L} ${n}</label><input id="wl${k}-${p.L}" data-lv="${k}" maxlength="160" value="${esc((p.levels && p.levels[k]) || '')}" placeholder="${n}: ${ph}">`).join('')}</div>
         ${`
         <div class="wodTog" role="group" aria-label="What members log for Part ${p.L}"><span>Members log</span>
           <label class="tog"><input type="checkbox" data-trk${p.lift ? ' checked' : ''}><span>Weight</span></label>
@@ -279,7 +284,7 @@ export function install(X) {
     // Parts are A to D in the order they stand. Moving a part takes everything in it along and the letters follow.
     const grid = $('.wodGrid');
     const clearPart = a => {
-      $('[data-text]', a).value = ''; $('[data-name]', a).value = '';
+      $('[data-text]', a).value = ''; $('[data-name]', a).value = ''; $$('[data-lv]', a).forEach(x => { x.value = ''; });
       ['[data-time]', '[data-reps]'].forEach(q => { const c = $(q, a); if (c) c.checked = false; });
       const t = $('[data-trk]', a); if (t) { t.checked = false; t.dispatchEvent(new Event('change')); }
       const ck = $('.wodClock', a); ck.dataset.auto = ''; $('[data-cm]', a).value = 'up'; $('[data-cmin]', a).value = ''; $('[data-cmin]', a).disabled = false;
@@ -364,7 +369,8 @@ export function install(X) {
         if (l && !l.n) { msg.textContent = `Part ${L} logs a weight. Name the movement.`; $('[data-n]', a).focus(); return; }
         const tm = !!($('[data-time]', a) || {}).checked, rp = !!($('[data-reps]', a) || {}).checked;
         const ck = clockIn(a), gp = Math.max(0, Math.min(15, parseInt($('#wd-gap').value, 10) || 0));
-        if (text || l || tm || rp) sections.push({ part: L, name: name || PH[L], text, clock: ck, ...(sections.length ? { gap: gp } : {}), ...(tm ? { time: true } : {}), ...(rp ? { reps: true } : {}) });
+        const lv = {}; $$('[data-lv]', a).forEach(x => { const v = x.value.trim(); if (v) lv[x.dataset.lv] = v; });
+        if (text || l || tm || rp) sections.push({ part: L, name: name || PH[L], text, clock: ck, ...(Object.keys(lv).length ? { levels: lv } : {}), ...(sections.length ? { gap: gp } : {}), ...(tm ? { time: true } : {}), ...(rp ? { reps: true } : {}) });
         if (l) lifts.push(l);
       }
       if (!sections.length) { msg.textContent = 'Write at least one part.'; return; }
@@ -522,7 +528,7 @@ export function install(X) {
       // 1. Workout of the day
       // No header here: the workout's name leads the screen; the logo, date and time sit in the footer.
       if (on('wod')) out.push(`<div class="tvBody tvWodS">
-        ${w ? `<div class="tvTop"><div class="tvTitleRow"><h1>${esc(w.title)}</h1><div class="tvNow" data-cnow></div></div><div data-cbar data-rule><div class="tvRule"></div></div></div><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div class="tvPartBtn" role="button" tabindex="0" data-part="${p.L}" aria-label="Show part ${p.L} full screen"><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
+        ${w ? `<div class="tvTop"><div class="tvTitleRow"><h1>${esc(w.title)}</h1><div class="tvNow" data-cnow></div></div><div data-cbar data-rule><div class="tvRule"></div></div></div><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div class="tvPartBtn" role="button" tabindex="0" data-part="${p.L}" aria-label="Show part ${p.L} full screen"><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${levelsHtml(p, 'tvLv')}${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
         : `<h1>Rest or not posted</h1><p class="tvEmpty">Coaches post the day at dandystrength.com/gym/${esc(g.id)}</p>`}</div>`);
       // 2. Today's targets (one screen per 12 members)
       const lifts = (w && w.lifts) || [];
@@ -736,11 +742,11 @@ export function install(X) {
         <div class="tvCBar" data-cbar></div>
         <div class="tvFBody">
           <div class="tvFMain">
-            <p class="tvFText" id="tvFText">${esc(p.text)}</p>
+            <p class="tvFText" id="tvFText">${esc(p.text)}</p>${levelsHtml(p, 'tvLv big')}
             ${l ? `<div class="tvFLift">${esc(l.n)}${l.sch ? ` · ${esc(l.sch)}` : ''}${l.why ? `<span>${esc(l.why)}</span>` : ''}</div>` : ''}
             ${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>
           <div class="tvFSide">${timerCard(p)}
-          ${tg.length ? `<div class="tvFTargets"><h3>Your targets${l && D.unit(l) !== 'lb' ? ` <small>${esc(D.unit(l))}</small>` : ''}<button type="button" class="tvWhoBtn" data-whobtn>${cls ? esc(cls.label) : "Who's here?"}</button></h3><ol>${tg.map(x => `<li class="${x.v ? (x.t && x.v >= x.t ? 'hit' : 'did') : ''}"><span>${esc(x.n)}</span><b>${x.v || x.t}</b></li>`).join('')}</ol></div>` : ''}</div>
+          ${tg.length ? `<div class="tvFTargets"><h3>Your targets <small class="tvDiBy">by DI</small>${l && D.unit(l) !== 'lb' ? ` <small>${esc(D.unit(l))}</small>` : ''}<button type="button" class="tvWhoBtn" data-whobtn>${cls ? esc(cls.label) : "Who's here?"}</button></h3><ol>${tg.map(x => `<li class="${x.v ? (x.t && x.v >= x.t ? 'hit' : 'did') : ''}"><span>${esc(x.n)}</span><b>${x.v || x.t}</b></li>`).join('')}</ol></div>` : ''}</div>
         </div></div>`;
     };
     // Make the part's words as big as the screen allows.
