@@ -406,12 +406,14 @@ VIEWS.log = async (_, tok) => {
   if (!S.me) return needLogin(tok, 'log lifts');
   await loadBoard();
   const r = boardRow(S.me.id) || {};
-  const opts = [...D.LIFTS.map(l => [l.db, D.liftName(l.db) + (r[l.k] ? ` (best ${fmt(r[l.k])})` : '')]), ...Object.entries(D.OTHER_LIFTS)];
+  const FREE = new Set(D.EXTRA_LIFTS.map(x => x[0]));
+  const opts = [...D.LIFTS.map(l => [l.db, D.liftName(l.db) + (r[l.k] ? ` (best ${fmt(r[l.k])})` : '')]), ...D.EXTRA_LIFTS, ...Object.entries(D.OTHER_LIFTS).filter(([k]) => !FREE.has(k))];
+  const nFree = D.LIFTS.length + D.EXTRA_LIFTS.length;
   if (!paint(tok, `<section class="sec"><div><div class="kicker">New max</div><h2>Log a <span>lift</span></h2></div>
-    <p class="lede">Log a heavy single. Beat your old best and it lands on the PR wall with today's date.${isPro() ? '' : ' Free covers the four DSI lifts. <a href="/pro">DSI Pro</a> adds every other lift.'}</p>
+    <p class="lede">Log a heavy single. Beat your old best and it lands on the PR wall with today's date.${isPro() ? '' : ' Free covers the four DSI lifts plus snatch, push press, squat snatch and squat clean. <a href="/pro">DSI Pro</a> adds every other lift.'}</p>
     <form class="formCard" id="logF">
       <div class="fields">
-        <div class="field w2"><label for="lf-lift">Lift</label><select id="lf-lift" required>${opts.map((o, i) => `<option value="${o[0]}"${i >= D.LIFTS.length && !isPro() ? ' disabled' : ''}>${esc(o[1])}${i >= D.LIFTS.length && !isPro() ? ' (Pro)' : ''}</option>`).join('')}</select></div>
+        <div class="field w2"><label for="lf-lift">Lift</label><select id="lf-lift" required>${opts.map((o, i) => `<option value="${o[0]}"${i >= nFree && !isPro() ? ' disabled' : ''}>${esc(o[1])}${i >= D.LIFTS.length && !isPro() ? ' (Pro)' : ''}</option>`).join('')}</select></div>
         <div class="field"><label for="lf-w">Weight (lb)</label><input id="lf-w" type="number" inputmode="decimal" min="1" max="1499" step="0.5" required></div>
         <div class="field"><label for="lf-d">Date</label><input id="lf-d" type="date" value="${today()}" max="${today()}" required></div>
         <div class="field w4"><label for="lf-n">Note (optional)</label><input id="lf-n" type="text" maxlength="280" placeholder="Belt, no belt, witnesses, video link…"></div>
@@ -464,7 +466,8 @@ VIEWS.week = async (day, tok) => {
   if (lvG && S.me) S.me.level = lvG.level;
   if (!S.people.size) await loadPeople();
   const w = wks.find(x => x.day === sel);
-  const meRow = S.me ? (boardRow(S.me.id) || { bw: num(S.me.bodyweight), sex: S.me.sex, bench: 0, squat: 0, dead: 0, clean: 0 }) : null;
+  const myX = S.me ? Object.fromEntries((((await sb.from('lift_bests').select('lift,weight_lb').eq('profile_id', S.me.id).in('lift', D.EXTRA_LIFTS.map(x => x[0]))).data) || []).map(r => [r.lift, +r.weight_lb])) : {};
+  const meRow = S.me ? { ...(boardRow(S.me.id) || { bw: num(S.me.bodyweight), sex: S.me.sex, bench: 0, squat: 0, dead: 0, clean: 0 }), ...myX } : null;
   const myLog = S.me && w ? logs.find(l => l.workout_id === w.id && l.profile_id === S.me.id) : null;
   const tdy = today();
   const days = [...Array(7)].map((_, i) => addDays(start, i));
@@ -506,6 +509,7 @@ VIEWS.week = async (day, tok) => {
   if (!paint(tok, `<section class="sec"><div class="wkNav"><div><div class="kicker">Week of ${esc(fmtD(start))}</div><h2>The <span>week</span></h2></div>
     <div class="row"><a class="btn ghost sm" href="/week/${addDays(start, -7)}${qs}">← Last week</a>${start !== monday(tdy) ? `<a class="btn ghost sm" href="/week/${tdy}${qs}">Today</a>` : ''}<a class="btn ghost sm" href="/week/${addDays(start, 7)}${qs}">Next week →</a>${editTo ? `<a class="btn sm" href="/wod/${editTo}?day=${sel}">Edit workouts</a><a class="btn ghost sm" href="/program${editTo !== 'dsi' ? '?gym=' + editTo : ''}">Import</a>` : ''}</div></div>
     ${lvG ? `<details class="lvWrap"${(lvE.data || []).length ? ' open' : ''}><summary><span class="lvChip lv-${lvG.level}">${X_LVN[lvG.level]}</span> Your level · how to move up</summary>${P().levelCard(lvG, (lvE.data || [])[0])}</details>` : ''}
+    ${S.me && S.me.display_name && D.EXTRA_LIFTS.some(([k]) => !myX[k]) ? `<p class="wkAsk">${CTX.DI || 'DI'} is missing your ${D.EXTRA_LIFTS.filter(([k]) => !myX[k]).map(([, n]) => n.toLowerCase()).join(', ').replace(/, ([^,]*)$/, ' and $1')}. <a href="/me#maxes">Add them</a> and your class targets cover those lifts too.</p>` : ''}
     ${hasGym ? `<div class="tabs" role="tablist" aria-label="Programming"><a class="tab" role="tab" href="/week/${sel}" aria-selected="${src === 'gym'}">${esc(gym ? gym.name : 'My gym')}</a><a class="tab" role="tab" href="/week/${sel}?src=dsi" aria-selected="${src === 'dsi'}">DSI week</a></div>` : ''}
     <nav class="wkDays" aria-label="Days">${dayBtns}</nav></section>
     <section class="sec">${body}</section>`)) return;
@@ -742,6 +746,9 @@ VIEWS.me = async (_, tok) => {
       <p class="secSub">${esc(S.session.user.email)}${first ? '' : ` · <a href="/u/${m.id}">View my card</a>`}</p></div>
       ${row ? `<div class="kpi"><div><b>${row.score}</b><span>DSI™</span></div><div><b>${fmt(row.total)}</b><span>Total</span></div></div>` : ''}</div>
       ${v ? `<p class="lede"><b style="color:var(--accent)">${esc(v[1])}.</b> ${esc(m.roast_opt_in ? v[2] : v[3])}</p>` : ''}</section>
+    <section class="sec" id="maxes"><div class="secHead"><div><div class="kicker">Four more maxes</div><h2>Your <span>olympic and press</span> numbers</h2><p class="secSub">Not part of your DSI. DI uses them to set your weight when the workout is a snatch, push press, squat snatch or squat clean. Your heaviest single, in pounds.</p></div></div>
+      <form class="formCard" id="xmF"><div class="fields">${D.EXTRA_LIFTS.map(([k, n]) => `<div class="field"><label for="xm-${k}">${n}</label><input id="xm-${k}" data-xm="${k}" type="number" inputmode="numeric" min="1" max="1499" step="any" placeholder="${best[k] ? fmt(best[k]) + ' lb now' : 'lb'}"></div>`).join('')}</div>
+        <div class="row"><button class="btn sm">Save</button><span class="hint" id="xm-msg">${D.EXTRA_LIFTS.filter(([k]) => !best[k]).length ? `${D.EXTRA_LIFTS.filter(([k]) => !best[k]).length} still missing.` : 'All four on file. Enter a new number any time you hit one.'}</span></div></form></section>
     ${first ? '' : `<section class="sec band"><div class="secHead"><div><div class="kicker">DSI Pro</div><h2>Train with a <span>plan</span></h2></div>${pro ? '<span class="pill up" style="margin:0">Pro active</span>' : '<a class="btn sm" href="/pro">See Pro</a>'}</div>
       <div class="tools">${tile('/progress', 'Progress charts', 'Every lift over time with your goal line.', 1)}${tile('/plans', 'Goal plans', 'A week by week path to your number.', 1)}${tile('/coach', 'Coach', 'Your weak link and what to train next.', 1)}${tile('/import', 'Import history', 'Paste years of lifts from a spreadsheet.', 1)}${tile('/recap/' + new Date().getFullYear(), 'Year recap', 'Your year in PRs and pounds, ready to share.', 1)}${tile('/battles', 'Weekly battles', 'Call out a lifter for a week.', 1)}</div></section>
     <section class="sec"><div class="secHead"><div><div class="kicker">Compete and grow</div><h2>More to <span>do</span></h2></div><button class="btn sm" data-invite>Invite your crew</button></div>
@@ -780,6 +787,16 @@ VIEWS.me = async (_, tok) => {
     <section class="sec"><div><div class="kicker">Account</div><h2>Your <span>account</span></h2></div>
       <div class="row"><span class="pill acc" style="margin:0">${pro ? 'DSI Pro' : 'Member'}</span><a class="btn ghost sm" href="/pro">Membership</a><a class="btn ghost sm" href="/security">Sign in options</a><button class="btn ghost sm" id="so">Sign out</button><button class="btn ghost sm dangerText" id="delAcct">Delete account</button></div>
       <p class="hint">Deleting removes your profile, every lift, goal, log, message and video, and your login. It cannot be undone.</p></section>`}`)) return;
+  const xm = $('#xmF');
+  if (location.hash === '#maxes' && xm) xm.scrollIntoView({ block: 'center' });
+  if (xm) xm.onsubmit = async e => {
+    e.preventDefault();
+    const rows = $$('[data-xm]', xm).filter(x => +x.value > 0 && +x.value < 1500).map(x => ({ profile_id: m.id, lift: x.dataset.xm, weight_lb: +x.value, performed_on: today(), source: 'manual', note: 'Max entered' }));
+    if (!rows.length) return ($('#xm-msg').textContent = 'Type at least one number.');
+    const { error } = await sb.from('lift_entries').insert(rows);
+    if (error) return ($('#xm-msg').textContent = error.message);
+    toast('Saved. DI will use them for your targets.'); route();
+  };
   // One short page per tab instead of one long page. The tool tiles live in the top menus now.
   if (!first) {
     const TABS = [['profile', 'Profile'], ['goals', 'Goals'], ['reminders', 'Reminders'], ['account', 'Account and safety']];
@@ -1368,7 +1385,8 @@ async function finishJoin() {
   const { data, error } = await sb.from('profiles').update({ display_name: j.name, birth_year: j.by, bodyweight: j.bw, sex: j.sex, division: j.div }).eq('id', S.me.id).select().single();
   if (error) return { ok: false, error: error.code === '23505' ? 'That board name is taken. Pick another to finish joining.' : error.message };
   S.me = data;
-  const rows = D.LIFTS.filter(l => +j[l.k] > 0).map(l => ({ profile_id: S.me.id, lift: l.db, weight_lb: +j[l.k], performed_on: today(), source: 'manual', note: 'Signup' }));
+  const rows = [...D.LIFTS.filter(l => +j[l.k] > 0).map(l => ({ profile_id: S.me.id, lift: l.db, weight_lb: +j[l.k], performed_on: today(), source: 'manual', note: 'Signup' })),
+    ...D.EXTRA_LIFTS.filter(([k]) => +j[k] > 0 && +j[k] < 1500).map(([k]) => ({ profile_id: S.me.id, lift: k, weight_lb: +j[k], performed_on: today(), source: 'manual', note: 'Signup' }))];
   if (rows.length) { const r = await sb.from('lift_entries').insert(rows); if (r.error) console.error(r.error); }
   saveJoin(null);
   return { ok: true };
@@ -1393,6 +1411,8 @@ VIEWS.join = async (_, tok) => {
       <h3 class="formH">2 · Your four lifts <span class="sub">heaviest single, in pounds</span></h3>
       <div class="fields">${D.LIFTS.map(l => `<div class="field"><label for="jf-${l.k}" style="color:${l.c}">${l.n}</label><input id="jf-${l.k}" type="number" inputmode="numeric" min="0" max="1499" step="any" value="${v(l.k)}" placeholder="lb"></div>`).join('')}</div>
       <p class="hint">Leave a lift blank if you don't do it. It scores as zero until you log it.</p>
+      <h3 class="formH">Four more <span class="sub">optional, not scored. DI uses them to set your weights in class</span></h3>
+      <div class="fields">${D.EXTRA_LIFTS.map(([k, n]) => `<div class="field"><label for="jf-${k}">${n}</label><input id="jf-${k}" type="number" inputmode="numeric" min="0" max="1499" step="any" value="${v(k)}" placeholder="lb"></div>`).join('')}</div>
       <p class="joinMini" id="jmini" aria-hidden="true"></p>
       <h3 class="formH">3 · Save your spot</h3>
       ${signedIn ? `<p class="hint">Signed in as ${esc(S.session.user.email)}.</p>
@@ -1406,7 +1426,7 @@ VIEWS.join = async (_, tok) => {
     <aside class="card joinCard" id="jp" aria-live="polite"></aside>
     </div></section>`)) return;
   const f = $('#jf');
-  const readForm = () => ({ name: $('#jf-n').value.trim(), by: +$('#jf-by').value || 0, bw: +$('#jf-bw').value || 0, sex: $('#jf-sex').value, div: $('#jf-div').value, email: $('#jf-e') ? $('#jf-e').value.trim().toLowerCase() : '', ...Object.fromEntries(D.LIFTS.map(l => [l.k, +$('#jf-' + l.k).value || 0])) });
+  const readForm = () => ({ name: $('#jf-n').value.trim(), by: +$('#jf-by').value || 0, bw: +$('#jf-bw').value || 0, sex: $('#jf-sex').value, div: $('#jf-div').value, email: $('#jf-e') ? $('#jf-e').value.trim().toLowerCase() : '', ...Object.fromEntries(D.EXTRA_LIFTS.map(([k]) => [k, +($('#jf-' + k) || {}).value || 0])), ...Object.fromEntries(D.LIFTS.map(l => [l.k, +$('#jf-' + l.k).value || 0])) });
   const preview = () => {
     const x = readForm(), age = x.by ? yr - x.by : 0, ready = age >= 13 && age <= 100 && x.bw >= 80 && x.bw <= 450, any = D.LIFTS.some(l => x[l.k] > 0);
     const mini = $('#jmini');

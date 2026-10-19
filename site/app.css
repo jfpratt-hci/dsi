@@ -1680,3 +1680,4 @@ abbr.diTag,.diTag{display:inline-block;font:800 .72em/1 var(--mono);letter-spaci
 @media (max-width:900px){.mbLevels,.mbDsi,.mbTwo{grid-template-columns:1fr}.mbDay{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:560px){.mbLadder,.mbDay,.mbFacts{grid-template-columns:1fr}.mbLadder li::after{display:none}.mbScale{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .lvPath>div:not(.lvOr){display:block;line-height:1.5}.lvPath .lvBar{margin-top:6px}
+.wkAsk{margin:0 0 12px;padding:10px 14px;border:1px dashed var(--accent);border-radius:8px;font-size:14px;color:var(--muted)}.wkAsk a{color:var(--accent);font-weight:700}
