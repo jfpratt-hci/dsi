@@ -371,22 +371,27 @@ export function install(X) {
   }
 
   async function memberDetail(g, pid, box, { owner, plans, ms, sigs, docs }) {
-    const [det, att, inv] = await Promise.all([
+    const [det, att, inv, lvp] = await Promise.all([
       sb.from('member_details').select('*').eq('profile_id', pid).maybeSingle().then(r => r.data),
       sb.from('bookings').select('checked_in_at,session:sessions(name,starts_at)').eq('gym_id', g.id).eq('profile_id', pid).eq('status', 'attended').order('checked_in_at', { ascending: false }).limit(30).then(must),
       owner ? sb.from('invoices').select('*').eq('gym_id', g.id).eq('profile_id', pid).order('created_at', { ascending: false }).limit(50).then(must) : [],
+      sb.rpc('level_progress', { p_profile: pid }).then(r => r.data),
     ]);
     const cur = ms.find(m => m.status !== 'canceled');
     box.innerHTML = `<div class="mdGrid">
       <div><h4>Contact</h4>${det ? `<p>${esc(det.legal_name || '')}<br>${esc(det.phone || '')}<br>${esc(det.email || '')}</p><p class="sub">Emergency: ${esc(det.emergency_name || 'not given')} ${esc(det.emergency_phone || '')}</p>` : '<p class="hint">They have not added contact details yet.</p>'}
         <h4>Documents</h4>${sigs.map(s => `<p>${s.kind === 'waiver' ? 'Waiver' : 'Contract'} v${(docs.find(d => d.id === s.doc_id) || {}).version || 'old'} · signed ${esc(fmtD(s.signed_at.slice(0, 10)))} as ${esc(s.signed_name)} <a href="/signed/${s.id}">View</a></p>`).join('') || '<p class="hint">Nothing signed yet.</p>'}</div>
-      <div><h4>Attendance</h4>${att.length ? `<ol class="mdAtt">${att.map(a => `<li>${esc(a.session ? a.session.name : 'Class')} <span class="sub">${esc(a.session ? new Date(a.session.starts_at).toLocaleString('en-US', { timeZone: g.tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '')}</span></li>`).join('')}</ol>` : '<p class="hint">No visits yet.</p>'}</div>
+      <div><h4>Level</h4>${lvp ? `<form class="row" data-lvf><select data-lv style="max-width:160px">${[['beginner', 'Beginner'], ['rx', 'Rx'], ['comp', 'Comp']].map(([k, n]) => `<option value="${k}"${lvp.level === k ? ' selected' : ''}>${n}</option>`).join('')}</select><button class="btn ghost sm">Set</button></form>
+        <p class="sub">${lvp.level_by === 'coach' ? 'Set by a coach. ' : 'Moves up on its own. '}${lvp.level === 'beginner' ? `${lvp.rx_logs} of 3 Rx logs, or ${lvp.weighted_logs} of 8 logs and ${lvp.prs} of 2 PRs` : lvp.level === 'rx' ? `${lvp.comp_logs} of 3 Comp logs` : 'Top level'}</p>` : '<p class="sub">Not set</p>'}
+        <h4>Attendance</h4>${att.length ? `<ol class="mdAtt">${att.map(a => `<li>${esc(a.session ? a.session.name : 'Class')} <span class="sub">${esc(a.session ? new Date(a.session.starts_at).toLocaleString('en-US', { timeZone: g.tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '')}</span></li>`).join('')}</ol>` : '<p class="hint">No visits yet.</p>'}</div>
       ${owner ? `<div><h4>Membership</h4>${cur ? `<p><b>${esc(cur.plan_name)}</b> ${statusPill(cur.status)}<br><span class="sub">${money(cur.price_cents)} ${cur.interval === 'once' ? 'one time' : 'per ' + cur.interval}${cur.stripe_subscription ? ' · autopay' : ' · paid at the desk'} · since ${esc(fmtD(cur.start_date))}${cur.end_date ? ' · ends ' + esc(fmtD(cur.end_date)) : ''}</span></p><button class="btn ghost sm" data-endm="${cur.id}">${cur.stripe_subscription ? 'Stop autopay' : 'End membership'}</button>` : '<p class="hint">No membership.</p>'}
         <form class="row" data-addm style="margin-top:8px"><select data-plan style="max-width:220px">${opt([['', 'Add a membership paid at the desk…'], ...plans.map(p => [p.id, `${p.name} · ${money(p.price_cents)}`])], '')}</select><button class="btn sm">Add</button></form>
         <h4>Invoices</h4>${inv.map(i => `<div class="row mdInv"><span>#${i.number} ${esc(i.description)}</span><b>${money(i.amount_cents)}</b>${i.status === 'paid' ? `<span class="pill up">Paid ${i.method || ''}</span>` : i.status === 'void' ? '<span class="pill">Void</span>' : `<span class="pill down">Open</span><button class="btn ghost sm" data-paid="${i.id}">Mark paid</button><button class="btn ghost sm" data-void="${i.id}">Void</button>`}</div>`).join('') || '<p class="hint">No invoices.</p>'}
         <form class="row" data-addi style="margin-top:8px"><input data-d maxlength="200" placeholder="What for, like Drop in or T shirt" style="max-width:220px" required><input data-a inputmode="decimal" placeholder="$" style="max-width:90px" required><button class="btn sm">New invoice</button></form></div>` : ''}
     </div>`;
     const again = () => route();
+    const lf = $('[data-lvf]', box);
+    if (lf) lf.onsubmit = async e => { e.preventDefault(); const { error } = await sb.rpc('set_member_level', { p_profile: pid, p_level: $('[data-lv]', lf).value }); if (error) return toast(error.message); toast('Level set'); };
     const am = $('[data-addm]', box);
     if (am) am.onsubmit = async e => { e.preventDefault(); const p = plans.find(x => x.id === $('[data-plan]', am).value); if (!p) return; const { data: m, error } = await sb.from('memberships').insert({ gym_id: g.id, profile_id: pid, plan_id: p.id, plan_name: p.name, price_cents: p.price_cents, interval: p.interval, status: 'active', note: 'Added by the gym, paid at the desk' }).select().single(); if (error) return toast(error.message); await sb.from('invoices').insert({ gym_id: g.id, profile_id: pid, membership_id: m.id, description: p.name, amount_cents: p.price_cents, created_by: S.me.id }); toast('Membership added with its first invoice'); again(); };
     const ai = $('[data-addi]', box);

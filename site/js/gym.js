@@ -61,9 +61,21 @@ export function install(X) {
   const boardItems = (w, logs) => items(w).filter(it => it.L !== 'D' || logs.some(x => num((x.entries || {})[it.key])));
   // Beginner, Rx and Comp: the same part three ways. Shown wherever the part is, only the levels the coach wrote.
   const LEVELS = [['beg', 'Beginner'], ['rx', 'Rx'], ['comp', 'Comp']];
-  const levelsHtml = (p, cls = '') => { const v = p && p.levels; if (!v || !LEVELS.some(([k]) => v[k])) return '';
-    return `<div class="lvRow ${cls}">${LEVELS.filter(([k]) => v[k]).map(([k, n]) => `<span class="lv lv-${k}"><b>${n}</b>${esc(v[k])}</span>`).join('')}</div>`; };
-  X.parts = { levelsHtml, LEVELS, isParts, partsOf, shownParts, liftLabel, items, fmtT, parseT, cell, rankKey, boardItems, logWords };
+  const levelsHtml = (p, cls = '', mine = '') => { const v = p && p.levels; if (!v || !LEVELS.some(([k]) => v[k])) return '';
+    const key = { beginner: 'beg', rx: 'rx', comp: 'comp' }[mine] || '';
+    return `<div class="lvRow ${cls}">${LEVELS.filter(([k]) => v[k]).map(([k, n]) => `<span class="lv lv-${k}${k === key ? ' mine' : ''}"><b>${n}${k === key ? ' · You' : ''}</b>${esc(v[k])}</span>`).join('')}</div>`; };
+  // A member's level and how close they are to the next one. g is what level_progress returns.
+  const LVN = { beginner: 'Beginner', rx: 'Rx', comp: 'Comp' };
+  const levelCard = (g, recent) => { if (!g) return '';
+    const lv = g.level || 'beginner', bar = (n, of) => `<span class="lvBar"><i style="width:${Math.min(100, Math.round(n / of * 100))}%"></i></span>`;
+    const next = lv === 'beginner' ? `<div class="lvPath"><div><b>${Math.min(3, g.rx_logs)} of 3</b> logs at the Rx weight ${bar(g.rx_logs, 3)}</div><div class="lvOr">or</div><div><b>${Math.min(8, g.weighted_logs)} of 8</b> weighted logs and <b>${Math.min(2, g.prs)} of 2</b> PRs ${bar(Math.min(8, g.weighted_logs) / 8 + Math.min(2, g.prs) / 2, 2)}</div></div><p class="hint">Either one graduates you to Rx. Counts the last 120 days.</p>`
+      : lv === 'rx' ? `<div class="lvPath"><div><b>${Math.min(3, g.comp_logs)} of 3</b> logs at the Comp weight ${bar(g.comp_logs, 3)}</div></div><p class="hint">Three Comp weight days in 120 days moves you up to Comp.</p>`
+      : '<p class="hint">Top of the ladder. DI is impressed, and it does not impress easily.</p>';
+    return `<div class="lvCard lv-${lv}">${recent && recent.to_level === lv ? `<div class="lvYay">You graduated to ${LVN[recent.to_level]}! <span>${esc(recent.reason || '')}</span></div>` : ''}
+      <div class="lvHead"><span class="grLbl">Your level</span><div class="lvSteps">${['beginner', 'rx', 'comp'].map(k => `<span class="${k === lv ? 'on' : ['beginner', 'rx', 'comp'].indexOf(k) < ['beginner', 'rx', 'comp'].indexOf(lv) ? 'done' : ''}">${LVN[k]}</span>`).join('<i></i>')}</div></div>
+      ${next}${g.level_by === 'coach' ? '<p class="hint">Set by your coach.</p>' : ''}</div>`; };
+  X.levelCard = levelCard; X.LVN = LVN;
+  X.parts = { levelsHtml, levelCard, LEVELS, isParts, partsOf, shownParts, liftLabel, items, fmtT, parseT, cell, rankKey, boardItems, logWords };
 
   // A gym can be reached by its id or its short big screen name (gyms.slug).
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -80,7 +92,7 @@ export function install(X) {
   async function gymData(gid, day) {
     const [g, members, staff, board, ws] = await Promise.all([
       sb.from('gyms').select('*').eq('id', gid).maybeSingle().then(must),
-      sb.from('profiles').select('id,display_name,bodyweight,birth_year,sex,tier,role').eq('gym_id', gid).not('display_name', 'is', null).then(must),
+      sb.from('profiles').select('id,display_name,bodyweight,birth_year,sex,tier,role,level').eq('gym_id', gid).not('display_name', 'is', null).then(must),
       sb.from('gym_staff').select('profile_id,role').eq('gym_id', gid).then(must),
       loadBoard(),
       sb.from('workouts').select('*').eq('day', day).or(`gym_id.is.null,gym_id.eq.${gid}`).then(must),
@@ -735,7 +747,7 @@ export function install(X) {
       const ps = st && st.w ? shownParts(st.w) : [], p = ps.find(x => x.L === focus);
       if (!p) return '';
       const { rowOf, logs } = st, members = inClass(), cls = classNow(), l = p.lift;
-      const tg = l ? members.map(m => { const t = D.target(l, rowOf(m)), v = num((((logs.find(x => x.profile_id === m.id) || {}).entries) || {})[l.id]); return { n: m.display_name, t, v }; }).filter(x => x.t || x.v) : [];
+      const tg = l ? members.map(m => { const t = D.target(l, rowOf(m)), v = num((((logs.find(x => x.profile_id === m.id) || {}).entries) || {})[l.id]); return { n: m.display_name, t, v, lv: ((S.people && S.people.get(m.id)) || m).level || null }; }).filter(x => x.t || x.v) : [];
       return `<div class="tvFocus" role="dialog" aria-modal="true" aria-label="Part ${p.L}">
         <header class="tvFHead"><nav class="tvFTabs">${ps.map(x => `<button type="button" data-fpart="${x.L}"${x.L === p.L ? ' aria-current="true"' : ''}><i>${x.L}</i>${esc(x.name || 'Part ' + x.L)}</button>`).join('')}</nav>
           <div class="tvNow sm" data-cnow></div><div class="tvClock">${clock()}</div><button type="button" class="tvFClose" id="tvFClose" aria-label="Close (Esc)">×</button></header>
@@ -746,7 +758,7 @@ export function install(X) {
             ${l ? `<div class="tvFLift">${esc(l.n)}${l.sch ? ` · ${esc(l.sch)}` : ''}${l.why ? `<span>${esc(l.why)}</span>` : ''}</div>` : ''}
             ${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>
           <div class="tvFSide">${timerCard(p)}
-          ${tg.length ? `<div class="tvFTargets"><h3>Your targets <small class="tvDiBy">by DI</small>${l && D.unit(l) !== 'lb' ? ` <small>${esc(D.unit(l))}</small>` : ''}<button type="button" class="tvWhoBtn" data-whobtn>${cls ? esc(cls.label) : "Who's here?"}</button></h3><ol>${tg.map(x => `<li class="${x.v ? (x.t && x.v >= x.t ? 'hit' : 'did') : ''}"><span>${esc(x.n)}</span><b>${x.v || x.t}</b></li>`).join('')}</ol></div>` : ''}</div>
+          ${tg.length ? `<div class="tvFTargets"><h3>Your targets <small class="tvDiBy">by DI</small>${l && D.unit(l) !== 'lb' ? ` <small>${esc(D.unit(l))}</small>` : ''}<button type="button" class="tvWhoBtn" data-whobtn>${cls ? esc(cls.label) : "Who's here?"}</button></h3><ol>${tg.map(x => `<li class="${x.v ? (x.t && x.v >= x.t ? 'hit' : 'did') : ''}"><span>${x.lv ? `<em class="tvLvC lv-${x.lv}">${{ beginner: 'B', rx: 'Rx', comp: 'C' }[x.lv]}</em>` : ''}${esc(x.n)}</span><b>${x.v || x.t}</b></li>`).join('')}</ol></div>` : ''}</div>
         </div></div>`;
     };
     // Make the part's words as big as the screen allows.

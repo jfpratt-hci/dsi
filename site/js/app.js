@@ -76,7 +76,7 @@ async function loadBoard() {
   return S.board;
 }
 async function loadPeople() {
-  const rows = must(await sb.from('profiles').select('id,display_name,roast_opt_in,role,division'));
+  const rows = must(await sb.from('profiles').select('id,display_name,roast_opt_in,role,division,level'));
   S.people = new Map(rows.map(r => [r.id, r]));
 }
 const nameOf = id => (S.people.get(id) || {}).display_name || 'Someone';
@@ -444,6 +444,7 @@ VIEWS.log = async (_, tok) => {
 /* ---------- week ---------- */
 const canEdit = w => w ? (w.gym_id ? isStaff() || S.myGyms.some(g => g.gym_id === w.gym_id) : isStaff()) : false;
 const P = () => CTX.parts;
+const X_LVN = { beginner: 'Beginner', rx: 'Rx', comp: 'Comp' };
 VIEWS.week = async (day, tok) => {
   const sel = /^\d{4}-\d{2}-\d{2}$/.test(day || '') ? day : today();
   const start = monday(sel), end = addDays(start, 6);
@@ -458,6 +459,9 @@ VIEWS.week = async (day, tok) => {
   const wks = allW.filter(x => src === 'gym' ? x.gym_id === myGym : !x.gym_id);
   const ids = wks.map(w => w.id);
   const logs = ids.length ? must(await sb.from('workout_logs').select('*').in('workout_id', ids)) : [];
+  const [lvR, lvE] = S.me ? await Promise.all([sb.rpc('level_progress', { p_profile: S.me.id }), sb.from('level_events').select('*').eq('profile_id', S.me.id).gte('created_at', new Date(Date.now() - 4 * 864e5).toISOString()).order('created_at', { ascending: false }).limit(1)]) : [{}, {}];
+  const lvG = lvR && lvR.data && typeof lvR.data === 'object' ? lvR.data : null;
+  if (lvG && S.me) S.me.level = lvG.level;
   if (!S.people.size) await loadPeople();
   const w = wks.find(x => x.day === sel);
   const meRow = S.me ? (boardRow(S.me.id) || { bw: num(S.me.bodyweight), sex: S.me.sex, bench: 0, squat: 0, dead: 0, clean: 0 }) : null;
@@ -476,7 +480,7 @@ VIEWS.week = async (day, tok) => {
   else {
     const prog = `<div class="wkProg"><div class="eyebrow">${esc(fmtDW(w.day))}${w.day === tdy ? ' · Today' : ''}${w.source ? ' · ' + esc(w.source) : ''}</div><h3>${esc(w.title)}</h3>
       ${w.rest_note ? `<p class="rest">${esc(w.rest_note)}</p>` : ''}
-      ${P().shownParts(w).map(p => `<div class="wkSec"><b>${P().isParts(w) ? `<i class="wkL">${p.L}</i>` : ''}${esc(p.name)}</b><p>${esc(p.text)}</p>${P().levelsHtml ? P().levelsHtml(p, 'wkLv') : ''}${P().logWords(p) ? `<div class="sub">Log your ${P().logWords(p)}</div>` : ''}</div>`).join('')}
+      ${P().shownParts(w).map(p => `<div class="wkSec"><b>${P().isParts(w) ? `<i class="wkL">${p.L}</i>` : ''}${esc(p.name)}</b><p>${esc(p.text)}</p>${P().levelsHtml(p, 'wkLv', S.me && S.me.level)}${P().logWords(p) ? `<div class="sub">Log your ${P().logWords(p)}</div>` : ''}</div>`).join('')}
       <div class="row">${canEdit(w) ? `<a class="btn sm" href="/wod/${w.gym_id || 'dsi'}?day=${w.day}">Edit workout</a>` : ''}<button class="btn ghost sm" data-thread="workout" data-ref="${w.id}" data-title="${esc(fmtD(w.day) + ' · ' + w.title)}">Day thread</button>${w.benchmark ? `<a class="chip" href="/benchmarks/${encodeURIComponent(w.benchmark)}">Benchmark: ${esc(w.benchmark)}</a>` : ''}${w.gym_id && S.myGyms.some(g => g.gym_id === w.gym_id) ? `<a class="btn sm" href="/results/${w.gym_id}?day=${w.day}">Enter results</a><a class="btn ghost sm" href="/tv/${w.gym_id}">Dandy TV</a>` : ''}</div>
       ${isStaff() ? `<form class="row" id="bmF"><label class="vh" for="bm-n">Benchmark name</label><input id="bm-n" maxlength="40" value="${esc(w.benchmark || '')}" placeholder="Name it as a benchmark, like Fran" style="max-width:260px"><button class="btn ghost sm">Save</button></form>` : ''}</div>`;
     let mine = '';
@@ -501,6 +505,7 @@ VIEWS.week = async (day, tok) => {
   }
   if (!paint(tok, `<section class="sec"><div class="wkNav"><div><div class="kicker">Week of ${esc(fmtD(start))}</div><h2>The <span>week</span></h2></div>
     <div class="row"><a class="btn ghost sm" href="/week/${addDays(start, -7)}${qs}">← Last week</a>${start !== monday(tdy) ? `<a class="btn ghost sm" href="/week/${tdy}${qs}">Today</a>` : ''}<a class="btn ghost sm" href="/week/${addDays(start, 7)}${qs}">Next week →</a>${editTo ? `<a class="btn sm" href="/wod/${editTo}?day=${sel}">Edit workouts</a><a class="btn ghost sm" href="/program${editTo !== 'dsi' ? '?gym=' + editTo : ''}">Import</a>` : ''}</div></div>
+    ${lvG ? `<details class="lvWrap"${(lvE.data || []).length ? ' open' : ''}><summary><span class="lvChip lv-${lvG.level}">${X_LVN[lvG.level]}</span> Your level · how to move up</summary>${P().levelCard(lvG, (lvE.data || [])[0])}</details>` : ''}
     ${hasGym ? `<div class="tabs" role="tablist" aria-label="Programming"><a class="tab" role="tab" href="/week/${sel}" aria-selected="${src === 'gym'}">${esc(gym ? gym.name : 'My gym')}</a><a class="tab" role="tab" href="/week/${sel}?src=dsi" aria-selected="${src === 'dsi'}">DSI week</a></div>` : ''}
     <nav class="wkDays" aria-label="Days">${dayBtns}</nav></section>
     <section class="sec">${body}</section>`)) return;

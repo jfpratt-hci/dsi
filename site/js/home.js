@@ -378,18 +378,58 @@ export function install(X) {
 
   /* ---------- for members ---------- */
   VIEWS.members = async (_, tok) => {
-    const m = me();
+    const m = me(), lc = X.levelCard || (() => '');
+    const LADDER = [
+      ['beginner', 'Beginner', 'Where everyone starts', 'Lighter weights, simpler movements, the same workout as everyone else. Your coach scales it and DI sets your targets.'],
+      ['rx', 'Rx', 'As written', 'Graduate when you log the Rx weight 3 times, or log 8 weighted workouts with 2 PRs. Whichever comes first.'],
+      ['comp', 'Comp', 'Competition standard', 'Log the Comp weight 3 times and you move up. Heavier loads, harder movements, bragging rights.'],
+    ];
+    const DAY = [
+      ['Book', 'Pick your class in the app. Your spot is saved and your coach knows you are coming.'],
+      ['Check in', 'Tap in on your phone or scan the QR code at the door.'],
+      ['See your number', 'The class TV shows your own target for the day, worked out by DI from your PRs, at your level.'],
+      ['Log it', 'Type your weight or time in the app. Ten seconds.'],
+      ['Get seen', 'A PR lands on the lobby TV and the gym board, and your DSI updates.'],
+    ];
+    const SCALE = [[300, 'Getting started'], [400, 'Building'], [500, 'Median for your age and size'], [600, 'Strong'], [700, 'Very strong'], [800, 'Rare air']];
     if (!paint(tok, `
-      <section class="plHero"><div><div class="kicker">For members</div><h1 class="plH">A number that proves you are getting stronger</h1>
-        <p class="hmSub">The DSI scores your bench, squat, deadlift and clean against lifters your age and size. 500 is the median. Your gym's TV shows your own weight for every workout, worked out from your PRs.</p>
-        <div class="row hmCta">${m ? '<a class="btn" href="/boards">See your board</a>' : '<a class="btn" href="/login">Sign in</a><a class="btn ghost" href="/join">Get your DSI free</a>'}</div></div>
+      <section class="plHero"><div><div class="kicker">For members</div><h1 class="plH">Get stronger. <span>Prove it.</span></h1>
+        <p class="hmSub">Your gym on Dandy gives you a score that shows you are getting stronger, a level that moves up as you do, your own weight on the TV every class, and a board where every PR gets seen.</p>
+        <div class="row hmCta">${m ? '<a class="btn" href="/week">See this week</a><a class="btn ghost" href="/boards">Your board</a>' : '<a class="btn" href="/login">Sign in</a><a class="btn ghost" href="/join">Get your DSI free</a>'}</div>
+        <ul class="mbFacts"><li><b>Free</b><span>for every member of a Dandy gym</span></li><li><b>3 levels</b><span>Beginner, Rx, Comp</span></li><li><b>1 number</b><span>the DSI, from 4 lifts</span></li></ul></div>
         ${sampleBoard()}</section>
-      <section class="sec dmDash">${demoTabs('mb', ['member', 'tv'])}</section>
-      <section class="sec"><dl class="hmFaq plFaq">
-        <div><dt>Is it free?</dt><dd>Yes. The DSI, the boards and the app are free for every member of a Dandy gym.</dd></div>
-        <div><dt>What is DSI Pro?</dt><dd>Progress charts, goal plans, a DI coach and readiness from your wearable. It comes with Unlimited at gyms on Grow.</dd></div>
+
+      <section class="sec" id="levels"><div class="secHead"><div><div class="kicker">Your level</div><h2 class="hmH2">Start at Beginner. <span>Graduate by lifting.</span></h2>
+          <p class="hmSideSub">Every new member starts at Beginner. Your level moves up on its own when the app sees you are ready, from what you log. Nobody has to decide you are ready. You show it.</p></div></div>
+        <div class="mbLevels"><ol class="mbLadder">${LADDER.map(([k, n, sub, p], i) => `<li class="lv-${k}"><span class="mbStep">${i + 1}</span><b>${n}</b><em>${sub}</em><p>${p}</p></li>`).join('')}</ol>
+          <div>${SAMPLE}${lc({ level: 'beginner', rx_logs: 2, comp_logs: 0, weighted_logs: 6, prs: 1, level_by: 'auto' })}<p class="hint" style="margin-top:10px">What a member sees on the week page. Levels only go up on their own; your coach can set one any time.</p></div></div></section>
+
+      <section class="sec"><div class="secHead"><div><div class="kicker">Your class, start to finish</div><h2 class="hmH2">Five taps a day</h2></div></div>
+        <ol class="mbDay">${DAY.map(([h, p], i) => `<li><span class="dmNum">${i + 1}</span><b>${h}</b><p>${p}</p></li>`).join('')}</ol></section>
+
+      <section class="sec dmDash"><div class="secHead"><div><div class="kicker">Your dashboard</div><h2 class="hmH2">Everything you have done, in one place</h2><p class="hmSideSub">Classes, streaks, PRs, your DSI and your next goal. People who can see themselves getting better keep showing up.</p></div></div>
+        ${memberDash()}</section>
+
+      <section class="sec mbDsi"><div><div class="kicker">The DSI</div><h2 class="hmH2">Dandy Strength <span>Index</span></h2>
+          <p class="hmSideSub">Your best bench, squat, deadlift and clean, scored against lifters your age and bodyweight. A 60 year old and a 25 year old can be compared fairly, and so can a 140 lb lifter and a 240 lb one. 500 is the median.</p>
+          <ul class="hmTicks"><li>Updates the moment a PR is logged</li><li>A video or a coach confirms big jumps</li><li>Boards by gym, age group and division</li></ul></div>
+        <div class="mbScale" role="img" aria-label="The DSI scale from 300 to 800, 500 is the median">${SCALE.map(([v, n]) => `<div class="${v === 500 ? 'mid' : ''}"><b>${v}</b><span>${n}</span></div>`).join('')}<div class="mbYou" style="left:${(612 - 300) / 500 * 100}%"><i></i><span>Alex, 612</span></div></div></section>
+
+      <section class="sec dxTv"><div class="secHead"><div><div class="kicker">On the gym TV</div><h2 class="hmH2">Your name. <span>Your weight.</span></h2><p class="hmSideSub">No more doing percentage math between sets. The class TV lists every member's own target, and the lobby TV shows off this week's PRs.</p></div></div>
+        ${tvShow('mb')}</section>
+
+      <section class="sec mbTwo">
+        <div class="formCard"><div class="kicker">Bring a friend</div><h3 class="mbH3">Your own invite link</h3><p>Send it or show the QR code. Your friend's first class is free, you get crew points, and you can be their buddy at the door so they do not walk in alone.</p></div>
+        <div class="formCard"><div class="kicker">DSI Pro</div><h3 class="mbH3">Your own coach in your pocket</h3><ul class="hmTicks"><li>Progress charts for every lift</li><li>A goal plan to your next number</li><li>A DI coach that knows your numbers</li><li>Readiness from WHOOP or Apple Health</li></ul><p class="hint">Included with Unlimited at gyms on Grow.</p></div></section>
+
+      <section class="sec"><h2 class="hmH2">Questions</h2><dl class="hmFaq plFaq">
+        <div><dt>Is it free?</dt><dd>Yes. The DSI, your level, the boards and the app are free for every member of a Dandy gym.</dd></div>
+        <div><dt>How do I move up a level?</dt><dd>Log your weights. Three days at the Rx weight graduates you from Beginner to Rx, or 8 weighted workouts with 2 PRs. Three days at the Comp weight moves you to Comp. It counts the last 120 days.</dd></div>
+        <div><dt>Can I move down?</dt><dd>Not on your own. Levels only go up automatically. If you are coming back from time off or an injury, your coach can set you back to scale safely.</dd></div>
+        <div><dt>What is DI?</dt><dd>Dandy Intelligence. It sets your targets, tracks your level and coaches you on your own numbers. Yes, we named it after ourselves.</dd></div>
         <div><dt>Who sees my numbers?</dt><dd>Members of your gym. Boards and PRs are behind sign in, not on the open web.</dd></div>
-        <div><dt>My gym is not on Dandy yet</dt><dd>Tell your owner about us, or <a href="/start">send us their details</a>.</dd></div></dl></section>`)) return;
+        <div><dt>My gym is not on Dandy yet</dt><dd>Tell your owner about us, or <a href="/start">send us their details</a>.</dd></div></dl></section>
+      ${m ? '' : `<section class="sec plEnd"><div><h2 class="hmH2">Already a member?</h2><p class="hmSideSub">Sign in with your email, a password or a text code.</p></div><div class="row"><a class="btn" href="/login">Sign in</a><a class="btn ghost" href="/join">Get your DSI free</a></div></section>`}`)) return;
     wireDemos();
   };
 
