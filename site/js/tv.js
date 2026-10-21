@@ -202,6 +202,8 @@ export function install(X) {
   const clearLb = () => { lbTimers.forEach(t => { clearInterval(t); cancelAnimationFrame(t); }); lbTimers = []; const st = document.getElementById('lbStyle'); if (st) st.remove(); };
   VIEWS.lobby = async (key, tok) => {
     clearLb();
+    if (!key && X.kiosk) { const k = X.kiosk.saved('lobby'); if (k) return go('/lobby/' + k, true); }
+    if (X.kiosk) X.kiosk.start('lobby', key);
     const g = await gymOf(key), qs = new URLSearchParams(location.search), preview = qs.has('preview');
     let cfg = await cfgOf(g.id), dd = await lobbyData(g);
     if (tok !== S.tok) return;
@@ -305,6 +307,9 @@ export function install(X) {
       <div class="dtvHead"><div><div class="kicker">${esc(g.name)}</div><h2>Dandy <span>TV</span></h2></div><div class="row"><button class="btn" id="dtvSave" disabled>Saved</button></div></div>
       ${missing ? '<div class="formCard cvNote"><b>Dandy TV settings are being set up.</b> The boards work with their starting slides until then.</div>' : ''}
       <div class="dtvLinks">${linkCard('cls', 'Class TV', 'For the floor. The workout, every member\'s targets, part timers and the day board.', L.cls)}${linkCard('lobby', 'Lobby TV', 'For the front. Your schedule, PRs, events and offers, each with a QR code.', L.lobby)}</div>
+      <div class="formCard dtvKiosk"><h3 class="inH">Make the TV an app</h3>
+        <ol><li>Open the link on the TV's browser (Chrome, Edge, a Fire TV or Android TV stick, or a mini PC).</li><li>Tap <b>Install Dandy TV</b> in the corner. It installs as its own app.</li><li>Open it from the app list. It runs full screen, keeps the screen awake, hides the cursor, remembers your gym and refreshes itself every night at 3am.</li></ol>
+        <p class="hint">Want it locked so nobody can leave the screen? On a mini PC, start Chrome with <code>--kiosk ${esc(L.cls)}</code>. On an Android TV stick, set the Dandy TV app as the kiosk app in Fully Kiosk Browser.</p></div>
       <div class="dtvGrid">
         <div class="formCard dtvSlides"><div class="formH">Lobby slides <span class="sub">Each shows for <select id="dtvLs">${[3, 5, 8, 10, 12, 15, 20, 30].map(n => `<option${n === lobbySecs ? ' selected' : ''}>${n}</option>`).join('')}</select> seconds</span></div>
           <ol class="dtvList" id="dtvList"></ol>

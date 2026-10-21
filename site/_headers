@@ -5,3 +5,5 @@
   Permissions-Policy: camera=(self), microphone=(), geolocation=()
 /assets/*
   Cache-Control: public, max-age=604800
+/*.webmanifest
+  Content-Type: application/manifest+json

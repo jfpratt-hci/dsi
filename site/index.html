@@ -8,7 +8,10 @@
 <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icon-180.png">
-<link rel="manifest" href="/manifest.webmanifest">
+<link rel="manifest" href="/manifest.webmanifest" id="appManifest">
+<script>/* Dandy TV installs as its own full screen app: the class and lobby screens get their own manifest. */
+(function(){var p=location.pathname,m=/^\/(tv|lobby)(\/|$)/.exec(p);if(m){document.getElementById('appManifest').href='/'+m[1]+'.webmanifest';}
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__dsiInstall=e;document.dispatchEvent(new Event('dsi-installable'));});})();</script>
 <meta name="apple-mobile-web-app-title" content="Dandy">
 <meta name="application-name" content="Dandy Strength">
 <meta name="theme-color" content="#0E1420">

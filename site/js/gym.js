@@ -479,6 +479,9 @@ export function install(X) {
 
   VIEWS.tv = async (key, tok) => {
     clearTv();
+    // The installed app opens at /tv/ and goes to the gym this screen was set up for.
+    if (!key && X.kiosk) { const k = X.kiosk.saved('tv'); if (k) return go('/tv/' + k, true); }
+    if (X.kiosk) X.kiosk.start('tv', key);
     const gid = await gymIdOf(key);
     let st = null, cur = 0, lastTouch = 0;
     const load = async () => {
@@ -497,8 +500,17 @@ export function install(X) {
       // Today's classes and who booked them, so the screens can show just the class on the floor.
       const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
       const sess = await sb.from('sessions').select('id,name,starts_at,ends_at,status').eq('gym_id', gid).gte('starts_at', dayStart.toISOString()).lt('starts_at', new Date(dayStart.getTime() + 864e5).toISOString()).neq('status', 'canceled').order('starts_at');
-      const sessions = sess.error ? [] : sess.data || [];
-      const bk = sessions.length ? await sb.from('bookings').select('session_id,profile_id,status').in('session_id', sessions.map(x => x.id)).neq('status', 'canceled') : { data: [] };
+      let sessions = sess.error ? [] : sess.data || [];
+      // No sessions made for today yet: use the weekly class schedule, so the class clock still starts at each class time.
+      if (!sessions.length) {
+        const wd = dayStart.getDay(), cl = ((await sb.from('classes').select('id,name,weekdays,start_time,duration_min,active').eq('gym_id', gid)).data || [])
+          .filter(c => c.active !== false && c.start_time && (c.weekdays || []).map(Number).includes(wd));
+        sessions = cl.map(c => { const [h, mi] = c.start_time.split(':').map(Number), a = new Date(dayStart); a.setHours(h, mi, 0, 0);
+          return { id: 'c-' + c.id, name: c.name, starts_at: a.toISOString(), ends_at: new Date(a.getTime() + (c.duration_min || 60) * 60000).toISOString(), status: 'scheduled' }; })
+          .sort((x, y) => x.starts_at < y.starts_at ? -1 : 1);
+      }
+      const realIds = sessions.map(x => x.id).filter(x => !String(x).startsWith('c-'));
+      const bk = realIds.length ? await sb.from('bookings').select('session_id,profile_id,status').in('session_id', realIds).neq('status', 'canceled') : { data: [] };
       const tv = X.tvConfig ? await X.tvConfig(gid).catch(() => null) : null;
       st = { ...base, tv, yday, prs, lb, q, by, from30, sessions, bookings: bk.error ? [] : bk.data || [], battles: bt.filter(b => ids.includes(b.challenger) || ids.includes(b.opponent)) };
     };
@@ -704,8 +716,10 @@ export function install(X) {
       const boxes = $$('[data-cbar]'), nows = $$('[data-cnow]'), b = document.body;
       if (!boxes.length && !nows.length) return;
       const put = (els, h) => els.forEach(el => { const v = typeof h === 'function' ? h(el) : h; if (el.innerHTML !== v) el.innerHTML = v; });
-      const { segs, used } = classPlan();
+      let { segs, used } = classPlan();
       const win = classWin(), live = !!(win && !win.next);
+      // No part clocks on today's workout: the class still gets its clock, as one block for the whole class.
+      if (!segs.length && win && st && st.w) { segs = [{ k: 'part', a: 0, b: win.len, p: { L: '', name: 'Class' }, c: { min: win.len }, whole: true }]; used = win.len; }
       b.classList.toggle('tvPlan', !!segs.length);
       if (!segs.length) { put(boxes, el => el.hasAttribute('data-rule') ? '<div class="tvRule"></div>' : ''); put(nows, ''); b.classList.remove('tvLive'); lastSeg = ''; return; }
       const len = Math.max(live ? win.len : 60, used);
@@ -713,7 +727,7 @@ export function install(X) {
       const m = live ? (Date.now() - win.at) / 60000 : -1, seg = live ? all.find(x => m >= x.a && m < x.b) : null;
       const barHtml = `<div class="tvTL">${all.map(x => {
         const f = Math.max(0, Math.min(1, (m - x.a) / (x.b - x.a))), cur = x === seg, done = live && m >= x.b;
-        const inner = x.k === 'part' ? `<i>${x.p.L}</i><span>${esc(x.p.name || 'Part ' + x.p.L)} · ${x.c.min} min</span>` : x.k === 'gap' ? `<span>${x.b - x.a}′</span>` : `<span>Open · ${Math.round(x.b - x.a)} min</span>`;
+        const inner = x.k === 'part' ? `${x.p.L ? `<i>${x.p.L}</i>` : ''}<span>${esc(x.p.name || 'Part ' + x.p.L)} · ${x.c.min} min</span>` : x.k === 'gap' ? `<span>${x.b - x.a}′</span>` : `<span>Open · ${Math.round(x.b - x.a)} min</span>`;
         return `<div class="tvSeg ${x.k}${cur ? ' cur' : ''}${done ? ' done' : ''}" style="flex:${x.b - x.a} 1 0"><b style="width:${f * 100}%"></b>${inner}</div>`;
       }).join('')}${live ? `<em class="tvMark" style="left:${Math.min(100, (m / len) * 100)}%"></em>` : ''}</div>
         ${live ? `<div class="tvEnds"><span>${fmtTime(win.at)} start</span><span>${fmtTime(win.at + len * 60000)} end</span></div>` : ''}`;
@@ -724,11 +738,15 @@ export function install(X) {
       if (win && win.next) { const sec = (win.at - Date.now()) / 1000; html = `<div class="lbl">Next class</div><b>${sec < 3600 ? mmss(sec) : fmtTime(win.at)}</b>${sec < 3600 ? `<small>Starts ${fmtTime(win.at)}</small>` : ''}`; }
       else if (live) {
         const el = m * 60, leftMin = Math.max(0, Math.ceil(len - m));
-        const what = !seg ? '' : seg.k === 'part' ? `${seg.p.L} ${esc(seg.p.name || 'Part ' + seg.p.L)} now` : seg.k === 'gap' ? `Change over, next ${seg.next.L}` : 'Cooldown';
-        html = `<div class="lbl">Class time</div><b>${mmss(el)}</b><small>${leftMin} min left${what ? ' · ' + what : ''}</small>`;
+        const what = !seg ? '' : seg.k === 'part' ? (seg.whole ? '' : `${seg.p.L} ${esc(seg.p.name || 'Part ' + seg.p.L)} now`) : seg.k === 'gap' ? `Change over, next ${seg.next.L}` : 'Cooldown';
+        // Yellow while you should be working, white in a changeover, grey in the open time at the end. Same colors as the class plan in the workout editor.
+        const mode = !seg ? 'open' : seg.k === 'part' ? 'work' : seg.k === 'gap' ? 'rest' : 'open';
+        html = `<div class="lbl cw-${mode}">${mode === 'work' ? 'Work' : mode === 'rest' ? 'Change over' : 'Class time'}</div><b class="cw-${mode}">${mmss(el)}</b><small>${leftMin} min left${what ? ' · ' + what : ''}</small>`;
+        b.dataset.cmode = mode;
       }
       const changed = nows.some(el => el.innerHTML !== html);
       put(nows, html); if (changed) fitTitle();
+      if (!live) delete b.dataset.cmode;
       b.classList.toggle('tvLive', !!html);
       // Light up the card and the part tab on now, and beep as each part and changeover begins.
       const onL = seg && seg.k === 'part' ? seg.p.L : '';

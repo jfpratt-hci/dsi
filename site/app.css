@@ -1681,3 +1681,19 @@ abbr.diTag,.diTag{display:inline-block;font:800 .72em/1 var(--mono);letter-spaci
 @media (max-width:560px){.mbLadder,.mbDay,.mbFacts{grid-template-columns:1fr}.mbLadder li::after{display:none}.mbScale{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .lvPath>div:not(.lvOr){display:block;line-height:1.5}.lvPath .lvBar{margin-top:6px}
 .wkAsk{margin:0 0 12px;padding:10px 14px;border:1px dashed var(--accent);border-radius:8px;font-size:14px;color:var(--muted)}.wkAsk a{color:var(--accent);font-weight:700}
+/* Dandy TV kiosk app */
+body.kioskIdle,body.kioskIdle *{cursor:none!important}
+.kioskInstall{position:fixed;right:18px;bottom:18px;z-index:200;display:grid;gap:2px;text-align:left;background:var(--accent);color:#141414;border:0;border-radius:10px;padding:12px 16px;box-shadow:0 10px 30px rgba(0,0,0,.5);cursor:pointer;font:inherit}
+.kioskInstall b{font:900 16px var(--disp);text-transform:uppercase;letter-spacing:.03em}.kioskInstall span{font-size:12px}
+body.kioskIdle .kioskInstall{opacity:.35}
+/* Class clock colors, the same as the class plan in the workout editor: yellow is work, white is change over, grey is open time */
+.tvNow b.cw-work{color:var(--accent)}.tvNow b.cw-rest{color:var(--ink)}.tvNow b.cw-open{color:var(--muted)}
+.tvNow .lbl.cw-work{color:var(--accent)}.tvNow .lbl.cw-rest{color:var(--ink)}
+.tvSeg.part{background:color-mix(in srgb,var(--accent) 80%,var(--panel2));color:#141414}
+.tvSeg.part i,.tvSeg.part span{color:#141414;text-shadow:none}
+.tvSeg.part>b{background:rgba(0,0,0,.22)}
+.tvSeg.part.done{background:color-mix(in srgb,var(--accent) 30%,var(--panel2))}
+.tvSeg.part.cur{background:var(--accent);box-shadow:inset 0 0 0 .2cqw #fff}
+.tvSeg.part.cur i,.tvSeg.part.cur span{color:#141414;text-shadow:none}
+.tvSeg.open{border-color:var(--down);color:var(--down)}
+.dtvKiosk{margin-top:12px;gap:8px}.dtvKiosk ol{margin:0;padding-left:20px;display:grid;gap:4px;color:var(--muted)}.dtvKiosk code{font:12px var(--mono);background:var(--panel2);padding:2px 5px;border-radius:4px}

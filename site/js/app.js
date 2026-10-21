@@ -12,6 +12,7 @@ import { install as installConnect } from './connect.js';
 import { install as installInsights } from './insights.js';
 import { install as installGrowth } from './growth.js';
 import { install as installFollow } from './followup.js';
+import { install as installKiosk } from './kiosk.js';
 import { install as installShop } from './shop.js';
 import { install as installTv } from './tv.js';
 
@@ -178,6 +179,7 @@ async function route() {
   if (/^#(access_token|error)/.test(location.hash)) return;
   const parts = location.pathname.replace(/^\/+|\/+$/g, '').split('/').map(decodeURIComponent);
   let r = parts[0] || '';
+  if (typeof CTX !== 'undefined' && CTX.kiosk && r !== 'tv' && r !== 'lobby') CTX.kiosk.stop();
   for (const ch of S.channels) sb.removeChannel(ch);
   S.channels = [];
   if (S.me && !S.me.display_name && !['join', 'login', 'privacy', 'terms', 'support', 'rules'].includes(r)) { go('/join', true); return; }
@@ -1493,6 +1495,7 @@ installConnect(CTX);
 installInsights(CTX);
 installGrowth(CTX);
 installFollow(CTX);
+installKiosk(CTX);
 // Real names and numbers are for signed in members. Visitors get the sample gym and a sign in prompt instead.
 for (const [k, what] of [['boards', 'Boards'], ['prs', 'PR walls'], ['pr', 'PRs'], ['u', 'Lifter pages'], ['gyms', 'Gym boards'], ['compete', 'Competitions'], ['season', 'Seasons'], ['battles', 'Battles'], ['recap', 'Year recaps']]) {
   const f = VIEWS[k]; if (f) VIEWS[k] = (a, tok) => (S.me ? f(a, tok) : CTX.membersOnly(tok, what));
