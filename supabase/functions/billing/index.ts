@@ -41,6 +41,8 @@ Deno.serve(async req => {
     const gymOf = async (gid: string) => (await admin.from('gyms').select('*').eq('id', gid).maybeSingle()).data;
     const office = (gid: string) => `${SITE}/club/${gid}?tab=billing`;
     const dest = (acct: string, md: Record<string, string>) => ({ on_behalf_of: acct, transfer_data: { destination: acct }, metadata: md });
+    // Stripe Managed Payments (Stripe as merchant of record) is on by default for new accounts; gym payments are the gym's own sales, so it stays off.
+    const newSession = (p: Record<string, unknown>) => stripe.checkout.sessions.create({ managed_payments: { enabled: false }, ...p } as any);
     const notReady = (g: any) => `${g?.name ?? 'This gym'} is not taking cards online yet. Pay at the gym.`;
     // Bank debit (ACH) for memberships and anything $50 or more, when the gym's account can take it. Card for the rest.
     const methods = async (acct: string, amount: number, bankOk: boolean) => {
@@ -78,7 +80,7 @@ Deno.serve(async req => {
       let ret = `${SITE}/site/${g.slug}`;
       try { const u = new URL(String(body.return ?? '')); if (u.protocol === 'https:' && allowed.has(u.hostname)) { u.search = ''; u.hash = ''; ret = u.toString(); } } catch { /* default */ }
       const md = { kind, ref_table: table, ref_id: id, gym_id: gid, label: label.slice(0, 100) };
-      const s = await stripe.checkout.sessions.create({
+      const s = await newSession({
         mode: 'payment', payment_method_types: await methods(g.stripe_account, amount, kind !== 'event') as any,
         line_items: [{ quantity: 1, price_data: { currency: 'usd', unit_amount: amount, product_data: { name: `${g.name}: ${label}`.slice(0, 250) } } }],
         ...(email ? { customer_email: email } : {}),
@@ -145,7 +147,7 @@ Deno.serve(async req => {
       const g = await gymOf(inv.gym_id);
       if (!g?.stripe_account || !g.stripe_ready) return fail(notReady(g), 409);
       const md = { invoice_id: inv.id, gym_id: g.id };
-      const s = await stripe.checkout.sessions.create({
+      const s = await newSession({
         mode: 'payment', payment_method_types: await methods(g.stripe_account, inv.amount_cents, true) as any,
         line_items: [{ quantity: 1, price_data: { currency: 'usd', unit_amount: inv.amount_cents, product_data: { name: `${g.name}: ${inv.description}`, description: `Invoice ${inv.number}` } } }],
         ...(inv.profile_id === me.id ? { customer: await customerFor() } : {}),
@@ -177,7 +179,7 @@ Deno.serve(async req => {
       if (me2) return fail(me2.message, 500);
       const recurring = plan.interval === 'month' || plan.interval === 'year';
       const md = { membership_id: m.id, gym_id: g.id };
-      const s = await stripe.checkout.sessions.create({
+      const s = await newSession({
         mode: recurring ? 'subscription' : 'payment', payment_method_types: await methods(g.stripe_account, recurring ? 99999 : plan.price_cents, true) as any,
         line_items: [{ quantity: 1, price_data: { currency: 'usd', unit_amount: plan.price_cents, product_data: { name: `${g.name}: ${plan.name}` }, ...(recurring ? { recurring: { interval: plan.interval } } : {}) } }],
         customer: await customerFor(),
@@ -241,7 +243,7 @@ Deno.serve(async req => {
       }
       const trialEnd = b.trial_ends_at ? Math.floor(Date.parse(b.trial_ends_at + 'T12:00:00Z') / 1000) : 0;
       const md = { gym_billing: g.id };
-      const s = await stripe.checkout.sessions.create({
+      const s = await newSession({
         mode: 'subscription', customer: cust, payment_method_types: ['card', 'us_bank_account'] as any,
         line_items: [{ quantity: 1, price_data: { currency: 'usd', unit_amount: b.price_cents, recurring: { interval: 'month' }, product_data: { name: `Dandy Strength ${TIER[b.tier] ?? ''} plan`.replace('  ', ' ') } } }],
         metadata: md,
