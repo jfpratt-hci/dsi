@@ -79,6 +79,9 @@ Deno.serve(async req => {
 
     case 'invoice.paid':
     case 'invoice.payment_failed': {
+      // Newer event versions move subscription and payment fields; read the invoice back in the API version this code uses.
+      const full: any = await stripe.invoices.retrieve(o.id).catch(() => null);
+      if (full) { o.subscription = full.subscription ?? o.subscription; o.payment_intent = full.payment_intent ?? o.payment_intent; }
       const subId = typeof o.subscription === 'string' ? o.subscription : o.subscription?.id ?? o.parent?.subscription_details?.subscription;
       if (!subId) break;
       const paid = ev.type === 'invoice.paid';
