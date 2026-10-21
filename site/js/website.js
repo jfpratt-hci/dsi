@@ -59,7 +59,7 @@ export function install(X) {
         <form id="wsStatus" class="fields">${fld('Status', chk('published', s.published, 'Website is live'), 'w2')}${fld('Search engines', chk('indexed', !seo.noindex, 'Show in Google and Bing'), 'w2')}
           ${fld('Search title', inp('title', seo.title, `maxlength="70" placeholder="${esc(g.name)} | Gym in ${esc(g.city || 'your town')}"`), 'w2')}${fld('Search description', inp('description', seo.description, 'maxlength="160"'), 'w2')}
           <div class="field w4"><span class="hint">Your own domain (like yourgym.com) is connected by the Dandy team. Contact and social links are in <a href="/gym/${g.id}">Settings</a>. Plans and services are in <a href="/sell/${g.id}">Plans and services</a>.</span></div>
-          <div class="field w4 row"><button class="btn sm">Save status</button></div></form></div>
+          </form><div class="row"><button class="btn sm" form="wsStatus">Save status</button></div></div>
 
       <form class="formCard" id="wsLook"><div class="formH">Look</div><div class="fields">
         ${fld('Gym name', inp('name', b.name || g.name, 'maxlength="80"'), 'w2')}${fld('Short name', inp('short', b.short, 'maxlength="12" placeholder="CFS"'))}${fld('Tagline', inp('tagline', b.tagline, 'maxlength="80"'))}

@@ -1,0 +1,3 @@
+# Old gym preview addresses now served by the one website template (worker/index.js, site/gs).
+/cfs /site/cfs 301
+/cfs.html /site/cfs 301
