@@ -1,7 +1,8 @@
 // Follow up texts for gyms, sent through Twilio from each gym's text line.
 // POST JSON with the x-dsi-hook secret (the database calls this every 5 minutes, and right away for a new lead or a coach's reply):
 //   queues whatever is due (follow_up_scan), then sends what is due: automatic texts (text_outbox) and coaches' replies (lead_messages).
-// POST from Twilio to ?in=1 (signed): a text to a gym's number. STOP and START are honored; anything else lands in the gym's inbox.
+// POST from Twilio to ?in=1 (signed): a text to a gym's number. STOP and START are honored, replies to a text blast are counted,
+// and anything else lands in the gym's inbox.
 // Secrets: TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN. Until they are set, texts wait in the queue and nothing is sent.
 // Rules kept here: only 9am to 8pm at the gym, never to a number that said STOP, nudges stop once a lead joins.
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -57,8 +58,11 @@ Deno.serve(async req => {
       await sb.from('sms_optouts').delete().eq('gym_id', gid).eq('phone', ph);
       await sb.from('leads').update({ opted_out: false }).eq('gym_id', gid).eq('phone', ph);
     }
+    // A reply to a text blast (a survey number, YES to a sign up) is counted on the blast.
+    const blast = STOP.has(word) ? null : (await sb.rpc('campaign_reply', { p_gym: gid, p_phone: ph, p_body: body })).data;
     // Into the inbox, as the same person as before when we know the number.
     let { data: lead } = await sb.from('leads').select('id,status').eq('gym_id', gid).eq('phone', ph).order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (!lead && blast) return twiml(); // a member answering a blast is not a new lead
     if (!lead) {
       const { data: md } = await sb.from('member_details').select('profile_id,legal_name').eq('phone', ph).limit(1).maybeSingle();
       let member = false;

@@ -21,7 +21,17 @@ export function install(X) {
     ['review_ask', 'Google review ask', 'Day after a PR', 'At most every 4 months, when the gym has a Google review link.', 'member'],
     ['card_failed', 'Card failed', 'When it happens', 'A private note with the link to update their card.', 'member'],
   ];
-  const RN = Object.fromEntries(RULES.map(r => [r[0], r[1]]));
+  const RN = { ...Object.fromEntries(RULES.map(r => [r[0], r[1]])), campaign: 'Text blast' };
+  // Text blasts: a survey, news with a link, or a sign up. Starters a gym can send as is or edit.
+  const KINDS = [['survey', 'Survey', 'Ask a question. People reply with a number and the answers count themselves.'], ['news', 'News and merch', 'New gear, a new class, a schedule change. Add a link to the store or the page.'], ['signup', 'Sign up', 'An event or a challenge. People reply YES and land on your list.']];
+  const STARTERS = [
+    ['survey', 'How was this week', 'Hi {first}! Quick one from the gym: how were classes this week?', ['Loved it', 'Good', 'Too hard', 'Too easy'], ''],
+    ['survey', 'New class time', 'Hi {first}! We are thinking about adding a class. Which time would you come to?', ['6am', '12pm', '7pm', 'Saturday 8am'], ''],
+    ['news', 'New merch', '{first}, new gym tees and hoodies just landed. Grab one at the front desk or order here:', [], ''],
+    ['signup', 'Event sign up', '{first}, Halloween partner WOD is Saturday at 9am. Costumes encouraged, bring a friend.', [], ''],
+  ];
+  const AUD = [['members', 'All members'], ['unlimited', 'Unlimited members'], ['quiet', 'Members not seen in 14 days'], ['leads', 'Leads still deciding'], ['everyone', 'Members and leads']];
+  const assemble = (kind, body, choices, link) => `${body.trim()}${kind === 'survey' && choices.length ? ' Reply ' + choices.map((c, i) => `${i + 1} ${c}`).join(', ') + '.' : ''}${kind === 'signup' ? ' Reply YES to sign up.' : ''}${link ? ' ' + link.trim() : ''} Reply STOP to opt out.`;
   const VARS = '{first} {gym} {link} {when} {address} {buddy_line} {lead} {from} {lift} {weight} {review}';
   const STATUS = [['new', 'New'], ['talking', 'Talking'], ['booked', 'Booked'], ['joined', 'Joined'], ['lost', 'Lost']];
   const phoneTxt = p => /^\d{10}$/.test(p || '') ? `${p.slice(0, 3)} ${p.slice(3, 6)} ${p.slice(6)}` : (p || '');
@@ -51,7 +61,7 @@ export function install(X) {
     const people = memIds.length ? ((await sb.from('profiles').select('id,display_name').in('id', memIds)).data || []).sort((a, b) => String(a.display_name).localeCompare(String(b.display_name))) : [];
     const ready = !!(line && line.phone_e164), waiting = outbox.filter(t => t.status === 'queued').length, sent7 = outbox.filter(t => t.status === 'sent' && Date.parse(t.sent_at) > Date.now() - 7 * 864e5).length;
     const fresh = leads.filter(l => l.status === 'new').length, canEdit = owner(gid) || X.isStaff();
-    const tabs = [['inbox', `Inbox${fresh ? ` <span class="fuN">${fresh}</span>` : ''}`], ['auto', 'Automatic texts'], ['sent', `Sent and waiting${waiting ? ` <span class="fuN">${waiting}</span>` : ''}`]];
+    const tabs = [['inbox', `Inbox${fresh ? ` <span class="fuN">${fresh}</span>` : ''}`], ['auto', 'Automatic texts'], ['blast', 'Text blasts'], ['sent', `Sent and waiting${waiting ? ` <span class="fuN">${waiting}</span>` : ''}`]];
     const head = `${X.officeBar(g, 'follow')}<section class="sec fuTop">
         <div class="fuStat${ready ? ' ok' : ''}"><span class="grLbl">Text line</span><b>${ready ? esc(phoneTxt(line.phone_e164.slice(-10))) : 'Not set up yet'}</b><span class="hint">${ready ? 'Texts send from this number, 9am to 8pm' : 'Texts wait in the queue until Dandy connects your number'}</span></div>
         <div class="fuStat"><span class="grLbl">Leads talking</span><b>${leads.filter(l => ['new', 'talking', 'booked'].includes(l.status)).length}</b><span class="hint">${fresh} new</span></div>
@@ -81,6 +91,7 @@ export function install(X) {
           <div class="field"><label for="fl-b">Buddy at the door</label><select id="fl-b"><option value="">No buddy yet</option>${people.map(p => `<option value="${p.id}"${cur.buddy_profile === p.id ? ' selected' : ''}>${esc(p.display_name)}</option>`).join('')}</select></div>
           <div class="field"><label for="fl-r">Brought by</label><select id="fl-r"><option value="">Nobody</option>${people.map(p => `<option value="${p.id}"${cur.referred_by === p.id ? ' selected' : ''}>${esc(p.display_name)}</option>`).join('')}</select></div>
           <label class="check"><input type="checkbox" id="fl-ok"${cur.sms_ok ? ' checked' : ''}${cur.opted_out ? ' disabled' : ''}><span>They agreed to texts from the gym</span></label>
+          <label class="check"><input type="checkbox" id="fl-pr"${cur.sms_promo ? ' checked' : ''}${cur.opted_out ? ' disabled' : ''}><span>And to news, offers and surveys</span></label>
           <button class="btn sm" type="submit">Save</button><span class="hint" id="fl-msg"></span></form>` : '';
       if (!paint(tok, `${head}<div class="fuInbox"><div class="fuList"><button class="btn ghost sm" id="fuAdd" type="button">+ Add a lead</button>${list}</div><div class="fuMain formCard">${thread}</div>${side}</div>
         <dialog id="fuNew" class="fuDlg"><form method="dialog" id="fuNewF"><h3 class="inH">Add a lead</h3>
@@ -114,7 +125,7 @@ export function install(X) {
         e.preventDefault();
         const ph = $('#fl-p').value.replace(/\D/g, '').slice(-10), t = $('#fl-t').value;
         const row = { name: $('#fl-n').value.trim() || null, phone: ph.length === 10 ? ph : null, status: $('#fl-s').value, trial_at: t ? new Date(t).toISOString() : null,
-          buddy_profile: $('#fl-b').value || null, referred_by: $('#fl-r').value || null, sms_ok: $('#fl-ok').checked };
+          buddy_profile: $('#fl-b').value || null, referred_by: $('#fl-r').value || null, sms_ok: $('#fl-ok').checked, sms_promo: $('#fl-pr').checked };
         if (row.trial_at && row.status === 'new') row.status = 'booked';
         if (['joined', 'lost'].includes(row.status)) await sb.from('text_outbox').update({ status: 'canceled', error: 'Marked ' + row.status }).eq('lead_id', cur.id).eq('status', 'queued');
         const { error } = await sb.from('leads').update(row).eq('id', cur.id);
@@ -147,6 +158,61 @@ export function install(X) {
         $('[data-save]', a).onclick = () => save({});
         $('[data-reset]', a).onclick = () => { ta.value = ''; prev(); save({ body: null }); $('[data-reset]', a).disabled = true; };
       });
+      return;
+    }
+
+    /* ---------- text blasts ---------- */
+    if (tab === 'blast') {
+      const [cR, rR] = await Promise.all([sb.from('text_campaigns').select('*').eq('gym_id', gid).order('created_at', { ascending: false }).limit(30), sb.from('text_campaign_replies').select('*').eq('gym_id', gid).order('created_at', { ascending: false }).limit(2000)]);
+      if (missing(cR.error) || (cR.error && /text_campaigns/.test(cR.error.message || ''))) return paint(tok, `${head}<section class="prEmpty"><b>Text blasts switch on with the next database update</b></section></section>`);
+      const camps = cR.data || [], reps = rR.data || [];
+      const result = c => { const rs = reps.filter(x => x.campaign_id === c.id);
+        if (c.kind === 'survey') { const tally = c.choices.map(ch => [ch, rs.filter(x => x.answer === ch).length]), mx = Math.max(1, ...tally.map(t => t[1]));
+          return `<ul class="bcBars">${tally.map(([ch, n]) => `<li><span>${esc(ch)}</span><i><em style="width:${n / mx * 100}%"></em></i><b>${n}</b></li>`).join('')}</ul><p class="hint">${rs.length} of ${c.sent_count} answered${rs.length ? ` · ${Math.round(rs.length / Math.max(1, c.sent_count) * 100)}%` : ''}</p>`; }
+        if (c.kind === 'signup') { const yes = rs.filter(x => x.answer === 'Yes');
+          return `<p><b class="bcBig">${yes.length}</b> signed up${rs.length - yes.length ? ` · ${rs.length - yes.length} said no` : ''}</p>${yes.length ? `<p class="bcNames">${yes.map(x => esc(x.name || phoneTxt(x.phone))).join(', ')}</p>` : ''}`; }
+        return `<p class="hint">${rs.length} ${rs.length === 1 ? 'reply' : 'replies'}${rs.length ? ': ' + rs.slice(0, 3).map(x => `"${esc((x.body || '').slice(0, 60))}"`).join(', ') : ''}</p>`; };
+      if (!paint(tok, `${head}<div class="bcGrid">
+        <form class="formCard bcForm" id="bcF"><h3 class="inH">New text blast</h3>
+          <div class="bcKinds" role="radiogroup" aria-label="Kind of blast">${KINDS.map(([k, n, d], i) => `<label class="bcKind"><input type="radio" name="bck" value="${k}"${i ? '' : ' checked'}><b>${n}</b><span>${d}</span></label>`).join('')}</div>
+          <div class="bcStart"><span class="hint">Start from</span>${STARTERS.map((x, i) => `<button type="button" class="chip" data-st="${i}">${esc(x[1])}</button>`).join('')}</div>
+          <div class="field"><label for="bc-t">Name it</label><input id="bc-t" maxlength="80" placeholder="Only you see this, like Saturday time survey" required></div>
+          <div class="field"><label for="bc-b">Message</label><textarea id="bc-b" rows="3" maxlength="400" placeholder="Hi {first}! ..." required></textarea><span class="hint">{first} fills in each person's first name.</span></div>
+          <div class="field" data-for="survey"><span class="lbl">Answers</span><div class="bcChoices">${[0, 1, 2, 3, 4].map(i => `<input data-ch maxlength="24" placeholder="${['Yes', 'No', 'Maybe', '', ''][i] || 'Optional'}" aria-label="Answer ${i + 1}">`).join('')}</div></div>
+          <div class="field" data-for="news signup"><label for="bc-l">Link <span class="hint">optional, like your store or the event page</span></label><input id="bc-l" type="url" placeholder="https://"></div>
+          <div class="fields"><div class="field w2"><label for="bc-a">Send to</label><select id="bc-a">${AUD.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></div>
+            <div class="field w2"><label for="bc-w">When</label><input id="bc-w" type="datetime-local"><span class="hint">Blank sends now. Texts only go out 9am to 8pm.</span></div></div>
+          <div class="bcPrev"><span class="grLbl">Taylor gets</span><p id="bc-p"></p><span class="hint" id="bc-n"></span></div>
+          <div class="row"><button class="btn" type="submit" id="bc-go"${canEdit ? '' : ' disabled'}>Send</button><span class="hint" id="bc-msg">${ready ? '' : 'Your text line is not connected yet, so blasts wait until it is.'}</span></div>
+          <p class="hint">Only people who said yes to news and offers get blasts. Members turn that on in their membership page; for leads, tick it on the lead.</p></form>
+        <div class="bcList"><h3 class="inH">Sent</h3>${camps.length ? camps.map(c => `<article class="formCard bcCard"><div class="bcCH"><span class="pill ${c.kind === 'survey' ? 'acc' : c.kind === 'signup' ? 'up' : ''}">${esc((KINDS.find(k => k[0] === c.kind) || [, c.kind])[1])}</span><b>${esc(c.title)}</b><span class="hint">${c.status === 'sent' ? `${c.sent_count} sent · ${esc(tFmt(c.send_at || c.sent_at))}` : esc(c.status)}</span></div>
+          <p class="bcBody">${esc(c.body)}</p>${c.status === 'sent' ? result(c) : ''}</article>`).join('') : '<p class="hint">No blasts yet. Your first survey is a good way to learn what members want.</p>'}</div></div></section>`)) return;
+      const f = $('#bcF'), kind = () => (f.querySelector('[name=bck]:checked') || {}).value || 'survey';
+      const choices = () => $$('[data-ch]', f).map(x => x.value.trim()).filter(Boolean);
+      let cnt = null, tm, armed = false;
+      const draw = async () => {
+        const k = kind(); $$('[data-for]', f).forEach(x => { x.hidden = !x.dataset.for.split(' ').includes(k); });
+        $('#bc-p').textContent = assemble(k, ($('#bc-b').value || 'Your message').replace(/\{first\}/g, 'Taylor'), choices(), k === 'survey' ? '' : $('#bc-l').value);
+        armed = false; $('#bc-go').textContent = cnt == null ? 'Send' : `Send to ${cnt} ${cnt === 1 ? 'person' : 'people'}`;
+      };
+      const count = () => { clearTimeout(tm); tm = setTimeout(async () => { const { data, error } = await sb.rpc('campaign_count', { p_gym: gid, p_audience: $('#bc-a').value }); cnt = error ? null : data; $('#bc-n').textContent = cnt == null ? '' : `${cnt} ${cnt === 1 ? 'person has' : 'people have'} said yes to texts like this.`; draw(); }, 150); };
+      f.addEventListener('input', draw); f.addEventListener('change', e => { if (e.target.id === 'bc-a') count(); draw(); });
+      $$('[data-st]', f).forEach(b => b.onclick = () => { const x = STARTERS[+b.dataset.st]; f.querySelector(`[name=bck][value="${x[0]}"]`).checked = true; $('#bc-t').value = x[1]; $('#bc-b').value = x[2]; $$('[data-ch]', f).forEach((el, i) => { el.value = x[3][i] || ''; }); $('#bc-l').value = x[4]; draw(); });
+      draw(); count();
+      f.onsubmit = async e => {
+        e.preventDefault();
+        const k = kind(), ch = k === 'survey' ? choices() : [], msg = $('#bc-msg');
+        if (k === 'survey' && ch.length < 2) return (msg.textContent = 'Add at least two answers.');
+        if (!cnt) return (msg.textContent = 'Nobody in that group has said yes to these texts yet.');
+        if (!armed) { armed = true; $('#bc-go').textContent = `Tap again to text ${cnt} ${cnt === 1 ? 'person' : 'people'}`; return; }
+        $('#bc-go').disabled = true; msg.textContent = 'Sending…';
+        const w = $('#bc-w').value, link = k === 'survey' ? null : ($('#bc-l').value.trim() || null);
+        const { data: c, error } = await sb.from('text_campaigns').insert({ gym_id: gid, kind: k, title: $('#bc-t').value.trim(), body: $('#bc-b').value.trim(), choices: ch, link, audience: $('#bc-a').value, created_by: S.me.id }).select('id').single();
+        if (error) { $('#bc-go').disabled = false; return (msg.textContent = error.message); }
+        const { data: n, error: e2 } = await sb.rpc('campaign_send', { p_id: c.id, p_at: w ? new Date(w).toISOString() : null });
+        if (e2) { $('#bc-go').disabled = false; return (msg.textContent = e2.message); }
+        toast(`${n} texts queued`); VIEWS.follow(gid, S.tok);
+      };
       return;
     }
 

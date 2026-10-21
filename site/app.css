@@ -1697,3 +1697,20 @@ body.kioskIdle .kioskInstall{opacity:.35}
 .tvSeg.part.cur i,.tvSeg.part.cur span{color:#141414;text-shadow:none}
 .tvSeg.open{border-color:var(--down);color:var(--down)}
 .dtvKiosk{margin-top:12px;gap:8px}.dtvKiosk ol{margin:0;padding-left:20px;display:grid;gap:4px;color:var(--muted)}.dtvKiosk code{font:12px var(--mono);background:var(--panel2);padding:2px 5px;border-radius:4px}
+/* Text blasts */
+.bcGrid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;align-items:start}
+.bcForm{gap:12px}
+.bcKinds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.bcKind{display:grid;gap:3px;border:1px solid var(--line);border-radius:8px;padding:10px;cursor:pointer;background:var(--panel2)}
+.bcKind input{position:absolute;opacity:0;pointer-events:none}.bcKind b{font:800 16px var(--disp);text-transform:uppercase}.bcKind span{font-size:12px;color:var(--muted)}
+.bcKind:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}.bcKind:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.bcStart{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.bcChoices{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.bcChoices input{min-width:0}
+.bcPrev{background:var(--panel2);border-radius:10px;padding:12px;display:grid;gap:6px}.bcPrev p{margin:0;background:var(--accent);color:#141414;border-radius:14px 14px 4px 14px;padding:10px 12px;justify-self:end;max-width:90%;font-size:14px;line-height:1.4}
+.bcList{display:grid;gap:10px;align-content:start}
+.bcCard{gap:8px}.bcCH{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.bcCH .hint{margin-left:auto}.bcBody{margin:0;color:var(--muted);font-size:14px}
+.bcBars{list-style:none;margin:0;padding:0;display:grid;gap:6px}.bcBars li{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) 28px;gap:8px;align-items:center;font-size:14px}
+.bcBars i{display:block;height:10px;border-radius:5px;background:var(--panel2);overflow:hidden}.bcBars em{display:block;height:100%;background:var(--accent)}.bcBars b{font:700 13px var(--mono);text-align:right}
+.bcBig{font:900 28px var(--disp);color:var(--up)}.bcNames{margin:0;font-size:14px}
+@media (max-width:900px){.bcGrid{grid-template-columns:1fr}.bcKinds{grid-template-columns:1fr}.bcChoices{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.bcForm .fields{grid-template-columns:repeat(2,minmax(0,1fr))}.bcForm .field.w2{grid-column:auto}.bcForm input,.bcForm select,.bcForm textarea{min-width:0;max-width:100%;width:100%;box-sizing:border-box}@media (max-width:560px){.bcForm .fields{grid-template-columns:1fr}}
