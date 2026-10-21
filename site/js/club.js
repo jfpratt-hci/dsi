@@ -401,13 +401,37 @@ export function install(X) {
     $$('[data-endm]', box).forEach(b => b.onclick = async () => { try { const r = await call('cancel', { membership: b.dataset.endm }); toast(r.ends === 'now' ? 'Membership ended' : 'Autopay stops ' + r.ends); } catch (e) { if (/not switched on/.test(e.message)) { const { error } = await sb.from('memberships').update({ status: 'canceled', end_date: today() }).eq('id', b.dataset.endm); if (error) return toast(error.message); toast('Membership ended'); } else return toast(e.message); } again(); });
   }
 
+  /* ----- The gym's own Dandy plan (what the gym pays Dandy). Dandy sets the tier, price and trial; the owner adds a card. ----- */
+  const TIERS = [['run', 'Run'], ['grow', 'Grow'], ['founder', 'Founder'], ['custom', 'Custom']];
+  function dandyPlanCard(g, b) {
+    const admin = S.me && S.me.role === 'admin';
+    const st = b ? { trial: 'Free trial', active: 'Active', past_due: 'Payment failed', paused: 'Paused', canceled: 'Canceled' }[b.status] || b.status : null;
+    const tier = b ? (TIERS.find(t => t[0] === b.tier) || [b.tier, b.tier])[1] : '';
+    return `<div class="formCard" style="margin-top:12px"><div class="formH">Your Dandy plan <span class="sub">${b ? `${esc(tier)} · ${b.price_cents ? money(b.price_cents) + ' a month' : 'no charge'} · ${esc(st)}${b.trial_ends_at ? ' · trial ends ' + esc(fmtD(b.trial_ends_at)) : ''}` : 'Dandy sets up your plan with you.'}</span></div>
+      ${b && b.note ? `<p class="hint" style="margin:0">${esc(b.note)}</p>` : ''}
+      ${b && b.price_cents && (!b.stripe_subscription || b.status === 'canceled') ? '<div class="row"><button class="btn sm" id="dpStart">Add a card for your Dandy plan</button><span class="hint">You are not charged until the trial ends.</span></div>' : ''}
+      ${admin ? `<form id="dpF" class="fields" style="margin-top:8px"><div class="field"><label>Tier (Dandy only)</label><select id="dp-t">${TIERS.map(([k, n]) => `<option value="${k}"${b && b.tier === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
+        <div class="field"><label>Price a month</label><input id="dp-p" inputmode="decimal" value="${b ? (b.price_cents / 100).toFixed(b.price_cents % 100 ? 2 : 0) : '249'}"></div>
+        <div class="field"><label>Trial ends</label><input id="dp-e" type="date" value="${esc((b && b.trial_ends_at) || '')}"></div>
+        <div class="field"><label>Note shown to the owner</label><input id="dp-n" maxlength="300" value="${esc((b && b.note) || '')}" placeholder="Founder price, locked for 12 months"></div>
+        <div class="field w4 row"><button class="btn ghost sm">Save plan (Dandy only)</button></div></form>` : ''}</div>`;
+  }
+  function wireDandyPlan(g, b, call) {
+    if ($('#dpStart')) $('#dpStart').onclick = async () => { try { location.href = (await call('dandy_plan', { gym: g.id })).url; } catch (e) { toast(e.message); } };
+    if ($('#dpF')) $('#dpF').onsubmit = async e => { e.preventDefault();
+      const row = { gym_id: g.id, tier: $('#dp-t').value, price_cents: cents($('#dp-p').value), trial_ends_at: $('#dp-e').value || null, note: $('#dp-n').value.trim() || null, updated_at: new Date().toISOString(), ...(b ? {} : { status: 'trial' }) };
+      const { error } = await sb.from('gym_billing').upsert(row, { onConflict: 'gym_id' }); if (error) return toast(error.message); toast('Dandy plan saved'); route(); };
+  }
+
   /* ----- Billing ----- */
   async function tabBilling(g, tok, shell, qs) {
     const month = today().slice(0, 7);
-    const [plans, ms, inv] = await Promise.all([
+    const [plans, ms, inv, pays, dplan] = await Promise.all([
       sb.from('plans').select('*').eq('gym_id', g.id).order('price_cents').then(must),
       sb.from('memberships').select('*').eq('gym_id', g.id).then(must),
       sb.from('invoices').select('*').eq('gym_id', g.id).order('created_at', { ascending: false }).limit(500).then(must),
+      sb.from('payments').select('*').eq('gym_id', g.id).order('created_at', { ascending: false }).limit(200).then(r => r.data || []),
+      sb.from('gym_billing').select('*').eq('gym_id', g.id).maybeSingle().then(r => r.data || null),
     ]);
     const names = await people(inv.map(i => i.profile_id).concat(ms.map(m => m.profile_id)));
     const live = ms.filter(m => ['active', 'past_due'].includes(m.status));
@@ -427,8 +451,9 @@ export function install(X) {
         <div class="adStat"><span>Members</span><b>${live.length}</b><small>${live.filter(m => m.status === 'past_due').length} past due</small></div>
         <div class="adStat"><span>Monthly revenue</span><b>${money(mrr)}</b><small>from memberships</small></div>
         <div class="adStat"><span>DSI Pro seats</span><b>${seats}</b><small>${money(seats * PRO_SEAT_CENTS)} a month at $4 a seat</small></div></div>
-      <div class="formCard" style="margin-top:20px"><div class="formH">Card payments <span class="sub">${g.stripe_ready ? 'On. Members pay invoices and start autopay memberships online. Money goes to your Stripe account.' : g.stripe_account ? 'Stripe is connected but not finished. Finish the Stripe setup to take cards.' : 'Connect a Stripe account so members can pay by card and set up autopay.'}</span></div>
-        <div class="row"><button class="btn sm" id="stConnect">${g.stripe_ready ? 'Open Stripe setup' : g.stripe_account ? 'Finish Stripe setup' : 'Connect Stripe'}</button>${g.stripe_account ? '<button class="btn ghost sm" id="stCheck">Check status</button>' : ''}<span class="hint" id="stMsg">${ret === 'done' ? 'Back from Stripe. Checking…' : ''}</span></div></div>
+      <div class="formCard" style="margin-top:20px"><div class="formH">Card payments <span class="sub">${g.stripe_ready ? 'On. Members pay online, and every payment runs through Dandy to your bank. Stripe pays out on its schedule. Dandy takes no fee.' : g.stripe_account ? 'Started but not finished. Finish the Stripe setup to take cards.' : 'Turn on card payments for memberships, drop ins, coaching, events and the store. Payments run through Dandy and go to your bank.'}</span></div>
+        <div class="row"><button class="btn sm" id="stConnect">${g.stripe_ready ? 'Update business details' : g.stripe_account ? 'Finish setup' : 'Turn on card payments'}</button>${g.stripe_account ? '<button class="btn ghost sm" id="stDash">Payouts and bank</button><button class="btn ghost sm" id="stCheck">Check status</button>' : ''}<span class="hint" id="stMsg">${ret === 'done' ? 'Back from Stripe. Checking…' : ''}</span></div></div>
+      ${dandyPlanCard(g, dplan)}
       <h3 style="margin-top:28px">Membership <span>plans</span></h3>
       <div class="board"><div class="tablewrap"><table><thead><tr><th>Plan</th><th class="r">Price</th><th>Billing</th><th>Commitment</th><th>DSI Pro</th><th class="r">Members</th><th></th></tr></thead><tbody>
       ${plans.map(p => `<tr><td><b>${esc(p.name)}</b>${p.active ? '' : ' <span class="pill">Hidden</span>'}<div class="sub">${esc(p.description || '')}</div></td><td class="r n">${money(p.price_cents)}</td><td>${{ month: 'Monthly autopay', year: 'Yearly autopay', once: 'One payment' }[p.interval]}</td><td>${p.commitment_months ? p.commitment_months + ' months' : 'None'}</td><td>${p.includes_pro ? '<span class="pill acc">Included</span> ' : ''}${proReady ? '' : '<span class="sub">Coming soon</span>'}<button${proReady ? '' : ' hidden'} class="btn ghost sm" data-pro="${p.id}" data-on="${p.includes_pro ? 0 : 1}">${p.includes_pro ? 'Remove' : 'Include Pro'}</button></td><td class="r n">${live.filter(m => m.plan_id === p.id).length}</td><td class="r"><button class="btn ghost sm" data-hide="${p.id}" data-on="${p.active ? 0 : 1}">${p.active ? 'Hide' : 'Offer again'}</button></td></tr>`).join('') || '<tr><td colspan="7" class="empty">No plans yet. Add one below, like Unlimited at $175 a month.</td></tr>'}
@@ -445,12 +470,24 @@ export function install(X) {
       <div class="board"><div class="tablewrap"><table><thead><tr><th>#</th><th>Member</th><th>For</th><th class="r">Amount</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>
       ${shown.map(i => `<tr><td class="n">${i.number}</td><td>${esc(names.get(i.profile_id) || 'Member')}</td><td>${esc(i.description)}</td><td class="r n">${money(i.amount_cents)}</td><td>${esc(fmtD(i.due_date))}</td><td>${i.status === 'paid' ? `<span class="pill up">Paid</span> <span class="sub">${esc(i.method || '')} ${i.paid_at ? esc(fmtD(i.paid_at.slice(0, 10))) : ''}</span>` : i.status === 'void' ? '<span class="pill">Void</span>' : '<span class="pill down">Open</span>'}</td>
         <td class="r">${i.status === 'open' ? `<button class="btn ghost sm" data-paid="${i.id}">Mark paid</button> <button class="btn ghost sm" data-void="${i.id}">Void</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="empty">Nothing here.</td></tr>'}
+      </tbody></table></div></div>
+      <div class="secHead" style="margin-top:28px"><h3>Card <span>payments</span></h3><span class="hint">Everything paid by card: memberships, invoices, events, coaching and store orders.</span></div>
+      <div class="board"><div class="tablewrap"><table><thead><tr><th>When</th><th>Who</th><th>For</th><th class="r">Amount</th><th>Status</th><th></th></tr></thead><tbody>
+      ${pays.map(p => `<tr><td>${esc(fmtD(p.created_at.slice(0, 10)))}</td><td>${esc((p.profile_id && names.get(p.profile_id)) || p.payer_name || p.payer_email || 'Guest')}</td><td>${esc(p.description || p.kind)}</td><td class="r n">${money(p.amount_cents)}${p.refunded_cents ? `<span class="sub">${money(p.refunded_cents)} refunded</span>` : ''}</td>
+        <td>${{ succeeded: '<span class="pill up">Paid</span>', refunded: '<span class="pill">Refunded</span>', partially_refunded: '<span class="pill">Part refunded</span>', disputed: '<span class="pill down">Disputed</span>' }[p.status] || esc(p.status)}</td>
+        <td class="r">${p.stripe_payment_intent && ['succeeded', 'partially_refunded'].includes(p.status) ? `<button class="btn ghost sm" data-refund="${p.id}" data-left="${p.amount_cents - p.refunded_cents}">Refund</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">No card payments yet.</td></tr>'}
       </tbody></table></div></div>`))) return;
     const stMsg = $('#stMsg');
     const check = async () => { try { const r = await call('status', { gym: g.id }); stMsg.textContent = r.ready ? 'Card payments are on.' : r.connected ? 'Stripe still needs a few details. Click Finish Stripe setup.' : 'Not connected yet.'; if (r.ready !== g.stripe_ready) route(); } catch (e) { stMsg.textContent = e.message; } };
     if (ret === 'done') check();
     $('#stConnect').onclick = async () => { stMsg.textContent = 'Opening Stripe…'; try { const r = await call('connect', { gym: g.id }); location.href = r.url; } catch (e) { stMsg.textContent = e.message; } };
     if ($('#stCheck')) $('#stCheck').onclick = check;
+    if ($('#stDash')) $('#stDash').onclick = async () => { stMsg.textContent = 'Opening Stripe…'; try { const r = await call('dashboard', { gym: g.id }); window.open(r.url, '_blank', 'noopener'); stMsg.textContent = ''; } catch (e) { stMsg.textContent = e.message; } };
+    $$('[data-refund]').forEach(b => b.onclick = async () => {
+      const left = +b.dataset.left, v = prompt(`Refund how much? Up to ${money(left)}.`, (left / 100).toFixed(2));
+      if (v === null) return; const amt = cents(v); if (!amt || amt > left) return toast('Pick an amount up to ' + money(left) + '.');
+      b.disabled = true; try { await call('refund', { payment: b.dataset.refund, amount_cents: amt }); toast(money(amt) + ' refunded'); route(); } catch (e) { b.disabled = false; toast(e.message); } });
+    wireDandyPlan(g, dplan, call);
     $('#plF').onsubmit = async e => { e.preventDefault(); const price = cents($('#pl-p').value); const { error } = await sb.from('plans').insert({ gym_id: g.id, name: $('#pl-n').value.trim(), price_cents: price, interval: $('#pl-i').value, commitment_months: +$('#pl-c').value || 0, description: $('#pl-d').value.trim() || null, ...(proReady && $('#pl-pro').checked ? { includes_pro: true } : {}) }); if (error) return toast(error.message); toast('Plan added'); route(); };
     $$('[data-pro]').forEach(b => b.onclick = async () => { const on = b.dataset.on === '1'; const { error } = await sb.from('plans').update({ includes_pro: on }).eq('id', b.dataset.pro); if (error) return toast(error.message); toast(on ? 'DSI Pro is now included. Members on this plan get Pro.' : 'DSI Pro removed from this plan.'); route(); });
     $$('[data-hide]').forEach(b => b.onclick = async () => { const { error } = await sb.from('plans').update({ active: b.dataset.on === '1' }).eq('id', b.dataset.hide); if (error) return toast(error.message); route(); });

@@ -8,6 +8,9 @@
   const rpc = (fn, args) => fetch(SB + '/rest/v1/rpc/' + fn, { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(args) })
     .then(async (r) => { const j = await r.json().catch(() => null); if (!r.ok) throw new Error((j && j.message) || 'That did not go through.'); return j; });
   window.rpc = rpc;
+  // Card payment for something booked on the site: Dandy's checkout, paid out to the gym (billing function, action checkout).
+  const payNow = (kind, id) => fetch(SB + '/functions/v1/billing', { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'checkout', kind, id, return: location.origin + location.pathname }) })
+    .then(async (r) => { const j = await r.json().catch(() => ({})); if (!r.ok || !j.url) throw new Error(j.error || 'Card checkout did not open.'); location.href = j.url; });
 
   const siteKey = () => {
     if (window.__SITE_KEY__) return window.__SITE_KEY__;
@@ -92,7 +95,9 @@
   $('#fAbout').textContent = C.about || ''; $('#fAbout').hidden = !C.about;
   const fullAddr = (() => { const a = (G.address || '').trim(); if (!a) return CITY; if (/\d{5}/.test(a) || !CITY) return a; return `${a}, ${CITY}${L.zip ? ' ' + L.zip : ''}`; })();
   $('#fFine').textContent = `© ${now.getFullYear()} ${NAME}${fullAddr ? ' · ' + fullAddr : ''}`;
-  if (S.announcement && S.announcement.on && S.announcement.text) {
+  const paidKind = new URLSearchParams(location.search).get('paid');
+  if (paidKind) { const a = $('#annBar'); a.hidden = false; a.textContent = { event: 'Payment received. Your spot is saved.', appointment: 'Payment received. We will text you to confirm your time.', order: 'Payment received. We will text you when your order is ready.' }[paidKind] || 'Payment received. Thank you.'; history.replaceState(null, '', location.pathname); }
+  else if (S.announcement && S.announcement.on && S.announcement.text) {
     const a = $('#annBar'); a.hidden = false;
     const t = el(https(S.announcement.link) || /^#/.test(S.announcement.link || '') ? 'a' : 'span', '', S.announcement.text);
     if (t.tagName === 'A') t.href = S.announcement.link; a.append(t);
@@ -488,7 +493,7 @@
     const call = s.kind === 'class'
       ? rpc('site_book_trial', { p_key: G.slug || siteKey(), p_name: name, p_phone: phone || null, p_email: email, p_at: at.toISOString(), p_what: s.name, p_note: note, p_sms_ok: true })
       : rpc('site_request_appointment', { p_service: s.id, p_name: name, p_email: email, p_phone: phone || null, p_starts_at: at ? at.toISOString() : null, p_session: null, p_notes: note || null });
-    call.then(() => { btn.disabled = false; booked(); }).catch((x) => { btn.disabled = false; err.textContent = x.message || 'That did not go through. Text or call us instead.'; err.hidden = false; });
+    call.then((r) => { if (s.kind === 'appt' && r && r.needs_payment && G.payments_ready && r.appointment_id) return payNow('appointment', r.appointment_id); btn.disabled = false; booked(); }).catch((x) => { btn.disabled = false; err.textContent = x.message || 'That did not go through. Text or call us instead.'; err.hidden = false; });
   });
   function booked() {
     const s = SERVICES[bk.svc], first = $('#bName').value.trim().split(' ')[0]; bk.done = true;
@@ -553,9 +558,9 @@
         ev.preventDefault();
         if (!nm.value.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em.value.trim())) { err.textContent = 'Add your name and a valid email.'; err.hidden = false; return; }
         sub.disabled = true;
-        rpc('site_register_event', { p_event: e.id, p_name: nm.value.trim(), p_email: em.value.trim(), p_phone: ph.value.trim() || null, p_division: dv ? dv.value : null, p_shirt_size: sh ? sh.value : null, p_team: null, p_pay_at_gym: true })
-          .then((r) => { e.joined = true; if (e.left) e.left--; drawEvList();
-            s.replaceChildren(el('span', 'eyebrow', r && r.status === 'waitlist' ? 'Waitlist' : 'Signed up'), el('h3', '', r && r.status === 'waitlist' ? 'You are on the waitlist' : `See you at ${e.title}`), el('p', 'muted', `${nm.value.trim().split(' ')[0]}, you're on the list for ${e.d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} at ${e.time}.${e.price ? ' Pay at the gym.' : ''}`)); })
+        rpc('site_register_event', { p_event: e.id, p_name: nm.value.trim(), p_email: em.value.trim(), p_phone: ph.value.trim() || null, p_division: dv ? dv.value : null, p_shirt_size: sh ? sh.value : null, p_team: null, p_pay_at_gym: !(G.payments_ready && e.price > 0) })
+          .then((r) => { if (r && r.needs_payment && r.registration_id) return payNow('event', r.registration_id); e.joined = true; if (e.left) e.left--; drawEvList();
+            s.replaceChildren(el('span', 'eyebrow', r && r.status === 'waitlist' ? 'Waitlist' : 'Signed up'), el('h3', '', r && r.status === 'waitlist' ? 'You are on the waitlist' : `See you at ${e.title}`), el('p', 'muted', `${nm.value.trim().split(' ')[0]}, you're on the list for ${e.d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} at ${e.time}.${e.price && !G.payments_ready ? ' Pay at the gym.' : ''}`)); })
           .catch((x) => { sub.disabled = false; err.textContent = x.message; err.hidden = false; });
       });
       s.append(f); if (scroll) scrollTo('evPanel', 'nearest');
@@ -592,7 +597,7 @@
       if (!nm || (!$('#oPhone').value.trim() && !$('#oEmail').value.trim())) { m.textContent = 'Add your name and a phone or email.'; m.hidden = false; return; }
       $('#checkout').disabled = true;
       rpc('site_place_order', { p_key: G.slug || siteKey(), p_items: cart.map((it) => it.v ? { variant_id: it.v.id, qty: 1 } : { product_id: it.p.id, qty: 1 }), p_name: nm, p_email: $('#oEmail').value.trim() || null, p_phone: $('#oPhone').value.trim() || null, p_delivery: 'pickup', p_ship_to: null })
-        .then(() => { cart.length = 0; drawCart(); m.textContent = `Order placed. ${SHORT} will text you when it is ready for pickup.`; m.hidden = false; })
+        .then((r) => { if (r && r.needs_payment && G.payments_ready && r.order_id) return payNow('order', r.order_id); cart.length = 0; drawCart(); m.textContent = `Order placed. Pay at pickup. ${SHORT} will text you when it is ready.`; m.hidden = false; })
         .catch((x) => { $('#checkout').disabled = false; m.textContent = x.message; m.hidden = false; });
     });
     drawCart();
