@@ -24,3 +24,7 @@ create policy gym_billing_read on public.gym_billing for select to authenticated
 drop policy if exists gym_billing_dsi on public.gym_billing;
 create policy gym_billing_dsi on public.gym_billing for all to authenticated
   using (public.is_platform_staff(gym_id, array['admin','manager'])) with check (public.is_platform_staff(gym_id, array['admin','manager']));
+
+-- Bank debit (ACH) payments
+alter table public.invoices drop constraint if exists invoices_method_check;
+alter table public.invoices add constraint invoices_method_check check (method in ('card','ach','cash','check','other'));

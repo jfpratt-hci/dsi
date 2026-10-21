@@ -36,13 +36,25 @@ Deno.serve(async req => {
       await db.from('gyms').update({ stripe_ready: !!o.charges_enabled }).eq('stripe_account', o.id);
       break;
 
-    case 'checkout.session.completed': {
+    // Card payments complete right away. Bank debits (ACH) complete a few days later: completed arrives unpaid,
+    // then async_payment_succeeded or async_payment_failed.
+    case 'checkout.session.completed':
+    case 'checkout.session.async_payment_succeeded':
+    case 'checkout.session.async_payment_failed': {
       const md = o.metadata ?? {};
+      const first = ev.type === 'checkout.session.completed';
+      if (ev.type === 'checkout.session.async_payment_failed') {
+        await db.from('payments').update({ status: 'failed' }).eq('stripe_checkout_session', o.id);
+        break;
+      }
       const paid = o.payment_status === 'paid';
-      const base = { gym_id: md.gym_id, payer_name: o.customer_details?.name ?? null, payer_email: o.customer_details?.email ?? null, amount_cents: o.amount_total ?? 0, stripe_checkout_session: o.id, stripe_payment_intent: pi(o.payment_intent) };
+      const waiting = !paid && o.mode === 'payment'; // a bank debit still clearing
+      const base = { gym_id: md.gym_id, payer_name: o.customer_details?.name ?? null, payer_email: o.customer_details?.email ?? null, amount_cents: o.amount_total ?? 0,
+        stripe_checkout_session: o.id, stripe_payment_intent: pi(o.payment_intent), method: first && paid ? 'card' : 'ach', status: paid ? 'succeeded' : 'pending' };
 
       // The gym's own Dandy plan (Run, Grow or a founder price).
       if (md.gym_billing) {
+        if (!first) break;
         await db.from('gym_billing').update({ stripe_customer: o.customer ?? null, stripe_subscription: o.subscription ?? null, status: 'active', updated_at: now }).eq('gym_id', md.gym_billing);
         if (o.subscription) {
           const sub = await stripe.subscriptions.retrieve(o.subscription);
@@ -51,28 +63,34 @@ Deno.serve(async req => {
         break;
       }
 
-      if (md.invoice_id && paid) {
-        const { data: inv } = await db.from('invoices').update({ status: 'paid', paid_at: now, method: 'card', stripe_session: o.id }).eq('id', md.invoice_id).eq('status', 'open').select().maybeSingle();
+      if (md.invoice_id && (paid || waiting)) {
+        const { data: inv } = paid
+          ? await db.from('invoices').update({ status: 'paid', paid_at: now, method: base.method, stripe_session: o.id }).eq('id', md.invoice_id).eq('status', 'open').select().maybeSingle()
+          : await db.from('invoices').select('*').eq('id', md.invoice_id).maybeSingle();
         if (inv) await record({ ...base, profile_id: inv.profile_id, kind: inv.membership_id ? 'membership' : 'invoice', ref_table: 'invoices', ref_id: inv.id, description: inv.description }, 'stripe_checkout_session');
       }
 
       if (md.membership_id) {
         const { data: m } = await db.from('memberships').select('*').eq('id', md.membership_id).maybeSingle();
         if (!m) break;
-        await db.from('memberships').update({ status: 'active', stripe_customer: o.customer ?? null, stripe_subscription: o.subscription ?? null, start_date: now.slice(0, 10), updated_at: now }).eq('id', m.id);
-        // A one time plan is paid right here; recurring plans record each payment on invoice.paid.
+        if (first) await db.from('memberships').update({ status: 'active', stripe_customer: o.customer ?? null, stripe_subscription: o.subscription ?? null, start_date: now.slice(0, 10), updated_at: now }).eq('id', m.id);
+        // A one time plan is paid here; recurring plans record each payment on invoice.paid.
         if (o.mode === 'payment' && paid) {
-          const { data: inv } = await db.from('invoices').insert({ gym_id: m.gym_id, profile_id: m.profile_id, membership_id: m.id, description: m.plan_name, amount_cents: o.amount_total ?? m.price_cents, status: 'paid', paid_at: now, method: 'card', stripe_session: o.id }).select().single();
+          const { data: inv } = await db.from('invoices').insert({ gym_id: m.gym_id, profile_id: m.profile_id, membership_id: m.id, description: m.plan_name, amount_cents: o.amount_total ?? m.price_cents, status: 'paid', paid_at: now, method: base.method, stripe_session: o.id }).select().single();
           await record({ ...base, profile_id: m.profile_id, kind: 'membership', ref_table: 'invoices', ref_id: inv?.id ?? null, description: m.plan_name }, 'stripe_checkout_session');
+        } else if (o.mode === 'payment' && waiting) {
+          await record({ ...base, profile_id: m.profile_id, kind: 'membership', description: m.plan_name }, 'stripe_checkout_session');
         }
       }
 
       // Paid on a gym website: an event registration, a booked service, a store order.
-      if (md.kind && md.ref_id && paid) {
+      if (md.kind && md.ref_id && (paid || waiting)) {
         const pid = await record({ ...base, kind: md.kind, ref_table: md.ref_table, ref_id: md.ref_id, description: md.label ?? null }, 'stripe_checkout_session');
-        if (md.kind === 'event') await db.from('event_registrations').update({ status: 'confirmed', payment_id: pid ?? null, updated_at: now }).eq('id', md.ref_id).eq('status', 'pending');
-        if (md.kind === 'appointment') await db.from('appointments').update({ payment_id: pid ?? null, updated_at: now }).eq('id', md.ref_id);
-        if (md.kind === 'order') await db.from('orders').update({ status: 'paid', payment_id: pid ?? null, updated_at: now }).eq('id', md.ref_id).eq('status', 'pending');
+        if (paid) {
+          if (md.kind === 'event') await db.from('event_registrations').update({ status: 'confirmed', payment_id: pid ?? null, updated_at: now }).eq('id', md.ref_id).eq('status', 'pending');
+          if (md.kind === 'appointment') await db.from('appointments').update({ payment_id: pid ?? null, updated_at: now }).eq('id', md.ref_id);
+          if (md.kind === 'order') await db.from('orders').update({ status: 'paid', payment_id: pid ?? null, updated_at: now }).eq('id', md.ref_id).eq('status', 'pending');
+        }
       }
       break;
     }
