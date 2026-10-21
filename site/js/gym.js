@@ -771,7 +771,7 @@ export function install(X) {
       const { rowOf, logs } = st, members = inClass(), cls = classNow(), l = p.lift;
       const tg = l ? members.map(m => { const t = D.target(l, rowOf(m)), v = num((((logs.find(x => x.profile_id === m.id) || {}).entries) || {})[l.id]); return { n: m.display_name, t, v, lv: ((S.people && S.people.get(m.id)) || m).level || null }; }).filter(x => x.t || x.v) : [];
       return `<div class="tvFocus" role="dialog" aria-modal="true" aria-label="Part ${p.L}">
-        <header class="tvFHead"><nav class="tvFTabs">${ps.map(x => `<button type="button" data-fpart="${x.L}"${x.L === p.L ? ' aria-current="true"' : ''}><i>${x.L}</i>${esc(x.name || 'Part ' + x.L)}</button>`).join('')}</nav>
+        <header class="tvFHead"><nav class="tvFTabs">${ps.map(x => `<button type="button" data-fpart="${x.L}"${x.L === p.L ? ' aria-current="true"' : ''}><i>${x.L}</i><span>${esc(x.name || 'Part ' + x.L)}</span></button>`).join('')}</nav>
           <div class="tvNow sm" data-cnow></div><div class="tvClock">${clock()}</div><button type="button" class="tvFClose" id="tvFClose" aria-label="Close (Esc)">×</button></header>
         <div class="tvCBar" data-cbar></div>
         <div class="tvFBody">

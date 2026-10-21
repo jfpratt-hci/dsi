@@ -1714,3 +1714,12 @@ body.kioskIdle .kioskInstall{opacity:.35}
 .bcBig{font:900 28px var(--disp);color:var(--up)}.bcNames{margin:0;font-size:14px}
 @media (max-width:900px){.bcGrid{grid-template-columns:1fr}.bcKinds{grid-template-columns:1fr}.bcChoices{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .bcForm .fields{grid-template-columns:repeat(2,minmax(0,1fr))}.bcForm .field.w2{grid-column:auto}.bcForm input,.bcForm select,.bcForm textarea{min-width:0;max-width:100%;width:100%;box-sizing:border-box}@media (max-width:560px){.bcForm .fields{grid-template-columns:1fr}}
+/* Part view tabs always on one row: they shrink, and long names end in an ellipsis */
+.tvFTabs{flex-wrap:nowrap;min-width:0;overflow:hidden}
+.tvFTabs button{flex:0 1 auto;min-width:0;white-space:nowrap}
+.tvFTabs button span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.tvFTabs button i{flex:none}
+.tvFTabs:has(button:nth-child(4)) button{font-size:1.8cqw;padding:.6cqw 1cqw;gap:.6cqw}
+.tvFTabs:has(button:nth-child(4)) button i{width:2.4cqw;height:2.4cqw;font-size:1.6cqw}
+.tvFTabs button{flex:1 1 0;max-width:max-content}
+.tvFHead .tvFTabs:has(button:nth-child(4)) button{font-size:1.6cqw;padding:.55cqw .9cqw}
