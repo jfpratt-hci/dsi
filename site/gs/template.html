@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--SITE_HEAD-->
+<title>Gym</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="/gs/site.css">
+<!--SITE_BRAND-->
+</head>
+<body>
+<!-- Dandy Strength gym website template. Every gym's site is this one file plus its data in Dandy. -->
+<div class="ann" id="annBar" hidden></div>
+<header class="bar">
+  <div class="wrap">
+    <a class="logo" href="#top" id="logoLink">
+      <span id="logoMark"><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true">
+        <rect x="2" y="19" width="36" height="2" rx="1" fill="currentColor"/>
+        <rect x="6" y="11" width="4" height="18" rx="1.5" fill="var(--brand-blue)"/>
+        <rect x="11" y="14" width="3" height="12" rx="1" fill="var(--cta)"/>
+        <rect x="30" y="11" width="4" height="18" rx="1.5" fill="var(--brand-blue)"/>
+        <rect x="26" y="14" width="3" height="12" rx="1" fill="var(--cta)"/>
+        <rect x="19.5" y="6" width="1" height="28" fill="var(--accent)"/>
+      </svg></span>
+      <span><b id="logoShort"></b><small id="logoName"></small></span>
+    </a>
+    <nav class="nav" id="nav" aria-label="Main"></nav>
+    <div class="actions">
+      <a class="btn login" href="https://dandystrength.com" target="_blank" rel="noopener">Member login</a>
+      <a class="btn primary intro" href="#book" id="barCta" data-book="">Book a free class</a>
+    </div>
+    <button class="btn menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="nav">Menu</button>
+  </div>
+</header>
+
+<main id="top">
+<section class="hero">
+  <div class="wrap grid">
+    <div class="hero-copy">
+      <span class="eyebrow" id="heroEyebrow"></span>
+      <h1 id="heroH1"></h1>
+      <p class="lede" id="heroSub"></p>
+      <div class="levels" id="levels" aria-label="Every workout comes in levels"></div>
+      <div class="cta" id="heroCtas"></div>
+    </div>
+    <aside class="today card" aria-labelledby="todayTitle">
+      <div class="today-head"><h3 id="todayTitle">Today</h3><span class="eyebrow" id="todayDate">Today</span></div>
+      <div id="todayList"></div>
+      <a class="pr-mini" href="#compete" data-goto="prs" id="prMini"><span><span class="eyebrow">PR wall</span><br>New personal records this week</span><b id="prCount">0</b></a>
+    </aside>
+  </div>
+</section>
+
+<section id="community">
+  <div class="wrap">
+    <div class="sec-head" data-head="community"></div>
+    <div class="pillars" id="pillars"></div>
+    <div id="socialBlock">
+      <div class="social-head">
+        <div style="display:grid;gap:6px"><span class="eyebrow" id="socialHandle"></span><h3 style="font-size:1.8rem" id="socialTitle">Life at the gym</h3></div>
+        <div class="btns">
+          <span class="sample" id="feedSample">Preview posts</span>
+          <a class="btn" data-soc="ig" href="#" target="_blank" rel="noopener" hidden>Follow on Instagram</a>
+          <a class="btn" data-soc="fb" href="#" target="_blank" rel="noopener" hidden>Like on Facebook</a>
+        </div>
+      </div>
+      <div class="feed" id="feed" role="region" aria-roledescription="carousel" aria-label="Recent posts">
+        <div class="track" id="track" aria-live="off"></div>
+        <div class="feed-nav">
+          <div class="dots" id="feedDots" aria-label="Choose a post"></div>
+          <div class="feed-btns">
+            <button class="fbtn" type="button" id="feedPrev" aria-label="Previous post"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+            <button class="fbtn" type="button" id="feedPlay" aria-label="Pause slideshow"></button>
+            <button class="fbtn" type="button" id="feedNext" aria-label="Next post"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="classes">
+  <div class="wrap">
+    <div class="sec-head" data-head="classes"></div>
+    <div class="tabs" role="tablist" id="classTabs">
+      <button role="tab" type="button" aria-selected="true" data-panel="tSchedule">Schedule</button>
+      <button role="tab" type="button" aria-selected="false" data-panel="tWorkouts" id="tabWorkouts">This week's workouts</button>
+      <button role="tab" type="button" aria-selected="false" data-panel="tPrograms" id="tabPrograms">Programs</button>
+    </div>
+    <div id="tSchedule" role="tabpanel">
+      <div class="week" id="weekGrid"></div>
+      <div class="week-mobile"><div class="pills" id="dayBtns" role="group" aria-label="Pick a day"></div><div class="dcol" id="dayOne"></div></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div id="tWorkouts" role="tabpanel" hidden>
+      <div class="board-ctl"><div class="pills" id="wodDays" role="group" aria-label="Pick a workout day"></div><span class="sample">Sample programming</span></div>
+      <div class="wod">
+        <div class="wod-main">
+          <div class="card part">
+            <span class="lbl">A · Strength · your weights</span>
+            <div class="ttl" id="sTitle"></div>
+            <p class="muted" id="sNote"></p>
+            <div class="tablewrap"><table class="sets"><thead><tr><th>Set</th><th>Reps</th><th>%</th><th>Your weight</th><th>Load each side</th></tr></thead><tbody id="sBody"></tbody></table></div>
+          </div>
+          <div class="card part">
+            <div class="part-top"><span class="lbl">B · Metcon</span><div class="pills" id="lvlBtns" role="group" aria-label="Pick your level"></div></div>
+            <div class="ttl" id="mTitle"></div>
+            <div class="wodtxt" id="mBody"></div>
+          </div>
+        </div>
+        <aside class="wod-side">
+          <div class="card" style="display:grid;gap:12px">
+            <h3>Your maxes</h3>
+            <p class="muted" style="font-size:.88rem">One rep max in pounds. Members' maxes fill in from their logged lifts.</p>
+            <div class="maxes">
+              <label for="mxSquat">Back squat<input id="mxSquat" type="number" inputmode="numeric" value="245" min="45" step="5"></label>
+              <label for="mxBench">Bench press<input id="mxBench" type="number" inputmode="numeric" value="200" min="45" step="5"></label>
+              <label for="mxDead">Deadlift<input id="mxDead" type="number" inputmode="numeric" value="275" min="45" step="5"></label>
+              <label for="mxClean">Clean<input id="mxClean" type="number" inputmode="numeric" value="195" min="45" step="5"></label>
+            </div>
+            <label for="barSel">Barbell<select id="barSel"><option value="45">45 lb bar</option><option value="35">35 lb bar</option></select></label>
+          </div>
+          <div class="card" style="display:grid;gap:10px"><h3>Plate colors</h3><div class="tiers" id="plateKey"></div></div>
+        </aside>
+      </div>
+    </div>
+    <div id="tPrograms" role="tabpanel" hidden>
+      <div class="programs" id="programs"></div>
+      <div class="card included" id="includedCard">
+        <div style="display:grid;gap:4px"><b>Every membership includes</b><span class="muted" style="font-size:.9rem" id="plansFrom"></span></div>
+        <ul id="included"></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="plans">
+  <div class="wrap">
+    <div class="sec-head" data-head="plans"></div>
+    <div class="plans" id="planGrid"></div>
+    <div class="card included plan-add" id="planAdd" hidden><div style="display:grid;gap:4px"><b id="addTitle">Add coaching to any plan</b><span class="muted" style="font-size:.9rem" id="addDesc">Book a coach by the hour, members and non members.</span></div>
+      <div class="cc-acts" id="addBtns"></div></div>
+  </div>
+</section>
+
+<section id="book">
+  <div class="wrap">
+    <div class="sec-head" data-head="book"></div>
+    <div class="book">
+      <div class="book-main">
+        <div class="card step">
+          <div class="step-h"><span class="num">1</span><b>What would you like?</b></div>
+          <div class="services" id="svcList" role="group" aria-label="Choose a service"></div>
+        </div>
+        <div class="card step" id="stepWhen">
+          <div class="step-h"><span class="num">2</span><b id="whenTitle">Pick a day and time</b></div>
+          <div id="coachPick" hidden><label for="coachSel">Coach<select id="coachSel"></select></label></div>
+          <div class="pills" id="dateBtns" role="group" aria-label="Pick a day"></div>
+          <div class="slots" id="slotList" role="group" aria-label="Pick a time"></div>
+          <p class="muted" id="slotNote" style="font-size:.85rem"></p>
+        </div>
+        <div class="card step" id="stepYou">
+          <div class="step-h"><span class="num" id="youNum">3</span><b>Your details</b></div>
+          <form class="form" id="bookForm" novalidate>
+            <div class="two">
+              <label for="bName">Name<input id="bName" autocomplete="name" required></label>
+              <label for="bPhone">Mobile phone<input id="bPhone" type="tel" autocomplete="tel" placeholder="For your text reminder"></label>
+            </div>
+            <label for="bEmail">Email<input id="bEmail" type="email" autocomplete="email" required></label>
+            <div class="two" id="extraRow">
+              <label for="bExp">Experience<select id="bExp"><option>Brand new</option><option>Some experience</option><option>I train like this now</option></select></label>
+              <label for="bHome">Home gym, if visiting<input id="bHome" placeholder="Optional"></label>
+            </div>
+            <label for="bNote">Anything we should know?<textarea id="bNote" placeholder="Injuries, goals, questions"></textarea></label>
+            <p class="muted" style="font-size:.8rem;margin:0" id="smsNote"></p>
+            <p id="bErr" style="color:var(--bad);font-size:.9rem" hidden></p>
+            <button class="btn primary" type="submit" id="bSubmit" style="justify-self:start">Confirm booking</button>
+          </form>
+          <div class="ok" id="bOk" hidden></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="coaches">
+  <div class="wrap">
+    <div class="sec-head" data-head="coaches"></div>
+    <div class="coaches" id="coachGrid"></div>
+  </div>
+</section>
+
+<section id="events" hidden>
+  <div class="wrap">
+    <div class="sec-head" data-head="events"></div>
+    <div class="strip-head">
+      <button class="btn" id="calToggle" type="button" aria-expanded="false" aria-controls="evPanel">Calendar view</button>
+      <div class="strip-ctl"><button class="arrow" type="button" data-strip="evList" data-dir="-1" aria-label="Earlier events">‹</button><button class="arrow" type="button" data-strip="evList" data-dir="1" aria-label="Later events">›</button></div>
+    </div>
+    <div class="strip" id="evList" aria-label="Upcoming events"></div>
+    <div class="ev-panel" id="evPanel" hidden>
+      <div class="ev-cal card">
+        <div class="cal-head"><button class="cal-nav" id="calPrev" type="button" aria-label="Previous month">‹</button><b id="calTitle"></b><button class="cal-nav" id="calNext" type="button" aria-label="Next month">›</button></div>
+        <div class="cal" id="calGrid" role="group" aria-label="Event calendar"></div>
+      </div>
+      <div class="ev-form card"><div class="signup" id="signup"><span class="eyebrow">Sign up</span><p class="muted">Tap an event on the calendar or in the row above to save your spot.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="store" hidden>
+  <div class="wrap">
+    <div class="sec-head" data-head="store"></div>
+    <div class="strip-head">
+      <button class="btn" id="cartToggle" type="button" aria-expanded="false" aria-controls="cartPanel">Cart <span class="cartcount" id="cartCount">0</span> <span class="mono" id="cartTotal">$0</span></button>
+      <div class="strip-ctl"><button class="arrow" type="button" data-strip="products" data-dir="-1" aria-label="Previous products">‹</button><button class="arrow" type="button" data-strip="products" data-dir="1" aria-label="More products">›</button></div>
+    </div>
+    <div class="strip" id="products" aria-label="Gear"></div>
+    <div class="card cartpanel" id="cartPanel" hidden aria-live="polite">
+      <h3>Your cart</h3>
+      <div id="cartLines"></div>
+      <form class="form" id="cartForm" novalidate>
+        <div class="two"><label for="oName">Name<input id="oName" autocomplete="name"></label><label for="oPhone">Mobile phone<input id="oPhone" type="tel" autocomplete="tel"></label></div>
+        <label for="oEmail">Email<input id="oEmail" type="email" autocomplete="email"></label>
+        <p class="muted" style="font-size:.8rem;margin:0">Free pickup at the gym. We text you when it is ready.</p>
+        <button class="btn primary" id="checkout" type="submit" style="justify-self:start" disabled>Place order</button>
+        <p id="cartMsg" class="muted" style="font-size:.85rem" hidden></p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <div class="sec-head" data-head="faq"></div>
+    <div class="faq" id="faqGrid"></div>
+  </div>
+</section>
+
+<section id="contact">
+  <div class="wrap">
+    <div class="sec-head" data-head="contact"></div>
+    <div class="contact-grid">
+      <article class="card cc visit"><span class="eyebrow">Find us</span>
+        <a class="mapwrap" id="mapLink" href="#" target="_blank" rel="noopener" aria-label="Open directions in Google Maps"><div id="mapBox"></div></a>
+        <span class="mapcredit" id="mapCredit"></span>
+        <div class="copyrow"><span class="v" id="cAddr"></span><button class="linkbtn" data-copy="cAddr" type="button">Copy</button></div>
+        <p class="muted" style="font-size:.9rem;margin:0" id="cDirections"></p>
+        <div class="cc-acts"><a class="btn" id="cDir" href="#" target="_blank" rel="noopener">Directions</a></div>
+      </article>
+      <article class="card cc"><span class="eyebrow">Call or text</span>
+        <div class="copyrow" id="cPhoneRow"><span class="v big" id="cPhone"></span><button class="linkbtn" data-copy="cPhone" type="button">Copy</button></div>
+        <div class="copyrow" id="cEmailRow" hidden><span class="v" id="cEmail"></span><button class="linkbtn" data-copy="cEmail" type="button">Copy</button></div>
+        <div class="cc-acts"><button class="btn primary" type="button" data-open-text>Text us</button><a class="btn" id="cCall" href="#">Call</a></div>
+      </article>
+      <article class="card cc"><span class="eyebrow">Hours</span><div class="hours" id="cHours"></div></article>
+      <article class="card cc wide" id="cSocialCard"><span class="eyebrow" id="cFollow">Follow</span><div class="soc" id="cSocial"></div></article>
+    </div>
+  </div>
+</section>
+
+<div id="pagesHost"></div>
+
+<section class="member-band" aria-labelledby="mbH" id="memberBand">
+  <div class="wrap mband">
+    <div class="t"><span class="eyebrow">Already a member?</span><h2 id="mbH">Get more out of your gym</h2></div>
+    <nav class="mb-links" aria-label="Member extras"><a class="btn primary" href="#compete" id="mbBoard">Chase the board</a><a class="btn" href="#book" data-book="" id="mbCoach" hidden>Book a coach</a><a class="btn" href="https://dandystrength.com" target="_blank" rel="noopener">Member login</a></nav>
+  </div>
+</section>
+
+<section id="compete">
+  <div class="wrap">
+    <div class="sec-head"><div class="t"><span class="eyebrow">Compete · Dandy Strength Index</span><h2>Friendly rivalry, built in</h2></div><p class="d">The DSI scores your lifts for your age and size, so a first year member and a ten year veteran can chase the same board. Members choose whether they show up here. For bragging rights, not medical or training advice.</p></div>
+    <div class="tabs" role="tablist">
+      <button role="tab" type="button" aria-selected="true" data-panel="tBoard">The board</button>
+      <button role="tab" type="button" aria-selected="false" data-panel="tPrs">PR wall</button>
+      <button role="tab" type="button" aria-selected="false" data-panel="tDsi">Get your DSI</button>
+    </div>
+    <div id="tBoard" role="tabpanel">
+      <div class="board-grid">
+        <div class="board-main card">
+          <div class="board-ctl"><div class="pills" id="liftSeg" role="group" aria-label="Ranking"></div></div>
+          <div class="board-ctl"><div class="pills" id="divSeg" role="group" aria-label="Division"></div><span class="eyebrow" id="boardCount"></span></div>
+          <div class="tablewrap"><table class="board" id="boardTbl"><thead><tr><th>#</th><th>Athlete</th><th>Tier</th><th id="valHead">DSI</th></tr></thead><tbody id="boardBody"></tbody></table></div>
+          <button class="btn" id="moreBtn" type="button" style="margin-top:12px">Show full board</button>
+        </div>
+        <aside class="board-side">
+          <div class="card" style="display:grid;gap:10px"><h3>Plate tiers</h3><p class="muted" style="font-size:.88rem">Climb from green to red, then take the Dandy.</p><div class="tiers" id="tierKey"></div></div>
+          <div class="card" style="display:grid;gap:10px"><h3>Get on the board</h3><p class="muted" style="font-size:.88rem">Members choose to show up here. Turn on "Show me on my gym's public website board" in your Dandy profile. Only your first name, last initial, DSI and lifts show.</p><a class="btn" href="https://dandystrength.com/me" target="_blank" rel="noopener" style="justify-self:start">Open my Dandy profile</a></div>
+        </aside>
+      </div>
+    </div>
+    <div id="tPrs" role="tabpanel" hidden>
+      <div class="board-ctl"><p class="muted">Every PR members on the board logged in the last 7 days.</p></div>
+      <div class="prwall" id="prWall"></div>
+    </div>
+    <div id="tDsi" role="tabpanel" hidden>
+      <div class="calc">
+        <div class="calc-in card">
+          <div class="row3">
+            <label for="cSex">Division<select id="cSex"><option value="M">Men</option><option value="F">Women</option></select></label>
+            <label for="cAge">Age<input id="cAge" type="number" inputmode="numeric" value="40" min="12" max="99"></label>
+            <label for="cBw">Bodyweight<input id="cBw" type="number" inputmode="numeric" value="212" min="70" max="500"></label>
+          </div>
+          <div class="row4">
+            <label for="cSquat">Squat<input id="cSquat" type="number" inputmode="numeric" value="245" min="0" step="5"></label>
+            <label for="cBench">Bench<input id="cBench" type="number" inputmode="numeric" value="200" min="0" step="5"></label>
+            <label for="cDead">Deadlift<input id="cDead" type="number" inputmode="numeric" value="275" min="0" step="5"></label>
+            <label for="cClean">Clean<input id="cClean" type="number" inputmode="numeric" value="195" min="0" step="5"></label>
+          </div>
+          <p class="muted" style="font-size:.82rem">All weights in pounds. Your score updates as you type.</p>
+          <a class="btn primary" href="https://dandystrength.com" target="_blank" rel="noopener" style="justify-self:start">Join the board free</a>
+        </div>
+        <div class="calc-out">
+          <div class="card" style="display:grid;gap:12px">
+            <div class="score-big"><b id="oScore">0</b><div style="display:grid;gap:6px;padding-bottom:6px"><span class="eyebrow">Your DSI</span><span id="oTier" class="tier"></span></div></div>
+            <div class="meter" aria-hidden="true"><span id="oMeter" style="width:0"></span></div>
+            <p id="oRank" class="muted"></p>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom:8px">Suggested goals</h3>
+            <table class="goals"><thead><tr><th>Lift</th><th>Now</th><th>Suggested</th><th>Your goal</th></tr></thead><tbody id="goalBody"></tbody></table>
+            <p class="muted" style="font-size:.82rem;margin-top:10px" id="goalNote"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap grid">
+    <div class="f1">
+      <a class="logo" href="#top"><span><b id="fName"></b><small id="fMotto"></small></span></a>
+      <p class="muted" style="font-size:.9rem;max-width:44ch" id="fAbout"></p>
+      <span class="powered">Powered by Dandy Strength</span>
+    </div>
+    <div class="f2">
+      <div id="fTrain"><span class="eyebrow">Train</span></div>
+      <div id="fCompete"><span class="eyebrow">Compete</span><a href="#compete">The board</a><a href="#compete" data-goto="prs">PR wall</a><a href="#coaches">Coaches</a><a href="https://dandystrength.com" target="_blank" rel="noopener">Member login</a></div>
+      <div id="fFollow"><span class="eyebrow">Follow</span></div>
+    </div>
+    <div class="fine"><span id="fFine"></span><span>DSI is for bragging rights, not medical or training advice.</span></div>
+  </div>
+</footer>
+
+<button class="tx-fab" id="txFab" type="button" aria-expanded="false" aria-controls="txPanel">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12z"/></svg>
+  <span>Text us<span class="lbl2"> · a coach replies fast</span></span><span class="dot" aria-hidden="true"></span>
+</button>
+<div class="tx-panel" id="txPanel" role="dialog" aria-label="Text the gym">
+  <div class="tx-head">
+    <div class="tx-av" aria-hidden="true" id="txAv"></div>
+    <div><b id="txTitle">Text us</b><small><i></i>Coaches online · usually reply in minutes</small></div>
+    <button class="tx-x" id="txClose" type="button" aria-label="Close">×</button>
+  </div>
+  <div class="tx-body" id="txBody" aria-live="polite">
+    <div class="tx-b them" id="txHello"></div>
+    <div class="tx-quick" id="txQuick"></div>
+  </div>
+  <form class="tx-form" id="txForm" novalidate>
+    <div class="tx-row">
+      <input id="txName" autocomplete="given-name" placeholder="First name" aria-label="First name" required>
+      <input id="txPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Mobile number" aria-label="Mobile number" required>
+    </div>
+    <div class="tx-send">
+      <textarea id="txMsg" rows="2" placeholder="Type your message" aria-label="Message" required></textarea>
+      <button class="btn primary" type="submit">Send</button>
+    </div>
+    <p class="tx-legal"><span id="txLegal"></span> <a id="txNative" href="#">Or open your texting app</a></p>
+  </form>
+</div>
+<div class="site-missing" id="siteMissing" hidden><b>This gym website is not live yet.</b><span>Check the address, or visit <a href="https://dandystrength.com">dandystrength.com</a>.</span></div>
+
+<!--SITE_DATA-->
+<script src="/gs/site.js" defer></script>
+</body>
+</html>
