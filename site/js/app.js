@@ -587,11 +587,35 @@ VIEWS.week = async (day, tok, opt = {}) => {
         </div>
         <div class="row"><button class="btn" type="submit">${myLog && (Object.keys(myLog.entries || {}).length || myLog.score) ? 'Update log' : 'Log it'}</button><span class="hint" id="wkMsg">${myLog && Object.keys(myLog.entries || {}).length ? 'Logged. Update any time.' : 'Set your goal or keep DI\'s, then log what you actually did.'}</span></div></form>`;
     }
+    // Parts days look like Dandy TV: a card per part, with Goal and Actual at the bottom of each card.
+    if (P().isParts(w) && S.me) {
+      const ps = P().shownParts(w), pro = isPro(), ent = (myLog && myLog.entries) || {}, gl = (myLog && myLog.goals) || {};
+      const box = (it, kind, key, di) => {
+        const own = gl[key] != null && gl[key] !== '' ? gl[key] : null, gShown = own == null ? '' : kind === 't' ? P().fmtT(own) : fmt(num(own));
+        const aVal = kind === 't' ? P().fmtT(ent[key]) : ent[key] ?? '', unit = kind === 'w' ? (it.lift && D.unit(it.lift) !== 'lb' ? D.unit(it.lift) : 'lb') : kind === 't' ? 'time' : 'reps';
+        return `<div class="pcRow"><span class="pcWhat">${kind === 'w' ? esc(it.lift.n) : kind === 't' ? 'Time' : 'Total reps'}</span>
+          <label class="pcBox wkG${own != null ? ' own' : ''}"><small data-gnote="${esc(key)}">${own != null ? (di ? `Your goal · DI ${esc(String(di))}` : 'Your goal') : di ? 'DI goal' : 'Goal'}</small><input class="wkIn wkGoal" data-goal="${esc(key)}" data-kind="${kind}" inputmode="${kind === 't' ? 'numeric' : 'decimal'}" maxlength="8" value="${esc(gShown)}" placeholder="${di ? esc(String(di)) : kind === 't' ? 'm:ss' : unit}" aria-label="${esc(it.label)} goal"></label>
+          <label class="pcBox"><small>Actual</small><input class="wkIn" ${kind === 'w' ? 'type="number" inputmode="decimal" step="any" min="0" max="1499"' : kind === 'r' ? 'type="number" inputmode="numeric" step="1" min="0" max="99999"' : 'inputmode="numeric" maxlength="8"'} data-id="${esc(key)}"${kind !== 'w' ? ` data-kind="${kind}"` : ''} value="${esc(aVal)}" placeholder="${kind === 't' ? 'm:ss' : unit}" aria-label="${esc(it.label)} actual"></label></div>`;
+      };
+      const cards = ps.map(p => {
+        const mineIts = its.filter(it => it.L === p.L);
+        const foot = !mineIts.length ? '<div class="pcFoot none">Nothing to log</div>' : !pro ? '<div class="pcFoot none"><a href="/pro">Goal and actual with DSI Pro</a></div>'
+          : `<div class="pcFoot">${mineIts.map(it => { if (it.kind === 'w') { const t = D.target(it.lift, meRow); return box(it, 'w', it.lift.id, t ? t + (D.unit(it.lift) !== 'lb' ? ' ' + D.unit(it.lift) : '') : 0); } return box(it, it.kind, it.key, 0); }).join('')}</div>`;
+        return `<article class="pc"><header><i>${p.L}</i><b>${esc(p.name || 'Part ' + p.L)}</b></header><p>${esc(p.text)}</p>${P().levelsHtml(p, 'wkLv', S.me && S.me.level)}${p.lift ? `<div class="pcLift">${esc(p.lift.n)}${p.lift.sch ? ' · ' + esc(p.lift.sch) : ''}${p.lift.why ? `<span>${esc(p.lift.why)}</span>` : ''}</div>` : ''}${foot}</article>`;
+      }).join('');
+      const logged = myLog && (Object.keys(myLog.entries || {}).length || myLog.score);
+      body = `<form class="pcWrap" id="wkF"><div class="pcHead"><div>${opt.embed ? '' : `<div class="eyebrow">${esc(fmtDW(w.day))}${w.day === tdy ? ' · Today' : ''}${w.source ? ' · ' + esc(w.source) : ''}</div>`}<h3>${esc(w.title)}</h3>${w.rest_note ? `<p class="rest">${esc(w.rest_note)}</p>` : ''}</div>
+          <div class="row">${canEdit(w) ? `<a class="btn ghost sm" href="/wod/${w.gym_id || 'dsi'}?day=${w.day}">Edit workout</a>` : ''}${w.gym_id && S.myGyms.some(g => g.gym_id === w.gym_id) ? `<a class="btn ghost sm" href="/results/${w.gym_id}?day=${w.day}">Enter results</a><a class="btn ghost sm" href="/tv/${w.gym_id}">Dandy TV</a>` : ''}</div></div>
+        <div class="pcGrid n${Math.min(4, ps.length)}">${cards}</div>
+        ${pro && w.score_label ? `<div class="pcScore"><label>${esc(w.score_label)} <input class="wkIn wkScore" type="text" maxlength="40" id="wkScore" value="${esc(myLog?.score || '')}" placeholder="${w.score_type === 'time' ? '12:34' : 'score'}"></label></div>` : ''}
+        ${pro && its.length ? `<div class="row pcSave"><button class="btn" type="submit">${logged ? 'Update log' : 'Log it'}</button><span class="hint" id="wkMsg">${logged ? 'Logged. Update any time.' : 'Goals save as you type them. Fill in Actual, then log it.'}</span></div>` : ''}
+      </form>${dayBoard(w, logs.filter(l => l.workout_id === w.id))}`;
+    } else
     body = `<div class="wkBody">${prog}${mine}</div>${dayBoard(w, logs.filter(l => l.workout_id === w.id))}`;
   }
   const extras = `${lvG ? `<details class="lvWrap"${(lvE.data || []).length ? ' open' : ''}><summary><span class="lvChip lv-${lvG.level}">${X_LVN[lvG.level]}</span> Your level · how to move up</summary>${P().levelCard(lvG, (lvE.data || [])[0])}</details>` : ''}
     ${S.me && S.me.display_name && D.EXTRA_LIFTS.some(([k]) => !myX[k]) ? `<p class="wkAsk">${CTX.DI || 'DI'} is missing your ${D.EXTRA_LIFTS.filter(([k]) => !myX[k]).map(([, n]) => n.toLowerCase()).join(', ').replace(/, ([^,]*)$/, ' and $1')}. <a href="/me#maxes">Add them</a> and your class targets cover those lifts too.</p>` : ''}`;
-  if (!paint(tok, opt.embed ? `<section class="sec wkEmbed"><div class="secHead"><div><div class="kicker">${esc(fmtDW(sel))}</div><h2>The <span>workout</span></h2></div>${editTo ? `<div class="row"><a class="btn ghost sm" href="/wod/${editTo}?day=${sel}">Edit workouts</a></div>` : ''}</div>${extras}</section>
+  if (!paint(tok, opt.embed ? `<section class="sec wkEmbed"><div class="secHead"><div><div class="kicker">${esc(fmtDW(sel))}${sel === tdy ? ' · Today' : ''}</div><h2>The <span>workout</span></h2></div>${editTo && !(w && P().isParts(w) && S.me) ? `<div class="row"><a class="btn ghost sm" href="/wod/${editTo}?day=${sel}">Edit workouts</a></div>` : ''}</div>${extras}</section>
     <section class="sec">${body}</section>` : `<section class="sec"><div class="wkNav"><div><div class="kicker">Week of ${esc(fmtD(start))}</div><h2>The <span>week</span></h2></div>
     <div class="row"><a class="btn ghost sm" href="/week/${addDays(start, -7)}${qs}">← Last week</a>${start !== monday(tdy) ? `<a class="btn ghost sm" href="/week/${tdy}${qs}">Today</a>` : ''}<a class="btn ghost sm" href="/week/${addDays(start, 7)}${qs}">Next week →</a>${editTo ? `<a class="btn sm" href="/wod/${editTo}?day=${sel}">Edit workouts</a><a class="btn ghost sm" href="/program${editTo !== 'dsi' ? '?gym=' + editTo : ''}">Import</a>` : ''}</div></div>
     ${extras}
@@ -617,7 +641,7 @@ VIEWS.week = async (day, tok, opt = {}) => {
     const own = goals[k] != null, real = /\d/.test(di) && di !== 'm:ss';
     i.closest('.wkG').classList.toggle('own', own);
     if (own && kind === 't') i.value = P().fmtT(goals[k]);
-    note.textContent = own ? (real ? `Yours · DI ${di}` : 'Your goal') : real ? 'DI goal' : 'Set a goal';
+    note.textContent = own ? (real ? `Your goal · DI ${di}` : 'Your goal') : real ? 'DI goal' : (i.closest('.pcBox') ? 'Goal' : 'Set a goal');
     toast(own ? 'Goal set' : 'Back to DI\'s goal');
   });
   const f = $('#wkF');

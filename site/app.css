@@ -1904,3 +1904,33 @@ a.g{text-decoration:none;color:inherit}
 .calDay{height:60px;box-sizing:border-box;align-content:center}
 .cal .cb{height:60px}
 @media (max-width:700px){.calDay,.cal .cb{height:54px}}
+
+/* Workout as part cards, like Dandy TV, with Goal and Actual at the bottom of each */
+.pcWrap{display:grid;gap:14px;margin-bottom:16px}
+.pcHead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.pcHead h3{margin:2px 0 0;font:900 34px/1 var(--disp);text-transform:uppercase}
+.pcGrid{display:grid;gap:12px;align-items:stretch}
+.pcGrid.n1{grid-template-columns:1fr}.pcGrid.n2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.pcGrid.n3{grid-template-columns:repeat(3,minmax(0,1fr))}.pcGrid.n4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:1000px){.pcGrid.n3,.pcGrid.n4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.pcGrid{grid-template-columns:1fr!important}}
+.pc{display:flex;flex-direction:column;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.pc header{display:flex;align-items:center;gap:10px}
+.pc header i{font-style:normal;display:grid;place-items:center;width:32px;height:32px;flex:none;border-radius:6px;background:var(--accent);color:var(--bg);font:900 20px var(--disp)}
+.pc header b{font:800 20px var(--disp);text-transform:uppercase;letter-spacing:.03em;overflow-wrap:anywhere}
+.pc>p{margin:0;font:500 17px/1.45 var(--sans);white-space:pre-line;flex:1}
+.pcLift{font:700 14px var(--mono);color:var(--accent)}
+.pcLift span{display:block;font:500 12px var(--sans);color:var(--muted);margin-top:2px}
+.pcFoot{margin-top:auto;padding-top:10px;border-top:1px solid var(--line);display:grid;gap:10px}
+.pcFoot.none{font:600 12px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.pcRow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.pcWhat{grid-column:1/-1;font:700 11px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.pcBox{display:grid;gap:4px;min-width:0}
+.pcBox small{font:700 10px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcBox .wkIn{width:100%;box-sizing:border-box;text-align:center}
+.pcBox.wkG{justify-items:stretch}
+.pcBox.wkG small{color:var(--accent)}
+.pcScore label{display:flex;align-items:center;gap:10px;font:700 13px var(--sans);text-transform:uppercase;letter-spacing:.08em}
+.pcSave{margin-top:2px}
+@media (max-width:640px){.pcBox.wkG small::before{content:none}}
+.wkEmbed+.sec .pcWrap{margin-top:0}
