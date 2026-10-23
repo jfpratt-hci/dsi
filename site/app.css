@@ -1992,3 +1992,8 @@ a.g{text-decoration:none;color:inherit}
 .lgF{margin:6px 0 10px;flex-wrap:wrap}
 .lgF .hint{flex-basis:100%}
 td .lgF{margin:6px 0 0}
+/* Classes: booked means here; the coach marks no shows */
+.cvNs{font:800 11px var(--sans);letter-spacing:.06em;text-transform:uppercase;padding:6px 10px;border-radius:999px;border:1px solid var(--up);background:color-mix(in srgb,var(--up) 14%,transparent);color:var(--up);cursor:pointer;white-space:nowrap}
+.cvNs[aria-pressed="true"]{border-color:var(--down);background:color-mix(in srgb,var(--down) 14%,transparent);color:var(--down)}
+.cvGrid tr.ns .cvName,.cvGrid tr.ns td:not(.cvHere){opacity:.45}
+.cvWho .pill{margin-left:6px;font-size:10px}

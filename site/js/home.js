@@ -229,7 +229,7 @@ export function install(X) {
 
   VIEWS[''] = async (_, tok) => {
     const m = me(), office = (S.myGyms || [])[0];
-    const ctas = office ? `<a class="btn" href="/club/${office.gym_id}?tab=today">Open your gym office</a><a class="btn ghost" href="/growth/${office.gym_id}">Your Growth game</a>`
+    const ctas = office ? `<a class="btn" href="/class/${office.gym_id}">Open your gym office</a><a class="btn ghost" href="/growth/${office.gym_id}">Your Growth game</a>`
       : `<a class="btn" href="/start">Book a setup call</a><a class="btn ghost" href="/tour">Tour the sample gym</a>`;
     if (!paint(tok, `
       <section class="hmHero">

@@ -91,11 +91,19 @@ export function install(X) {
     const pick = live.find(x => x.id === qs.get('s')) || (day === tdy && (live.find(x => Date.parse(x.starts_at) - 15 * 60000 <= now && Date.parse(x.ends_at) >= now)
       || live.filter(x => Date.parse(x.starts_at) <= now).pop() || live[0])) || live[0] || null;
     const w = wr, its = w ? P.items(w) : [];
-    const bk = pick ? must(await sb.from('bookings').select('profile_id,status').eq('session_id', pick.id).in('status', ['booked', 'attended']).order('created_at')) : [];
-    const ids = bk.map(b => b.profile_id), here = new Set(bk.filter(b => b.status === 'attended').map(b => b.profile_id));
+    const bk = pick ? must(await sb.from('bookings').select('profile_id,status').eq('session_id', pick.id).in('status', ['booked', 'attended', 'no_show']).order('created_at')) : [];
+    // Everyone who booked counts as here; the coach marks the ones who did not come.
+    const ids = bk.map(b => b.profile_id), noShow = new Set(bk.filter(b => b.status === 'no_show').map(b => b.profile_id));
     const memberBy = new Map(members.map(m => [m.id, m]));
     const extra = await people(ids.filter(id => !memberBy.has(id)));
     const nameOf = id => (memberBy.get(id) || {}).display_name || extra.get(id) || 'Member';
+    const [waiver, ms] = await Promise.all([
+      sb.from('gym_docs').select('id').eq('gym_id', gid).eq('kind', 'waiver').eq('active', true).maybeSingle().then(r => r.data),
+      sb.from('memberships').select('profile_id,status').eq('gym_id', gid).in('status', ['active', 'past_due', 'pending', 'paused']).then(r => r.data || []),
+    ]);
+    const signed = new Set(waiver && ids.length ? ((await sb.from('doc_signatures').select('profile_id').eq('doc_id', waiver.id).in('profile_id', ids)).data || []).map(x => x.profile_id) : []);
+    const mem = new Map(ms.map(m => [m.profile_id, m.status]));
+    const flags = id => `${waiver && !signed.has(id) ? '<span class="pill down">No waiver</span>' : ''}${!mem.has(id) ? '<span class="pill flat">No membership</span>' : mem.get(id) === 'past_due' ? '<span class="pill down">Past due</span>' : ''}`;
     const logs = w && ids.length ? must(await sb.from('workout_logs').select('profile_id,entries,score,sets').eq('workout_id', w.id).in('profile_id', ids)) : [];
     const logOf = new Map(logs.map(l => [l.profile_id, l]));
     const rowOf = id => board.find(r => r.profile_id === id) || { sex: (memberBy.get(id) || {}).sex };
@@ -114,15 +122,15 @@ export function install(X) {
     const dayNav = `<div class="row cvDay"><a class="btn ghost sm" href="/class/${gid}?day=${addDays(day, -1)}" aria-label="Day before">‹</a><b>${esc(day === tdy ? 'Today' : dayName(day, { weekday: 'short', month: 'short', day: 'numeric' }))}</b><a class="btn ghost sm" href="/class/${gid}?day=${addDays(day, 1)}" aria-label="Day after">›</a>${day !== tdy ? `<a class="btn ghost sm" href="/class/${gid}">Today</a>` : ''}</div>`;
 
     if (!paint(tok, `${X.officeBar(g, 'class')}<section class="sec cvSec">
-      <div class="cvTop"><div><div class="kicker">${esc(dayName(day))}${w ? ' · ' + esc(w.title) : ''}</div><h2>Coach <span>view</span></h2></div>${dayNav}</div>
+      <div class="cvTop"><div><div class="kicker">${esc(dayName(day))}${w ? ' · ' + esc(w.title) : ''}</div><h2><span>Classes</span></h2></div>${dayNav}</div>
       <div class="chips cvClasses" aria-label="Class">${live.map(x => `<a class="chip" href="${href({ s: x.id })}" aria-pressed="${!!pick && x.id === pick.id}">${esc(tAt(x.starts_at, g.tz))} ${esc(x.name)}</a>`).join('')}
         <button class="chip" type="button" id="cvNewBtn">+ Start a class</button></div>
       <form class="cvNew" id="cvNew"${live.length ? ' hidden' : ''}><label for="cvT">Time</label><input id="cvT" type="time" value="${roundNow()}" required><label for="cvN">Class</label><input id="cvN" maxlength="40" value="CrossFit" required><button class="btn sm">Start ${live.length ? 'this class' : 'today\'s class'}</button><span class="hint">No schedule needed. The class is saved so attendance counts.</span></form>
       ${!w ? `<div class="formCard cvNote"><b>No workout posted for ${esc(day === tdy ? 'today' : dayName(day))}.</b> You can still take attendance. <a href="/wod/${gid}?day=${day}">Post the workout</a> to log weights and times.</div>` : ''}
       ${pick ? `<div class="cvBar"><div class="cvAdd"><label class="vh" for="cvAddIn">Add someone</label><input id="cvAddIn" list="cvPeople" placeholder="Add someone: type a name, press Enter" autocomplete="off"><datalist id="cvPeople">${members.filter(m => !ids.includes(m.id)).map(m => `<option value="${esc(m.display_name)}">`).join('')}</datalist></div>
-          <span class="cvCount"><b>${here.size}</b> here of ${ids.length}</span>${w ? `<a class="btn ghost sm" href="/tv/${esc(g.slug || gid)}" target="_blank" rel="noopener">Dandy TV</a>` : ''}</div>
-        ${ids.length ? `<div class="cvWrap"><table class="cvGrid" id="cvGrid"><thead><tr><th scope="col" class="cvWhoH">${esc(tAt(pick.starts_at, g.tz))} ${esc(pick.name)}</th><th scope="col" class="cvHereH">Here</th>${its.map(head).join('')}</tr></thead><tbody>
-          ${order.map(id => `<tr data-row="${id}"><th scope="row" class="cvWho"><span class="cvName">${esc(nameOf(id))}</span><button type="button" class="cvX" data-out="${id}" aria-label="Take ${esc(nameOf(id))} off this class">×</button><span class="cvDot" data-st aria-live="polite"></span></th><td class="cvHere"><input type="checkbox" data-here="${id}"${here.has(id) ? ' checked' : ''} aria-label="${esc(nameOf(id))} is here"></td>${its.map(it => `<td>${cell(id, it)}</td>`).join('')}</tr>`).join('')}
+          <span class="cvCount"><b>${ids.length - noShow.size}</b> here${noShow.size ? ` · ${noShow.size} no show` : ''}</span>${w ? `<a class="btn ghost sm" href="/tv/${esc(g.slug || gid)}" target="_blank" rel="noopener">Dandy TV</a>` : ''}</div>
+        ${ids.length ? `<div class="cvWrap"><table class="cvGrid" id="cvGrid"><thead><tr><th scope="col" class="cvWhoH">${esc(tAt(pick.starts_at, g.tz))} ${esc(pick.name)}</th><th scope="col" class="cvHereH">Came?</th>${its.map(head).join('')}</tr></thead><tbody>
+          ${order.map(id => `<tr data-row="${id}"${noShow.has(id) ? ' class="ns"' : ''}><th scope="row" class="cvWho"><span class="cvName">${esc(nameOf(id))}</span>${flags(id)}<button type="button" class="cvX" data-out="${id}" aria-label="Take ${esc(nameOf(id))} off this class">×</button><span class="cvDot" data-st aria-live="polite"></span></th><td class="cvHere"><button type="button" class="cvNs" data-ns="${id}" aria-pressed="${noShow.has(id)}" aria-label="Mark ${esc(nameOf(id))} as a no show">${noShow.has(id) ? 'No show' : 'Here'}</button></td>${its.map(it => `<td>${cell(id, it)}</td>`).join('')}</tr>`).join('')}
           </tbody></table></div>
           <p class="hint">Grey numbers are each person's target. Every box saves as you leave it and shows on the board and the TV. Enter moves down the column.${its.some(i => i.lift && i.lift.max) && w.pr_lift ? ' Today is a max out day: a new best becomes a PR.' : ''}</p>`
         : '<div class="prEmpty"><b>Nobody in this class yet</b><p>Type names above as people walk in.</p></div>'}` : ''}
@@ -160,9 +168,15 @@ export function install(X) {
 
     const grid = $('#cvGrid'); if (!grid) return;
     grid.addEventListener('change', async e => {
-      const hb = e.target.closest('[data-here]');
-      if (hb) { try { await rpc('check_in', { p_session: pick.id, p_profile: hb.dataset.here, p_in: hb.checked }); hb.checked ? here.add(hb.dataset.here) : here.delete(hb.dataset.here); $('.cvCount b').textContent = here.size; } catch (err) { hb.checked = !hb.checked; toast(err.message); } return; }
       if (e.target.matches('.cvIn')) save(e.target);
+    });
+    const count = () => { const c = $('.cvCount'); if (c) c.innerHTML = `<b>${ids.length - noShow.size}</b> here${noShow.size ? ` · ${noShow.size} no show` : ''}`; };
+    $$('[data-ns]', grid).forEach(b => b.onclick = async () => {
+      const pid = b.dataset.ns, no = !noShow.has(pid);
+      b.disabled = true;
+      try { await rpc('mark_no_show', { p_session: pick.id, p_profile: pid, p_no: no }); no ? noShow.add(pid) : noShow.delete(pid); b.setAttribute('aria-pressed', String(no)); b.textContent = no ? 'No show' : 'Here'; b.closest('tr').classList.toggle('ns', no); count(); }
+      catch (err) { toast(err.message); }
+      b.disabled = false;
     });
     $$('[data-out]', grid).forEach(b => twoTap(b, 'Remove?', async () => { await rpc('remove_from_class', { p_session: pick.id, p_profile: b.dataset.out }); toast(`${nameOf(b.dataset.out)} is off this class`); route(); }));
     grid.addEventListener('keydown', e => {
@@ -196,7 +210,7 @@ export function install(X) {
       if (error) { mark(pid, 'bad', 'not saved'); toast(/row-level security/i.test(error.message) ? `${nameOf(pid)} is not a member of ${g.name} yet, so their result can't be entered here.` : error.message); return; }
       logOf.set(pid, row);
       mark(pid, 'ok', 'saved');
-      if (!here.has(pid)) { try { await rpc('check_in', { p_session: pick.id, p_profile: pid, p_in: true }); here.add(pid); const hb = $(`[data-here="${pid}"]`, grid); if (hb) hb.checked = true; $('.cvCount b').textContent = here.size; } catch {} }
+      if (noShow.has(pid)) { try { await rpc('mark_no_show', { p_session: pick.id, p_profile: pid, p_no: false }); noShow.delete(pid); const nb = $(`[data-ns="${pid}"]`, grid); if (nb) { nb.setAttribute('aria-pressed', 'false'); nb.textContent = 'Here'; nb.closest('tr').classList.remove('ns'); } count(); } catch {} }
       // Max out day: a new best becomes a PR for the DSI and the PR wall.
       if (it.kind === 'w' && it.lift && it.lift.max && w.pr_lift && D.LIFT_BY_DB[w.pr_lift] && !r.empty) {
         const L = D.LIFT_BY_DB[w.pr_lift], br = rowOf(pid), best = num(br[L.k]);
@@ -213,7 +227,7 @@ export function install(X) {
      STAFF: the gym office
      ================================================================= */
   const PRO_SEAT_CENTS = 400;
-  const TABS = [['today', 'Check in'], ['schedule', 'Schedule'], ['members', 'Members'], ['billing', 'Billing', 1], ['docs', 'Waivers and contracts', 1], ['staff', 'Coaches']];
+  const TABS = [['schedule', 'Schedule'], ['members', 'Members'], ['billing', 'Billing', 1], ['docs', 'Waivers and contracts', 1], ['staff', 'Coaches']];
   // One tab bar across every gym office page: check in, schedule, workouts, results, members, billing, documents, staff, settings.
   function officeBar(g, active) {
     const owner = isOwner(g.id);
@@ -232,7 +246,9 @@ export function install(X) {
     const owner = isOwner(gid);
     const qs = new URLSearchParams(location.search);
     const tabs = TABS.filter(t => !t[2] || owner);
-    const tab = tabs.some(t => t[0] === qs.get('tab')) ? qs.get('tab') : 'today';
+    // Check in now lives on the Classes page (the coach view).
+    if (!qs.get('tab') || qs.get('tab') === 'today') return go(`/class/${gid}${qs.get('day') ? '?day=' + qs.get('day') : ''}`, true);
+    const tab = tabs.some(t => t[0] === qs.get('tab')) ? qs.get('tab') : 'schedule';
     const shell = inner => `${officeBar(g, tab)}<section class="sec">${inner}</section>`;
     const view = { today: tabToday, schedule: tabSchedule, members: tabMembers, billing: tabBilling, docs: tabDocs, staff: tabStaff }[tab];
     await view(g, tok, shell, qs, owner);
@@ -313,7 +329,7 @@ export function install(X) {
         <div class="field"><label>Coach</label><select data-k="coach_id">${opt(coachOpts, s.coach_id || '')}</select></div>
         <div class="field"><label>Spots</label><input data-k="capacity" type="number" min="1" max="500" value="${s.capacity}"></div>
         <div class="field w2"><label>Note for members</label><input data-k="note" maxlength="200" value="${esc(s.note || '')}" placeholder="Like: partner workout, bring a jump rope"></div></div>
-        <div class="row"><button class="btn sm">Save</button><button type="button" class="btn ghost sm" id="spCancel">${s.status === 'canceled' ? 'Put class back on' : 'Cancel this class'}</button><button type="button" class="btn ghost sm scDel" id="spDel">Delete</button><a class="btn ghost sm" href="/club/${g.id}?tab=today&day=${dayOf(s.starts_at, g.tz)}">Roster and check in</a></div></form>`;
+        <div class="row"><button class="btn sm">Save</button><button type="button" class="btn ghost sm" id="spCancel">${s.status === 'canceled' ? 'Put class back on' : 'Cancel this class'}</button><button type="button" class="btn ghost sm scDel" id="spDel">Delete</button><a class="btn ghost sm" href="/class/${g.id}?day=${dayOf(s.starts_at, g.tz)}&s=${s.id}">Open the class</a></div></form>`;
       const f = $('#spF');
       f.onsubmit = async e => { e.preventDefault(); const v = k => $(`[data-k="${k}"]`, f).value; const { error } = await sb.from('sessions').update({ coach_id: v('coach_id') || null, capacity: +v('capacity') || s.capacity, note: v('note').trim() || null }).eq('id', s.id); if (error) return toast(error.message); toast('Class saved'); route(); };
       $('#spCancel').onclick = async () => { const { error } = await sb.from('sessions').update({ status: s.status === 'canceled' ? 'scheduled' : 'canceled' }).eq('id', s.id); if (error) return toast(error.message); toast(s.status === 'canceled' ? 'Class is back on' : 'Class canceled'); route(); };
