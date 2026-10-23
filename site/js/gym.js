@@ -1,6 +1,6 @@
 // Gym side of dandystrength.com.
 // /gym/<id>      run a gym: post the day, enter results, coaches, gym details; or ask to run it
-// /results/<id>  coaches enter members' results for the gym's workout of the day
+// /results/<id>  redirects to /class/<id>, where coaches enter results for each class
 // /tv/<id>       the big screen: today's workout with every member's targets, live day board, leaderboard, PR alerts
 // app.js calls install(ctx) after extra.js so ctx.compete is available.
 
@@ -254,7 +254,7 @@ export function install(X) {
         <div class="formCard wodPlan" id="wodPlan"><div class="wodPlanH"><b>Class plan</b><label for="wd-gap">Between parts</label><input id="wd-gap" type="number" inputmode="numeric" min="0" max="15" value="${(ps.find(x => x.gap != null) || {}).gap ?? GAP}"><span>min</span><label for="wd-len">Class</label><input id="wd-len" type="number" inputmode="numeric" min="15" max="180" value="${classLen}"><span>min</span></div><div class="wodBar" id="wodBar"></div><p class="hint" id="wodPlanMsg"></p></div>
         <div class="wodGrid">${ps.map(box).join('')}</div>
         <div class="row wodAdd"><button type="button" class="btn ghost sm" id="addFirst">+ Add a part at the start</button><button type="button" class="btn ghost sm" id="addD">+ Add a part at the end</button><span class="hint" id="addMsg"></span></div>
-        <div class="row" style="margin-top:16px"><button class="btn" type="submit">${w ? 'Save changes' : 'Post the workout'}</button><a class="btn ghost" href="${dest}">See it on the week</a>${dsi ? '' : `<a class="btn ghost" href="/results/${gid}?day=${day}">Enter results</a><a class="btn ghost" href="/tv/${gid}" target="_blank">Dandy TV</a>`}<span class="hint" id="wd-msg">${nLogs ? `${nLogs} logged already. Their weights stay with each part letter.` : ''}</span></div>
+        <div class="row" style="margin-top:16px"><button class="btn" type="submit">${w ? 'Save changes' : 'Post the workout'}</button><a class="btn ghost" href="${dest}">See it on the week</a>${dsi ? '' : `<a class="btn ghost" href="/class/${gid}?day=${day}">Enter results</a><a class="btn ghost" href="/tv/${gid}" target="_blank">Dandy TV</a>`}<span class="hint" id="wd-msg">${nLogs ? `${nLogs} logged already. Their weights stay with each part letter.` : ''}</span></div>
       </form></section>`)) return;
     $('#wd-day').onchange = e => { if (e.target.value) go(`/wod/${gid}?day=${e.target.value}`); };
     const build = a => {
@@ -410,7 +410,9 @@ export function install(X) {
   };
 
   /* ---------- coaches enter results ---------- */
-  VIEWS.results = async (gid, tok) => {
+  // Results are entered on the Classes page now; old Results links land there for the same day.
+  VIEWS.results = (gid, tok) => { const d = new URLSearchParams(location.search).get('day'); go(`/class/${gid}${d ? '?day=' + d : ''}`, true); };
+  VIEWS.resultsOld = async (gid, tok) => {
     if (!S.me) return needLogin(tok, 'enter results');
     if (!runs(gid)) return paint(tok, '<section class="prEmpty"><b>Coaches only</b><p>Gym owners and coaches enter results here.</p></section>');
     const day = new URLSearchParams(location.search).get('day') || today();
