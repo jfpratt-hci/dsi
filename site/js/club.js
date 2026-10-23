@@ -20,8 +20,8 @@ export function install(X) {
   const isCoach = gid => isOwner(gid) || (S.myGyms || []).some(g => g.gym_id === gid);
   // Two taps to do something you can't take back with one tap: the first arms the button for four seconds.
   const twoTap = (b, ask, f) => b.onclick = async () => {
-    if (!b.dataset.armed) { b.dataset.was = b.textContent; b.dataset.armed = '1'; b.textContent = ask; b.classList.add('danger'); b._t = setTimeout(() => { delete b.dataset.armed; b.textContent = b.dataset.was; b.classList.remove('danger'); }, 4000); return; }
-    clearTimeout(b._t); b.disabled = true; try { await f(); } catch (e) { toast(e.message); b.disabled = false; delete b.dataset.armed; b.textContent = b.dataset.was; b.classList.remove('danger'); }
+    if (!b.dataset.armed) { b.dataset.was = b.textContent; b.dataset.armed = '1'; b.textContent = ask; b.classList.add('armed'); b._t = setTimeout(() => { delete b.dataset.armed; b.textContent = b.dataset.was; b.classList.remove('armed'); }, 4000); return; }
+    clearTimeout(b._t); b.disabled = true; try { await f(); } catch (e) { toast(e.message); b.disabled = false; delete b.dataset.armed; b.textContent = b.dataset.was; b.classList.remove('armed'); }
   };
   const rpc = async (fn, args) => { const { data, error } = await sb.rpc(fn, args); if (error) throw new Error(error.message); return data; };
   const call = async (action, body) => {
@@ -296,7 +296,7 @@ export function install(X) {
         <div class="field"><label>Spots</label><input data-k="capacity" type="number" min="1" max="500" value="${c ? c.capacity : 16}"></div>
         <div class="field"><label>Coach</label><select data-k="coach_id">${opt(coachOpts, c ? c.coach_id || '' : '')}</select></div>
         ${c ? `<div class="field"><label>Running</label><select data-k="active">${opt([['true', 'Yes'], ['false', 'Paused']], String(c.active))}</select></div>` : ''}</div>
-        <div class="row"><button class="btn sm">${c ? 'Save class' : 'Add class'}</button><span class="hint" data-msg>${c ? 'Changes rebuild upcoming classes nobody has booked.' : ''}</span></div></form>`;
+        <div class="row"><button class="btn sm">${c ? 'Save class' : 'Add class'}</button>${c ? `<button type="button" class="btn ghost sm scDel" data-delc="${c.id}">Delete class</button>` : ''}<span class="hint" data-msg>${c ? 'Changes rebuild upcoming classes nobody has booked.' : ''}</span></div></form>`;
     if (!paint(tok, shell(`<div class="row ckNav"><a class="btn ghost sm" href="/club/${g.id}?tab=schedule&week=${addDays(start, -7)}">← Last week</a><b>Week of ${esc(dayName(start, { month: 'long', day: 'numeric' }))}</b><a class="btn ghost sm" href="/club/${g.id}?tab=schedule&week=${addDays(start, 7)}">Next week →</a></div>
       <div class="scWeek">${days.map(d => `<div class="scDay"><h4>${esc(dayName(d, { weekday: 'short', day: 'numeric' }))}</h4>${ss.filter(s => dayOf(s.starts_at, g.tz) === d).map(sessBtn).join('') || '<p class="hint">No classes</p>'}</div>`).join('')}</div>
       <div id="scPanel"></div>
@@ -311,13 +311,41 @@ export function install(X) {
         <div class="field"><label>Coach</label><select data-k="coach_id">${opt(coachOpts, s.coach_id || '')}</select></div>
         <div class="field"><label>Spots</label><input data-k="capacity" type="number" min="1" max="500" value="${s.capacity}"></div>
         <div class="field w2"><label>Note for members</label><input data-k="note" maxlength="200" value="${esc(s.note || '')}" placeholder="Like: partner workout, bring a jump rope"></div></div>
-        <div class="row"><button class="btn sm">Save</button><button type="button" class="btn ghost sm" id="spCancel">${s.status === 'canceled' ? 'Put class back on' : 'Cancel this class'}</button><a class="btn ghost sm" href="/club/${g.id}?tab=today&day=${dayOf(s.starts_at, g.tz)}">Roster and check in</a></div></form>`;
+        <div class="row"><button class="btn sm">Save</button><button type="button" class="btn ghost sm" id="spCancel">${s.status === 'canceled' ? 'Put class back on' : 'Cancel this class'}</button><button type="button" class="btn ghost sm scDel" id="spDel">Delete</button><a class="btn ghost sm" href="/club/${g.id}?tab=today&day=${dayOf(s.starts_at, g.tz)}">Roster and check in</a></div></form>`;
       const f = $('#spF');
       f.onsubmit = async e => { e.preventDefault(); const v = k => $(`[data-k="${k}"]`, f).value; const { error } = await sb.from('sessions').update({ coach_id: v('coach_id') || null, capacity: +v('capacity') || s.capacity, note: v('note').trim() || null }).eq('id', s.id); if (error) return toast(error.message); toast('Class saved'); route(); };
       $('#spCancel').onclick = async () => { const { error } = await sb.from('sessions').update({ status: s.status === 'canceled' ? 'scheduled' : 'canceled' }).eq('id', s.id); if (error) return toast(error.message); toast(s.status === 'canceled' ? 'Class is back on' : 'Class canceled'); route(); };
+      // Delete just this one. Only when nobody has ever booked or checked in, so attendance is never lost; otherwise cancel it.
+      $('#spDel').onclick = async () => {
+        const d = $('#spDel');
+        const any = must(await sb.from('bookings').select('id').eq('session_id', s.id).limit(1));
+        if (any.length) { d.disabled = true; d.textContent = 'Has bookings'; toast('People booked this class. Cancel it instead so their history stays.'); return; }
+        if (!d.dataset.armed) { d.dataset.armed = '1'; d.textContent = 'Tap again to delete'; d.classList.add('armed'); return; }
+        const { error } = await sb.from('sessions').delete().eq('id', s.id);
+        if (error) return toast(error.message);
+        toast('Class deleted'); route();
+      };
       f.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
     $$('[data-ec]').forEach(b => b.onclick = () => { const r = $(`[data-ecf="${b.dataset.ec}"]`); r.hidden = !r.hidden; });
+    // Delete a weekly class. Upcoming classes nobody booked go with it; past classes stay for attendance, and upcoming
+    // classes people already booked stay on so nobody is dropped without a word (cancel those one at a time above).
+    $$('[data-delc]').forEach(b => b.onclick = async () => {
+      const c = classes.find(x => x.id === b.dataset.delc), msg = $('[data-msg]', b.closest('form'));
+      if (!b.dataset.armed) {
+        const up = must(await sb.from('sessions').select('id').eq('class_id', c.id).eq('status', 'scheduled').gte('starts_at', new Date().toISOString()));
+        const held = up.length ? must(await sb.from('bookings').select('session_id').in('session_id', up.map(x => x.id)).in('status', ['booked', 'waitlist'])) : [];
+        const n = new Set(held.map(x => x.session_id)).size;
+        b.dataset.armed = '1'; b.textContent = 'Tap again to delete'; b.classList.add('armed');
+        msg.textContent = `Deletes ${c.name} at ${hm(c.start_time)} from the weekly schedule.${n ? ` ${n} upcoming class${n === 1 ? ' has' : 'es have'} bookings and will stay on until you cancel ${n === 1 ? 'it' : 'them'}.` : ''} Past attendance is kept.`;
+        setTimeout(() => { if (b.isConnected && b.dataset.armed) { delete b.dataset.armed; b.textContent = 'Delete class'; b.classList.remove('armed'); } }, 8000);
+        return;
+      }
+      b.disabled = true;
+      const { error } = await sb.from('classes').delete().eq('id', c.id);
+      if (error) { b.disabled = false; msg.textContent = error.message; return; }
+      toast(`${c.name} at ${hm(c.start_time)} deleted`); route();
+    });
     $$('.scForm').forEach(f => f.onsubmit = async e => {
       e.preventDefault();
       const v = k => { const el = $(`[data-k="${k}"]`, f); return el ? el.value : null; }, msg = $('[data-msg]', f);

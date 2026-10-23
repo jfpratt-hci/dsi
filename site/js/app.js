@@ -107,7 +107,7 @@ function navGroups() {
   const gyms = S.myGyms || [];
   const offItems = (x, keys) => OFFICE.filter(o => keys.includes(o[0]) && (!o[3] || x.role === 'owner' || (S.me && S.me.role === 'admin'))).map(([k, n, d]) => [officeHref(x.gym_id, k), n, d]);
   if (gyms.length === 1) { const x = gyms[0], nm = x.gym.name || 'Gym';
-    g.push({ k: 'office', n: 'Gym office', sections: [{ h: nm + ' · Run the floor', items: [...offItems(x, ['today', 'class', 'schedule', 'wod', 'plan', 'results', 'shop', 'tv'])] }, { h: 'Run the business', items: offItems(x, ['growth', 'follow', 'members', 'billing', 'docs', 'staff', 'settings']) }] }); }
+    g.push({ k: 'office', n: 'Gym office', sections: [{ h: nm + ' · Run the floor', items: [...offItems(x, ['today', 'class', 'schedule', 'wod', 'plan', 'results', 'shop', 'tv'])] }, { h: 'Run the business', items: offItems(x, ['members', 'follow', 'growth', 'insights', 'sell', 'billing', 'website', 'docs', 'staff', 'settings']) }] }); }
   else if (gyms.length) g.push({ k: 'office', n: 'Gym office', sections: gyms.map(x => ({ h: (x.gym.name || 'Gym') + ' office', items: offItems(x, OFFICE.map(o => o[0])) })) });
   if (me && (me.role === 'admin' || me.role === 'commissioner')) g.push({ k: 'admin', n: 'Admin', sections: [{ h: me.role === 'admin' ? 'Management' : 'Commissioner', items: [...(me.role === 'admin' ? [['/admin', 'Management dashboard', 'Members, gyms and stats'], ['/admin?tab=gyms', 'All gyms', 'Edit gyms and open any office'], ['/admin?tab=requests', 'Requests', 'Gym claims and approvals']] : []), ['/reports', 'Reports', 'Flagged lifts and people'], ['/program', 'Import workouts', 'Load a program for a gym']] }] });
   return g;

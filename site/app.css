@@ -1764,3 +1764,9 @@ body[data-cmode="work"] .tvMark{background:var(--accent)}
 .tvGoalsNone,.tvGoalsHint{margin:.6cqw 0 0;font:500 1.1cqw var(--sans);color:var(--muted)}
 .tvGoalsHint{font-size:.9cqw}
 .tvGoals h3 span{white-space:nowrap}
+
+/* Gym office tabs: every tab shows, wrapping to a second row instead of hiding off the right edge */
+.offTabs{flex-wrap:wrap;overflow:visible;row-gap:2px}
+.offTabs .tab{font-size:16px;padding:8px 10px}
+@media (max-width:640px){.offTabs .tab{font-size:13px;padding:6px 7px}}
+.scDel.armed{border-color:var(--down);color:var(--down)}
