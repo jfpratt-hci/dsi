@@ -383,13 +383,8 @@ export function install(X) {
       m.textContent = 'Saving…';
       const { error } = await sb.from('workout_logs').upsert({ workout_id: wid, profile_id: S.me.id, entries, sets: allSets, score: cur ? cur.score : null }, { onConflict: 'workout_id,profile_id' });
       if (error) { m.textContent = error.message; return; }
-      if (L.max && w.pr_lift && top) {
-        const best = meRow[keyOf(w.pr_lift)] || 0;
-        if (top > best) {
-          const { data } = await sb.from('lift_entries').insert({ profile_id: S.me.id, lift: w.pr_lift, weight_lb: top, performed_on: w.day, source: 'workout' }).select().single();
-          if (data && data.is_pr) { go('/pr/' + data.id + '?celebrate=1'); return; }
-        }
-      }
+      // A top set that beats their best is saved as a new best by the database; celebrate a PR.
+      if (top) { const pr = await X.freshPr(S.me.id, w.day); if (pr && pr.prev_best) { go('/pr/' + pr.id + '?celebrate=1'); return; } }
       m.textContent = `Saved ${done.length} set${done.length === 1 ? '' : 's'}${top ? ', top ' + top + ' lb' : ''}.`; toast('Sets saved');
     };
   };

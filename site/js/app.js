@@ -88,6 +88,9 @@ async function loadPeople() {
   S.people = new Map(rows.map(r => [r.id, r]));
 }
 const nameOf = id => (S.people.get(id) || {}).display_name || 'Someone';
+// The newest best a workout log just created (the workout_log_bests trigger writes it), if any.
+const freshPr = async (pid, day) => ((await sb.from('lift_entries').select('*').eq('profile_id', pid).eq('source', 'workout').eq('performed_on', day).eq('is_pr', true)
+  .gte('created_at', new Date(Date.now() - 120000).toISOString()).order('created_at', { ascending: false }).limit(1)).data || [])[0] || null;
 
 /* ---------- profile pictures ---------- */
 // Square JPEGs, 640 px, cropped to the center in the browser, in the public avatars bucket under the profile id.
@@ -492,8 +495,10 @@ VIEWS.dsi = async (_, tok) => {
   const MAIN = D.LIFTS.map(l => [l.db, D.liftName(l.db)]);
   const OLY0 = D.EXTRA_LIFTS.map(x => x[0]);
   const isMain = id => !!D.LIFT_BY_DB[id];
-  let oly = [...OLY0, ...D.ALL_LIFTS.map(x => x[0]).filter(id => !isMain(id) && !OLY0.includes(id) && (best[id] || gl[id]))];
-  const addable = () => D.ALL_LIFTS.filter(([id]) => !isMain(id) && !oly.includes(id));
+  // Every lift in the catalog shows, no picker: the four tracked lifts first, then the rest.
+  const oly = [...OLY0, ...D.ALL_LIFTS.map(x => x[0]).filter(id => !isMain(id) && !OLY0.includes(id))];
+  const saved = list => list.filter(id => best[id]).length;
+  const nudge = list => { const n = saved(list), all = list.length; return `<div class="mxNudge"><span class="mxCount"><b>${n}</b> of ${all} saved</span><span class="pb"><i style="width:${Math.round(n / all * 100)}%"></i></span><span class="sub">${n === all ? 'All saved. Nice.' : n ? 'Type any number you know. Lifts you log in class fill in here on their own.' : 'Start with the ones you know. Lifts you log in class fill in here on their own.'}</span></div>`; };
 
   const rowHtml = (id, i) => {
     const g = gl[id], now = best[id] || 0, t = g ? num(g.target_lb) : 0, done = t && now >= t, pct = t && now ? Math.min(100, Math.round(now / t * 100)) : 0;
@@ -525,9 +530,9 @@ VIEWS.dsi = async (_, tok) => {
 
   if (!paint(tok, `${card ? `<div class="dsCard">${card}</div>` : ''}
     <section class="sec dsSec" id="dsiLifts"><div class="secHead"><div><div class="kicker">Your Dandy Strength Index™</div><h2>DSI <span>lifts</span></h2><p class="secSub">Bench, squat, deadlift and clean make your score. Type your best; then it asks for a goal. Both are optional.</p></div></div>
-      ${table('mxMain', MAIN.map(x => x[0]))}</section>
-    <section class="sec dsSec" id="oly"><div class="secHead"><div><div class="kicker">Tracked with PRs, not part of the DSI™</div><h2>Olympic and <span>press</span></h2><p class="secSub">Snatch, front squat, push press, clean and jerk, and any other lift you want to chase.</p></div></div>
-      ${table('mxOly', oly, `<form class="row mxAdd" id="mxAdd"><select id="mxAddL" aria-label="Add a lift">${addable().map(([id, n]) => `<option value="${esc(id)}">${esc(n)}</option>`).join('')}</select><button class="btn ghost sm">Add a lift</button></form>`)}</section>
+      ${nudge(MAIN.map(x => x[0]))}${table('mxMain', MAIN.map(x => x[0]))}</section>
+    <section class="sec dsSec" id="oly"><div class="secHead"><div><div class="kicker">Tracked with PRs, not part of the DSI™</div><h2>Every other <span>lift</span></h2><p class="secSub">Snatch, front squat, push press and clean and jerk show on the boards. Save the rest too; DI uses them for your class targets.</p></div></div>
+      ${nudge(oly)}${table('mxOly', oly)}</section>
     <section class="sec dsSec gbCoach" id="coach"><div class="secHead"><div><div class="kicker">Built from your numbers and goals</div><h2><span>Coach</span></h2></div></div>
       ${pro ? `<div id="dsTargets">${targetsHtml()}</div>${coach}` : `<div class="prEmpty"><b>Your coach comes with DSI Pro</b><p>Weekly targets for every goal, your weak link, and how your lifts balance.</p><p><a class="btn" href="/pro">See DSI Pro</a></p></div>`}</section>`)) return;
   bindPhoto(main, () => route());
@@ -543,6 +548,7 @@ VIEWS.dsi = async (_, tok) => {
     tr.outerHTML = rowHtml(id, i); const nt = $(`tr[data-lift="${CSS.escape(id)}"]`, main); bindRow(nt);
     if (focus) { const f = $(focus, nt); if (f) f.focus(); }
     const tg = $('#dsTargets'); if (tg) tg.innerHTML = targetsHtml();
+    const sec = nt.closest('.dsSec'), nu = sec && $('.mxNudge', sec); if (nu) nu.outerHTML = nudge(sec.id === 'oly' ? oly : MAIN.map(x => x[0]));
   };
   const bindRow = tr => {
     const id = tr.dataset.lift, bi = $('[data-best]', tr), gi = $('[data-goal]', tr), di = $('[data-by]', tr);
@@ -570,12 +576,6 @@ VIEWS.dsi = async (_, tok) => {
     };
   };
   $$('.mxT tbody tr', main).forEach(bindRow);
-  $('#mxAdd').onsubmit = e => {
-    e.preventDefault(); const id = $('#mxAddL').value; if (!id || oly.includes(id)) return;
-    oly.push(id); $('#mxOly tbody').insertAdjacentHTML('beforeend', rowHtml(id, oly.length - 1));
-    const tr = $(`#mxOly tr[data-lift="${CSS.escape(id)}"]`); bindRow(tr); $('[data-best]', tr).focus();
-    $('#mxAddL').innerHTML = addable().map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
-  };
 };
 
 /* ---------- PR wall ---------- */
@@ -839,16 +839,11 @@ VIEWS.week = async (day, tok, opt = {}) => {
     b.disabled = true; msg.textContent = 'Saving…';
     const { error } = await sb.from('workout_logs').upsert({ workout_id: w.id, profile_id: S.me.id, entries, score: score || null }, { onConflict: 'workout_id,profile_id' });
     if (error) { b.disabled = false; msg.textContent = error.message; return; }
+    // The database turns any lift weight that beats your best into a new best (and a PR). Celebrate it here.
     let prMsg = '';
-    if (w.pr_lift) {
-      const maxItem = (w.lifts || []).find(l => l.max && entries[l.id]);
-      const L = D.LIFT_BY_DB[w.pr_lift], best = L && meRow ? meRow[L.k] : 0;
-      if (maxItem && entries[maxItem.id] > best) {
-        const { data } = await sb.from('lift_entries').insert({ profile_id: S.me.id, lift: w.pr_lift, weight_lb: entries[maxItem.id], performed_on: w.day, source: 'workout' }).select().single();
-        if (data && data.is_pr && data.prev_best) { go('/pr/' + data.id + '?celebrate=1'); return; }
-        if (data && data.is_pr) prMsg = `New ${D.liftName(w.pr_lift)} PR: ${fmt(data.weight_lb)} lb!`;
-      }
-    }
+    const pr = await freshPr(S.me.id, w.day);
+    if (pr && pr.prev_best) { go('/pr/' + pr.id + '?celebrate=1'); return; }
+    if (pr) prMsg = `${D.liftName(pr.lift)} saved to your DSI page: ${fmt(pr.weight_lb)} lb`;
     toast(prMsg || 'Logged');
     route();
   };
@@ -1796,7 +1791,7 @@ VIEWS.join = async (_, tok) => {
 };
 
 /* ---------- compete and grow pages (extra.js) ---------- */
-const CTX = { avatar, photoUrl, photoTools, bindPhoto, changePhoto, OFFICE, officeHref, sb, D, S, VIEWS, $, $$, esc, num, fmt, today, pd, fmtD, addDays, monday, toast, must, paint, needLogin, go,
+const CTX = { freshPr, avatar, photoUrl, photoTools, bindPhoto, changePhoto, OFFICE, officeHref, sb, D, S, VIEWS, $, $$, esc, num, fmt, today, pd, fmtD, addDays, monday, toast, must, paint, needLogin, go,
   loadBoard, loadPeople, nameOf, boardRow, inGym, isPro, isStaff, PRO, bindActions, bindVideo, route, videoUrl, normDay, liftRule, boardBar };
 installExtra(CTX);
 installGym(CTX);

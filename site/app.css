@@ -2060,3 +2060,11 @@ td .lgF{margin:6px 0 0}
 .dsTgC small { color: var(--muted, #9aa4b2); }
 /* My profile: one page, sections stacked with room between them */
 #main > section[data-part], #main > #billing, #main > #profile section[data-part] { margin-top: 36px; }
+.mxNudge { display: grid; grid-template-columns: auto minmax(120px, 220px) 1fr; gap: 14px; align-items: center; margin: 0 0 12px; }
+.mxCount { white-space: nowrap; } .mxCount b { font-size: 1.3rem; color: var(--accent, #f5c542); }
+.mxNudge .pb { display: block; height: 8px; border-radius: 4px; background: var(--line, #2a3242); overflow: hidden; }
+.mxNudge .pb i { display: block; height: 100%; background: var(--accent, #f5c542); }
+@media (max-width: 640px) { .mxNudge { grid-template-columns: auto 1fr; } .mxNudge .sub { grid-column: 1 / -1; } }
+.mxT th, .mxT td { padding-top: 6px; padding-bottom: 6px; }
+.mxT .mxIn { padding: 6px 10px; font-size: 15px; }
+.mxT .mxIn[data-best]:placeholder-shown { border-style: dashed; border-color: rgba(245, 197, 66, .45); }

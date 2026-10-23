@@ -212,14 +212,10 @@ export function install(X) {
       logOf.set(pid, row);
       mark(pid, 'ok', 'saved');
       if (noShow.has(pid)) { try { await rpc('mark_no_show', { p_session: pick.id, p_profile: pid, p_no: false }); noShow.delete(pid); const nb = $(`[data-ns="${pid}"]`, grid); if (nb) { nb.setAttribute('aria-pressed', 'false'); nb.textContent = 'Here'; nb.closest('tr').classList.remove('ns'); } count(); } catch {} }
-      // Max out day: a new best becomes a PR for the DSI and the PR wall.
-      if (it.kind === 'w' && it.lift && it.lift.max && w.pr_lift && D.LIFT_BY_DB[w.pr_lift] && !r.empty) {
-        const L = D.LIFT_BY_DB[w.pr_lift], br = rowOf(pid), best = num(br[L.k]);
-        if (r.x > best) {
-          const { data, error: e2 } = await sb.from('lift_entries').insert({ profile_id: pid, lift: w.pr_lift, weight_lb: r.x, performed_on: day, source: 'workout', entered_by: S.me.id, note: `Entered by ${S.me.display_name} in class` }).select().single();
-          if (!e2 && data && data.is_pr) { br[L.k] = r.x; mark(pid, 'pr', 'PR'); toast(`New ${D.liftName(w.pr_lift)} PR for ${nameOf(pid)}: ${r.x} lb`); }
-          else if (e2) { console.error(e2); toast(`Saved. ${nameOf(pid)} can confirm the PR from their own log.`); }
-        }
+      // Any lift weight that beats their best becomes a new best in the database (DSI page, PR wall). Flag it here.
+      if (it.kind === 'w' && !r.empty) {
+        const pr = await X.freshPr(pid, day);
+        if (pr) { mark(pid, 'pr', 'PR'); toast(`New ${D.liftName(pr.lift)} best for ${nameOf(pid)}: ${num(pr.weight_lb)} lb`); }
       }
     }
   };
