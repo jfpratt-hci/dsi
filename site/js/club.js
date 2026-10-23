@@ -103,7 +103,8 @@ export function install(X) {
     ]);
     const signed = new Set(waiver && ids.length ? ((await sb.from('doc_signatures').select('profile_id').eq('doc_id', waiver.id).in('profile_id', ids)).data || []).map(x => x.profile_id) : []);
     const mem = new Map(ms.map(m => [m.profile_id, m.status]));
-    const flags = id => `${waiver && !signed.has(id) ? '<span class="pill down">No waiver</span>' : ''}${!mem.has(id) ? '<span class="pill flat">No membership</span>' : mem.get(id) === 'past_due' ? '<span class="pill down">Past due</span>' : ''}`;
+    const coachIds = new Set(((await sb.from('gym_staff').select('profile_id').eq('gym_id', gid)).data || []).map(x => x.profile_id));
+    const flags = id => `${waiver && !signed.has(id) ? '<span class="pill down">No waiver</span>' : ''}${!mem.has(id) && !coachIds.has(id) ? '<span class="pill flat">No membership</span>' : mem.get(id) === 'past_due' ? '<span class="pill down">Past due</span>' : ''}`;
     const logs = w && ids.length ? must(await sb.from('workout_logs').select('profile_id,entries,score,sets').eq('workout_id', w.id).in('profile_id', ids)) : [];
     const logOf = new Map(logs.map(l => [l.profile_id, l]));
     const rowOf = id => board.find(r => r.profile_id === id) || { sex: (memberBy.get(id) || {}).sex };
@@ -419,7 +420,7 @@ export function install(X) {
 
   async function tabMembers(g, tok, shell, qs, owner) {
     const since = addDays(today(), -30);
-    const [members, ms, docs, sigs, att, plans, inv] = await Promise.all([
+    const [members, ms, docs, sigs, att, plans, inv, staffRows] = await Promise.all([
       sb.from('profiles').select('id,display_name,created_at').eq('gym_id', g.id).not('display_name', 'is', null).order('display_name').then(must),
       sb.from('memberships').select('*').eq('gym_id', g.id).order('created_at', { ascending: false }).then(must),
       sb.from('gym_docs').select('id,kind,version').eq('gym_id', g.id).eq('active', true).then(must),
@@ -427,23 +428,29 @@ export function install(X) {
       sb.from('bookings').select('profile_id,checked_in_at,session_id').eq('gym_id', g.id).eq('status', 'attended').order('checked_in_at', { ascending: false }).limit(2000).then(must),
       owner ? sb.from('plans').select('*').eq('gym_id', g.id).eq('active', true).order('price_cents').then(must) : [],
       owner ? sb.from('invoices').select('profile_id,amount_cents,status').eq('gym_id', g.id).eq('status', 'open').then(must) : [],
+      sb.from('gym_staff').select('profile_id,role').eq('gym_id', g.id).then(must),
     ]);
+    // Coaches and owners are members too, just another type, and free.
+    const typeOf = new Map(staffRows.map(x => [x.profile_id, x.role])), kind = id => typeOf.get(id) || 'member';
+    const show = ['member', 'coach'].includes(qs.get('type')) ? qs.get('type') : 'all';
     const cur = id => ms.find(m => m.profile_id === id && m.status !== 'canceled');
     const docId = k => (docs.find(d => d.kind === k) || {}).id;
     const signedDoc = (id, k) => !docId(k) || sigs.some(s => s.profile_id === id && s.doc_id === docId(k));
     const visits = id => att.filter(a => a.profile_id === id);
     const owed = id => inv.filter(i => i.profile_id === id).reduce((t, i) => t + i.amount_cents, 0);
     const q = (qs.get('q') || '').toLowerCase();
-    const list = members.filter(m => !q || m.display_name.toLowerCase().includes(q));
-    if (!paint(tok, shell(`${owner ? addPersonForm(g, 'member') : ''}<div class="row adSearch"><label class="vh" for="mq">Search members</label><input id="mq" placeholder="Search members" value="${esc(qs.get('q') || '')}" style="max-width:300px"><span class="hint">${list.length} of ${members.length} members. Members join by picking ${esc(g.name)} on the Gym league page.${owner ? ' Remove takes someone off the gym and ends a desk paid membership; their account and history stay.' : ''}</span></div>
-      <div class="board"><div class="tablewrap"><table class="adT"><thead><tr><th>Member</th><th>Membership</th><th>Waiver</th><th>Contract</th><th class="r">Visits 30 days</th><th>Last visit</th>${owner ? '<th class="r">Owes</th>' : ''}<th></th></tr></thead><tbody>
-      ${list.map(m => { const c = cur(m.id), v = visits(m.id); return `<tr><td><b><a href="/u/${m.id}">${esc(m.display_name)}</a></b></td><td>${c ? `${esc(c.plan_name)} ${statusPill(c.status)}` : statusPill('')}</td>
+    const list = members.filter(m => (!q || m.display_name.toLowerCase().includes(q)) && (show === 'all' || (show === 'coach' ? kind(m.id) !== 'member' : kind(m.id) === 'member')));
+    const nCoach = members.filter(m => kind(m.id) !== 'member').length;
+    const typeChips = `<div class="chips mbType" aria-label="Show">${[['all', `All ${members.length}`], ['member', `Members ${members.length - nCoach}`], ['coach', `Coaches ${nCoach}`]].map(([v, n]) => `<a class="chip" href="/club/${g.id}?tab=members&type=${v}${q ? '&q=' + encodeURIComponent(q) : ''}" aria-pressed="${show === v}">${n}</a>`).join('')}</div>`;
+    if (!paint(tok, shell(`${owner ? addPersonForm(g, 'member') : ''}${typeChips}<div class="row adSearch"><label class="vh" for="mq">Search members</label><input id="mq" placeholder="Search members" value="${esc(qs.get('q') || '')}" style="max-width:300px"><span class="hint">${list.length} of ${members.length} members. Members join by picking ${esc(g.name)} on the Gym league page.${owner ? ' Remove takes someone off the gym and ends a desk paid membership; their account and history stay.' : ''}</span></div>
+      <div class="board"><div class="tablewrap"><table class="adT"><thead><tr><th>Member</th><th>Type</th><th>Membership</th><th>Waiver</th><th>Contract</th><th class="r">Visits 30 days</th><th>Last visit</th>${owner ? '<th class="r">Owes</th>' : ''}<th></th></tr></thead><tbody>
+      ${list.map(m => { const c = cur(m.id), v = visits(m.id), k = kind(m.id); return `<tr><td><b><a href="/u/${m.id}">${esc(m.display_name)}</a></b></td><td>${k === 'owner' ? '<span class="pill acc">Owner</span>' : k === 'coach' ? '<span class="pill acc">Coach</span>' : '<span class="sub">Member</span>'}</td><td>${c ? `${esc(c.plan_name)} ${statusPill(c.status)}` : k !== 'member' ? `<span class="pill up">Free, ${k}</span>` : statusPill('')}</td>
         <td>${signedDoc(m.id, 'waiver') ? '<span class="pill up">Signed</span>' : '<span class="pill down">Missing</span>'}</td><td>${!docId('contract') ? '<span class="sub">none</span>' : signedDoc(m.id, 'contract') ? '<span class="pill up">Signed</span>' : '<span class="pill flat">Not yet</span>'}</td>
         <td class="r n">${v.filter(a => (a.checked_in_at || '') >= since).length}</td><td>${v[0] && v[0].checked_in_at ? esc(fmtD(v[0].checked_in_at.slice(0, 10))) : '<span class="sub">never</span>'}</td>
         ${owner ? `<td class="r n">${owed(m.id) ? `<b style="color:var(--down)">${money(owed(m.id))}</b>` : ''}</td>` : ''}<td class="r nowrap"><button class="btn ghost sm" data-md="${m.id}">Open</button>${owner ? ` <button class="btn ghost sm" data-rm="${m.id}" aria-label="Remove ${esc(m.display_name)} from ${esc(g.name)}">Remove</button>` : ''}</td></tr>
-        <tr data-mdp="${m.id}" hidden><td colspan="${owner ? 8 : 7}"><div class="mdBox">Loading…</div></td></tr>`; }).join('') || `<tr><td colspan="8" class="empty">No members yet.</td></tr>`}
+        <tr data-mdp="${m.id}" hidden><td colspan="${owner ? 9 : 8}"><div class="mdBox">Loading…</div></td></tr>`; }).join('') || `<tr><td colspan="9" class="empty">No one here yet.</td></tr>`}
       </tbody></table></div></div>`))) return;
-    $('#mq').onchange = e => go(`/club/${g.id}?tab=members&q=${encodeURIComponent(e.target.value.trim())}`);
+    $('#mq').onchange = e => go(`/club/${g.id}?tab=members${show !== 'all' ? '&type=' + show : ''}&q=${encodeURIComponent(e.target.value.trim())}`);
     $$('[data-rm]').forEach(b => twoTap(b, 'Tap again to remove', async () => {
       const name = (members.find(m => m.id === b.dataset.rm) || {}).display_name || 'Member';
       await rpc('remove_member', { p_gym: g.id, p_profile: b.dataset.rm });
@@ -451,11 +458,11 @@ export function install(X) {
     }));
     $$('[data-md]').forEach(b => b.onclick = async () => {
       const row = $(`[data-mdp="${b.dataset.md}"]`); row.hidden = !row.hidden; if (row.hidden) return;
-      await memberDetail(g, b.dataset.md, $('.mdBox', row), { owner, plans, ms: ms.filter(m => m.profile_id === b.dataset.md), sigs: sigs.filter(s => s.profile_id === b.dataset.md), docs });
+      await memberDetail(g, b.dataset.md, $('.mdBox', row), { kind: kind(b.dataset.md), owner, plans, ms: ms.filter(m => m.profile_id === b.dataset.md), sigs: sigs.filter(s => s.profile_id === b.dataset.md), docs });
     });
   }
 
-  async function memberDetail(g, pid, box, { owner, plans, ms, sigs, docs }) {
+  async function memberDetail(g, pid, box, { kind = 'member', owner, plans, ms, sigs, docs }) {
     const [det, att, inv, lvp, lgs] = await Promise.all([
       sb.from('member_details').select('*').eq('profile_id', pid).maybeSingle().then(r => r.data),
       sb.from('bookings').select('checked_in_at,session:sessions(name,starts_at)').eq('gym_id', g.id).eq('profile_id', pid).eq('status', 'attended').order('checked_in_at', { ascending: false }).limit(30).then(must),
@@ -465,7 +472,7 @@ export function install(X) {
     ]);
     const cur = ms.find(m => m.status !== 'canceled');
     box.innerHTML = `<div class="mdGrid">
-      <div><h4>Sign in</h4>${loginRow(lgs.get(pid), pid, owner)}<h4>Contact</h4>${det ? `<p>${esc(det.legal_name || '')}<br>${esc(det.phone || '')}<br>${esc(det.email || '')}</p><p class="sub">Emergency: ${esc(det.emergency_name || 'not given')} ${esc(det.emergency_phone || '')}</p>` : '<p class="hint">They have not added contact details yet.</p>'}
+      <div>${owner ? `<h4>Type</h4><form class="row" data-tyf><select data-ty style="max-width:160px">${[['member', 'Member'], ['coach', 'Coach'], ['owner', 'Owner']].map(([k, n]) => `<option value="${k}"${kind === k ? ' selected' : ''}>${n}</option>`).join('')}</select><button class="btn ghost sm">Save</button></form><p class="sub">Coaches and owners are free members and can run classes.</p>` : ''}<h4>Sign in</h4>${loginRow(lgs.get(pid), pid, owner)}<h4>Contact</h4>${det ? `<p>${esc(det.legal_name || '')}<br>${esc(det.phone || '')}<br>${esc(det.email || '')}</p><p class="sub">Emergency: ${esc(det.emergency_name || 'not given')} ${esc(det.emergency_phone || '')}</p>` : '<p class="hint">They have not added contact details yet.</p>'}
         <h4>Documents</h4>${sigs.map(s => `<p>${s.kind === 'waiver' ? 'Waiver' : 'Contract'} v${(docs.find(d => d.id === s.doc_id) || {}).version || 'old'} · signed ${esc(fmtD(s.signed_at.slice(0, 10)))} as ${esc(s.signed_name)} <a href="/signed/${s.id}">View</a></p>`).join('') || '<p class="hint">Nothing signed yet.</p>'}</div>
       <div><h4>Level</h4>${lvp ? `<form class="row" data-lvf><select data-lv style="max-width:160px">${[['beginner', 'Beginner'], ['rx', 'Rx'], ['comp', 'Comp']].map(([k, n]) => `<option value="${k}"${lvp.level === k ? ' selected' : ''}>${n}</option>`).join('')}</select><button class="btn ghost sm">Set</button></form>
         <p class="sub">${lvp.level_by === 'coach' ? 'Set by a coach. ' : 'Moves up on its own. '}${lvp.level === 'beginner' ? `${lvp.rx_logs} of 3 Rx logs, or ${lvp.weighted_logs} of 8 logs and ${lvp.prs} of 2 PRs` : lvp.level === 'rx' ? `${lvp.comp_logs} of 3 Comp logs` : 'Top level'}</p>` : '<p class="sub">Not set</p>'}
@@ -477,6 +484,8 @@ export function install(X) {
     </div>`;
     const again = () => route();
     bindLogin(g, box);
+    const tf = $('[data-tyf]', box);
+    if (tf) tf.onsubmit = async e => { e.preventDefault(); try { const t = await rpc('gym_set_type', { p_gym: g.id, p_profile: pid, p_type: $('[data-ty]', tf).value }); toast(t === 'member' ? 'Now a member' : `Now ${t === 'owner' ? 'an owner' : 'a coach'}`); route(); } catch (err) { toast(err.message); } };
     const lf = $('[data-lvf]', box);
     if (lf) lf.onsubmit = async e => { e.preventDefault(); const { error } = await sb.rpc('set_member_level', { p_profile: pid, p_level: $('[data-lv]', lf).value }); if (error) return toast(error.message); toast('Level set'); };
     const am = $('[data-addm]', box);

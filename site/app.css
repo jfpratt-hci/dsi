@@ -1997,3 +1997,4 @@ td .lgF{margin:6px 0 0}
 .cvNs[aria-pressed="true"]{border-color:var(--down);background:color-mix(in srgb,var(--down) 14%,transparent);color:var(--down)}
 .cvGrid tr.ns .cvName,.cvGrid tr.ns td:not(.cvHere){opacity:.45}
 .cvWho .pill{margin-left:6px;font-size:10px}
+.mbType{margin:0 0 12px}
