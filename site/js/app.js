@@ -68,12 +68,12 @@ async function loadMe() {
   }
 }
 async function loadBoard() {
-  const [rows, profs] = await Promise.all([sb.from('board').select('*').then(must), sb.from('profiles').select('id,tier,role,gym_id').then(must)]);
+  const [rows, profs] = await Promise.all([sb.from('board').select('*').then(must), sb.from('profiles').select('id,tier,role,gym_id,photo').then(must)]);
   const pmap = new Map(profs.map(p => [p.id, p]));
   S.boardAll = rows.map(r => {
     const pp = pmap.get(r.profile_id) || {};
     const x = { ...r, bw: num(r.bw), age: num(r.age), bench: num(r.bench), squat: num(r.squat), dead: num(r.dead), clean: num(r.clean) };
-    x.score = D.score(x); x.total = D.total(x); x.p = D.pcts(x); x.g = D.gains(x); x.pro = pp.tier === 'pro' || ['admin', 'commissioner'].includes(pp.role); x.gym_id = pp.gym_id || null;
+    x.score = D.score(x); x.total = D.total(x); x.p = D.pcts(x); x.g = D.gains(x); x.pro = pp.tier === 'pro' || ['admin', 'commissioner'].includes(pp.role); x.gym_id = pp.gym_id || null; x.photo = pp.photo || null;
     return x;
   });
   // Gyms only for now: everyone sees the people in their own gym. Someone without a gym sees everyone.
@@ -84,10 +84,63 @@ async function loadBoard() {
 }
 const inGym = id => !S.myGymIds || S.myGymIds.has(id);
 async function loadPeople() {
-  const rows = must(await sb.from('profiles').select('id,display_name,roast_opt_in,role,division,level'));
+  const rows = must(await sb.from('profiles').select('id,display_name,roast_opt_in,role,division,level,photo'));
   S.people = new Map(rows.map(r => [r.id, r]));
 }
 const nameOf = id => (S.people.get(id) || {}).display_name || 'Someone';
+
+/* ---------- profile pictures ---------- */
+// Square JPEGs, 640 px, cropped to the center in the browser, in the public avatars bucket under the profile id.
+const photoUrl = path => path ? sb.storage.from('avatars').getPublicUrl(path).data.publicUrl : '';
+const initialsOf = n => String(n || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase() || '?';
+const avatar = (p, size = 44, cls = '') => p && p.photo
+  ? `<img class="av ${cls}" src="${esc(photoUrl(p.photo))}" alt="" loading="lazy" style="--av:${size}px">`
+  : `<span class="av avI ${cls}" style="--av:${size}px" aria-hidden="true">${esc(initialsOf(p && (p.display_name || p.name)))}</span>`;
+async function squareJpeg(file, px = 640) {
+  const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => null);
+  if (!bmp) throw new Error('That file is not a picture we can read. Try a JPG or PNG.');
+  const side = Math.min(bmp.width, bmp.height), out = Math.min(px, side);
+  const c = document.createElement('canvas'); c.width = c.height = out;
+  c.getContext('2d').drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, out, out);
+  return new Promise((ok, bad) => c.toBlob(b => b ? ok(b) : bad(new Error('Could not shrink that picture.')), 'image/jpeg', 0.86));
+}
+// Pick a picture and save it as this profile's photo. Resolves to the new path, or null if they backed out.
+function changePhoto(pid) {
+  return new Promise((done, fail) => {
+    const inp = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*' });
+    inp.onchange = async () => {
+      const f = inp.files && inp.files[0]; if (!f) return done(null);
+      try {
+        if (f.size > 25e6) throw new Error('That picture is over 25 MB. Pick a smaller one.');
+        const blob = await squareJpeg(f), path = `${pid}/${Date.now()}.jpg`;
+        const up = await sb.storage.from('avatars').upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+        if (up.error) throw new Error(up.error.message);
+        const { error } = await sb.rpc('set_photo', { p_profile: pid, p_path: path });
+        if (error) throw new Error(error.message);
+        if (S.me && S.me.id === pid) S.me.photo = path;
+        if (S.people && S.people.get(pid)) S.people.get(pid).photo = path;
+        done(path);
+      } catch (e) { fail(e); }
+    };
+    inp.click();
+  });
+}
+// Buttons with data-photo="<profile id>" change that picture; data-photo-rm takes it off.
+function bindPhoto(root, after) {
+  $$('[data-photo]', root).forEach(b => b.onclick = async () => {
+    const t = b.textContent; b.disabled = true; b.textContent = 'Uploading…';
+    try { const p = await changePhoto(b.dataset.photo); if (p) { toast('Picture saved'); after && after(p); } }
+    catch (e) { toast(e.message); }
+    b.disabled = false; b.textContent = t;
+  });
+  $$('[data-photo-rm]', root).forEach(b => b.onclick = async () => {
+    const { error } = await sb.rpc('set_photo', { p_profile: b.dataset.photoRm, p_path: null });
+    if (error) return toast(error.message);
+    if (S.me && S.me.id === b.dataset.photoRm) S.me.photo = null;
+    toast('Picture removed'); after && after(null);
+  });
+}
+const photoTools = (p, canEdit) => !canEdit ? '' : `<div class="avTools"><button type="button" class="btn ghost sm" data-photo="${p.id}">${p.photo ? 'Change photo' : 'Add a photo'}</button>${p.photo ? `<button type="button" class="linkBtn" data-photo-rm="${p.id}">Remove</button>` : ''}</div>`;
 const boardRow = id => (S.boardAll || S.board).find(r => r.profile_id === id);
 
 /* ---------- navigation ---------- */
@@ -328,7 +381,7 @@ function renderBoard() {
     ${rows.map((r, i) => {
       const club = D.clubOf(r.total), up = v => v > 0 ? `<span class="upArrow" title="Up ${fmt(v)} this week">▲${fmt(v)}</span>` : '';
       return `<tr class="${S.me && S.me.id === r.profile_id ? 'me' : ''}"><td class="pos">${i + 1}</td>
-      <td><div class="who"><a href="/u/${r.profile_id}">${esc(r.name)}</a>${r.pro ? '<span class="pill acc proTag" title="DSI Pro">Pro</span>' : ''}${r.roast_opt_in ? '<i class="fire" title="Opted in to roasts">🔥</i>' : ''}</div><div class="sub">${r.age ? 'Age ' + r.age + ' · ' : ''}${r.bw ? r.bw + ' lb · ' : ''}${esc(r.division)}</div></td>
+      <td><div class="who">${avatar(r, 36)}<a href="/u/${r.profile_id}">${esc(r.name)}</a>${r.pro ? '<span class="pill acc proTag" title="DSI Pro">Pro</span>' : ''}${r.roast_opt_in ? '<i class="fire" title="Opted in to roasts">🔥</i>' : ''}</div><div class="sub">${r.age ? 'Age ' + r.age + ' · ' : ''}${r.bw ? r.bw + ' lb · ' : ''}${esc(r.division)}</div></td>
       <td class="r n big">${r.score}${up(r.g.score)}</td><td class="r n">${fmt(r.total)}${up(r.g.total)}${club ? `<span class="club">${fmt(club)}</span>` : ''}</td>
       ${D.LIFTS.map(l => r[l.k] ? `<td class="r n">${fmt(r[l.k])}${up(r.g.lift[l.k])}<div class="sub">${isNew(r[l.k + '_date']) ? `<span class="prDateNew">PR ${fmtD(r[l.k + '_date'])}</span>` : D.fmtPct(r.p[l.k]) + ' pct'}</div></td>` : '<td class="r sub">n/a</td>').join('')}
       </tr>`;
@@ -504,7 +557,7 @@ VIEWS.u = async (id, tok) => {
   if (!id) { go('/'); return; }
   const [board, prof, hist, goals] = await Promise.all([
     loadBoard(),
-    sb.from('profiles').select('id,display_name,division,sex,birth_year,bodyweight,roast_opt_in,role,tier').eq('id', id).maybeSingle(),
+    sb.from('profiles').select('id,display_name,division,sex,birth_year,bodyweight,roast_opt_in,role,tier,photo,gym_id').eq('id', id).maybeSingle(),
     sb.from('lift_entries').select('*').eq('profile_id', id).order('performed_on', { ascending: false }).order('created_at', { ascending: false }).limit(100),
     sb.from('goals').select('*').eq('profile_id', id),
   ]);
@@ -519,8 +572,8 @@ VIEWS.u = async (id, tok) => {
   const mine = S.me && S.me.id === id, club = D.clubOf(r.total);
   const role = p.role === 'commissioner' ? '<span class="pill acc">Commissioner</span>' : p.role === 'admin' ? '<span class="pill acc">Founder</span>' : p.tier === 'pro' ? '<span class="pill acc">DSI Pro</span>' : '';
   if (!paint(tok, `<article class="card">
-    <div class="cardHead"><div><div class="eyebrow">${esc(p.division)} division</div><div class="nm">${esc(p.display_name)}${p.roast_opt_in ? ' <span title="Opted in to roasts">🔥</span>' : ''}</div>
-      <div class="meta">${r.age ? 'Age ' + r.age + ' · ' : ''}${r.bw ? r.bw + ' lb · ' : ''}${fmt(r.total)} lb total${club ? ' · ' + fmt(club) + ' club' : ''} ${role}</div></div>
+    <div class="cardHead"><div class="uWho"><div class="uAv">${avatar(p, 152)}${photoTools(p, mine || (S.me && S.me.role === 'admin') || (S.myGyms || []).some(g => g.gym_id === p.gym_id && g.role === 'owner'))}</div><div><div class="eyebrow">${esc(p.division)} division</div><div class="nm">${esc(p.display_name)}${p.roast_opt_in ? ' <span title="Opted in to roasts">🔥</span>' : ''}</div>
+      <div class="meta">${r.age ? 'Age ' + r.age + ' · ' : ''}${r.bw ? r.bw + ' lb · ' : ''}${fmt(r.total)} lb total${club ? ' · ' + fmt(club) + ' club' : ''} ${role}</div></div></div>
       <div class="dsi"><div class="eyebrow">DSI™</div><b>${r.score}</b>${S.me && !mine ? `<div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn ghost sm" id="rpU">Report</button><button class="btn ghost sm" id="blU">${S.blocked.has(id) ? 'Unblock' : 'Block'}</button></div>` : ''}</div></div>
     ${S.blocked.has(id) ? '<div class="verdict"><p class="sub">You blocked this lifter. Their messages are hidden from you.</p></div>' : ''}
     <div class="verdict"><b>${esc(v[1])}</b><p>${esc(p.roast_opt_in ? v[2] : v[3])}</p></div>
@@ -536,6 +589,7 @@ VIEWS.u = async (id, tok) => {
   </tbody></table></div></div>${!isPro() && must(hist).length > 3 ? `<p class="hint">Showing the latest 3 of ${must(hist).length}. <a href="/pro">See every lift with DSI Pro</a></p>` : ''}</section>`)) return;
   bindActions(main, () => route());
   bindVideo(main, () => route());
+  bindPhoto(main, () => route());
   if ($('#rpU')) $('#rpU').onclick = () => reportDialog({ type: 'profile', id, name: p.display_name, uid: id });
   if ($('#blU')) $('#blU').onclick = async () => {
     const was = S.blocked.has(id);
@@ -940,7 +994,8 @@ VIEWS.me = async (_, tok) => {
   const yr = new Date().getFullYear();
   const tile = (href, t, d, isProTool) => `<a class="tool" href="${pro || !isProTool ? href : '/pro'}"><b>${t}${isProTool ? ' ' + PRO : ''}</b><span>${d}</span></a>`;
   if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${first ? 'Welcome to the index' : (m.role === 'admin' ? 'Founder' : m.role === 'commissioner' ? 'Commissioner' : pro ? 'DSI Pro' : 'Member')}</div><h2>${first ? 'Set up your <span>profile</span>' : esc(m.display_name)}</h2>
-      <p class="secSub">${esc(S.session.user.email)}${first ? '' : ` · <a href="/u/${m.id}">View my card</a>`}</p></div>
+      <p class="secSub">${esc(S.session.user.email)}${first ? '' : ` · <a href="/u/${m.id}">View my card</a>`}</p>
+      <div class="meAv">${avatar(m, 128)}<div><b>Profile picture</b><p class="sub">Shows on your card, the boards and at your gym. A clear face shot works best.</p>${photoTools(m, true)}</div></div></div>
       ${row ? `<div class="kpi"><div><b>${row.score}</b><span>DSI™</span></div><div><b>${fmt(row.total)}</b><span>Total</span></div></div>` : ''}</div>
       ${v ? `<p class="lede"><b style="color:var(--accent)">${esc(v[1])}.</b> ${esc(m.roast_opt_in ? v[2] : v[3])}</p>` : ''}</section>
     <section class="sec" id="maxes"><div class="secHead"><div><div class="kicker">Four more maxes</div><h2>Your <span>olympic and press</span> numbers</h2><p class="secSub">Not part of your DSI. DI uses them to set your weight when the workout is a snatch, push press, squat snatch or squat clean. Your heaviest single, in pounds.</p></div></div>
@@ -1003,6 +1058,7 @@ VIEWS.me = async (_, tok) => {
     secs.slice(1).forEach(sec => { const k = kindOf(sec); if (k === 'drop') sec.remove(); else if (k && k !== tab) sec.hidden = true; });
     secs[0].insertAdjacentHTML('beforeend', `<nav class="tabs" aria-label="Account" style="margin-top:20px">${TABS.map(([k, n]) => `<a class="tab" href="/me${k === 'profile' ? '' : '?tab=' + k}"${k === tab ? ' aria-current="page" aria-selected="true"' : ''}>${n}</a>`).join('')}</nav>`);
   }
+  bindPhoto(main, () => route());
   const nf = $('#nf');
   if (nf) nf.onsubmit = async e => {
     e.preventDefault();
@@ -1678,7 +1734,7 @@ VIEWS.join = async (_, tok) => {
 };
 
 /* ---------- compete and grow pages (extra.js) ---------- */
-const CTX = { OFFICE, officeHref, sb, D, S, VIEWS, $, $$, esc, num, fmt, today, pd, fmtD, addDays, monday, toast, must, paint, needLogin, go,
+const CTX = { avatar, photoUrl, photoTools, bindPhoto, changePhoto, OFFICE, officeHref, sb, D, S, VIEWS, $, $$, esc, num, fmt, today, pd, fmtD, addDays, monday, toast, must, paint, needLogin, go,
   loadBoard, loadPeople, nameOf, boardRow, inGym, isPro, isStaff, PRO, bindActions, bindVideo, route, videoUrl, normDay, liftRule, boardBar };
 installExtra(CTX);
 installGym(CTX);

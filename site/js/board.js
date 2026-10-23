@@ -3,7 +3,7 @@
 // app.js calls install(ctx) after the other views exist and before the members only wrapping.
 
 export function install(X) {
-  const { sb, D, S, VIEWS, $, $$, esc, fmtD, addDays, monday, today, toast, must, needLogin, loadBoard, loadPeople, nameOf, boardRow, boardBar, inGym, fmt } = X;
+  const { sb, D, S, VIEWS, $, $$, avatar, esc, fmtD, addDays, monday, today, toast, must, needLogin, loadBoard, loadPeople, nameOf, boardRow, boardBar, inGym, fmt } = X;
   const main = () => $('#main');
   const fmtS = s => { s = Math.round(+s || 0); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, '0'); return h ? `${h}:${String(m).padStart(2, '0')}:${x}` : `${m}:${x}`; };
   const parseS = v => { v = String(v || '').trim(); const m = v.match(/^(?:(\d+):)?(\d{1,2}):(\d{2})$/); return m ? (+(m[1] || 0)) * 3600 + +m[2] * 60 + +m[3] : NaN; };
@@ -40,7 +40,7 @@ export function install(X) {
           <p class="bbStd">${esc(b.std)}</p>
           ${me ? `<div class="bbMe"><span>Your best</span><b>${fmtS(me.seconds)}</b><span>#${myPos} of ${list.length} · ${fmtD(me.performed_on)}</span></div>` : ''}
           ${list.length ? `<div class="tablewrap"><table class="lb"><thead><tr><th>#</th><th>Lifter</th><th class="r hl">Time</th><th class="r">Date</th></tr></thead><tbody>
-          ${list.map((r, i) => `<tr class="${S.me && S.me.id === r.profile_id ? 'me' : ''}"><td class="pos">${i + 1}</td><td><div class="who"><a href="/u/${r.profile_id}">${esc(nameOf(r.profile_id))}</a></div></td><td class="r n big">${fmtS(r.seconds)}${r.is_pr && r.prev_best && daysAgo(r.performed_on) <= 6 ? `<div class="sub"><span class="prDateNew">PR, was ${fmtS(r.prev_best)}</span></div>` : ''}</td><td class="r n">${fmtD(r.performed_on)}</td></tr>`).join('')}
+          ${list.map((r, i) => `<tr class="${S.me && S.me.id === r.profile_id ? 'me' : ''}"><td class="pos">${i + 1}</td><td><div class="who">${avatar(S.people && S.people.get(r.profile_id) || { display_name: nameOf(r.profile_id) }, 36)}<a href="/u/${r.profile_id}">${esc(nameOf(r.profile_id))}</a></div></td><td class="r n big">${fmtS(r.seconds)}${r.is_pr && r.prev_best && daysAgo(r.performed_on) <= 6 ? `<div class="sub"><span class="prDateNew">PR, was ${fmtS(r.prev_best)}</span></div>` : ''}</td><td class="r n">${fmtD(r.performed_on)}</td></tr>`).join('')}
           </tbody></table></div>` : `<div class="empty">Nobody has a ${esc(benchName(b.k, f.std === 'rx'))} time yet. It shows up after your gym programs it.</div>`}
         </article>`;
       }).join('');

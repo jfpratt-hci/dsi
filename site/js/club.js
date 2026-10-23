@@ -6,7 +6,7 @@
 import { STARTERS, fillDoc } from './doc-templates.js';
 
 export function install(X) {
-  const { sb, S, VIEWS, $, $$, esc, num, today, pd, fmtD, addDays, toast, must, paint, needLogin, go, route, isStaff } = X;
+  const { sb, S, VIEWS, $, $$, avatar, photoTools, bindPhoto, esc, num, today, pd, fmtD, addDays, toast, must, paint, needLogin, go, route, isStaff } = X;
 
   /* ---------- helpers ---------- */
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -85,7 +85,7 @@ export function install(X) {
       sessionsFor(g, day, day),
       sb.from('workouts').select('*').eq('gym_id', gid).eq('day', day).maybeSingle().then(must),
       X.loadBoard(),
-      sb.from('profiles').select('id,display_name,sex').eq('gym_id', gid).not('display_name', 'is', null).order('display_name').then(must),
+      sb.from('profiles').select('id,display_name,sex,photo').eq('gym_id', gid).not('display_name', 'is', null).order('display_name').then(must),
     ]);
     const live = ss.filter(x => x.status !== 'canceled'), now = Date.now();
     const pick = live.find(x => x.id === qs.get('s')) || (day === tdy && (live.find(x => Date.parse(x.starts_at) - 15 * 60000 <= now && Date.parse(x.ends_at) >= now)
@@ -131,7 +131,7 @@ export function install(X) {
       ${pick ? `<div class="cvBar"><div class="cvAdd"><label class="vh" for="cvAddIn">Add someone</label><input id="cvAddIn" list="cvPeople" placeholder="Add someone: type a name, press Enter" autocomplete="off"><datalist id="cvPeople">${members.filter(m => !ids.includes(m.id)).map(m => `<option value="${esc(m.display_name)}">`).join('')}</datalist></div>
           <span class="cvCount"><b>${ids.length - noShow.size}</b> here${noShow.size ? ` · ${noShow.size} no show` : ''}</span>${w ? `<a class="btn ghost sm" href="/tv/${esc(g.slug || gid)}" target="_blank" rel="noopener">Dandy TV</a>` : ''}</div>
         ${ids.length ? `<div class="cvWrap"><table class="cvGrid" id="cvGrid"><thead><tr><th scope="col" class="cvWhoH">${esc(tAt(pick.starts_at, g.tz))} ${esc(pick.name)}</th><th scope="col" class="cvHereH">Came?</th>${its.map(head).join('')}</tr></thead><tbody>
-          ${order.map(id => `<tr data-row="${id}"${noShow.has(id) ? ' class="ns"' : ''}><th scope="row" class="cvWho"><span class="cvName">${esc(nameOf(id))}</span>${flags(id)}<button type="button" class="cvX" data-out="${id}" aria-label="Take ${esc(nameOf(id))} off this class">×</button><span class="cvDot" data-st aria-live="polite"></span></th><td class="cvHere"><button type="button" class="cvNs" data-ns="${id}" aria-pressed="${noShow.has(id)}" aria-label="Mark ${esc(nameOf(id))} as a no show">${noShow.has(id) ? 'No show' : 'Here'}</button></td>${its.map(it => `<td>${cell(id, it)}</td>`).join('')}</tr>`).join('')}
+          ${order.map(id => `<tr data-row="${id}"${noShow.has(id) ? ' class="ns"' : ''}><th scope="row" class="cvWho">${avatar(memberBy.get(id) || { display_name: nameOf(id) }, 40, 'cvAv')}<span class="cvName">${esc(nameOf(id))}</span>${flags(id)}<button type="button" class="cvX" data-out="${id}" aria-label="Take ${esc(nameOf(id))} off this class">×</button><span class="cvDot" data-st aria-live="polite"></span></th><td class="cvHere"><button type="button" class="cvNs" data-ns="${id}" aria-pressed="${noShow.has(id)}" aria-label="Mark ${esc(nameOf(id))} as a no show">${noShow.has(id) ? 'No show' : 'Here'}</button></td>${its.map(it => `<td>${cell(id, it)}</td>`).join('')}</tr>`).join('')}
           </tbody></table></div>
           <p class="hint">Grey numbers are each person's target. Every box saves as you leave it and shows on the board and the TV. Enter moves down the column.${its.some(i => i.lift && i.lift.max) && w.pr_lift ? ' Today is a max out day: a new best becomes a PR.' : ''}</p>`
         : '<div class="prEmpty"><b>Nobody in this class yet</b><p>Type names above as people walk in.</p></div>'}` : ''}
@@ -427,7 +427,7 @@ export function install(X) {
   async function tabMembers(g, tok, shell, qs, owner) {
     const since = addDays(today(), -30);
     const [members, ms, docs, sigs, att, plans, inv, staffRows] = await Promise.all([
-      sb.from('profiles').select('id,display_name,created_at').eq('gym_id', g.id).not('display_name', 'is', null).order('display_name').then(must),
+      sb.from('profiles').select('id,display_name,created_at,photo').eq('gym_id', g.id).not('display_name', 'is', null).order('display_name').then(must),
       sb.from('memberships').select('*').eq('gym_id', g.id).order('created_at', { ascending: false }).then(must),
       sb.from('gym_docs').select('id,kind,version').eq('gym_id', g.id).eq('active', true).then(must),
       sb.from('doc_signatures').select('id,doc_id,profile_id,kind,signed_at,signed_name').eq('gym_id', g.id).then(must),
@@ -461,7 +461,7 @@ export function install(X) {
     const typeChips = `<div class="chips mbType" aria-label="Show">${[['all', `All ${members.length}`], ['member', `Members ${members.length - nCoach}`], ['coach', `Coaches ${nCoach}`]].map(([v, n]) => `<a class="chip" href="/club/${g.id}?tab=members&type=${v}${q ? '&q=' + encodeURIComponent(q) : ''}${sortQ}" aria-pressed="${show === v}">${n}</a>`).join('')}</div>`;
     if (!paint(tok, shell(`${owner ? addPersonForm(g, 'member') : ''}${typeChips}<div class="row adSearch"><label class="vh" for="mq">Search members</label><input id="mq" placeholder="Search by name" value="${esc(qs.get('q') || '')}" style="max-width:300px"><span class="hint">${list.length} of ${members.length} members. Members join by picking ${esc(g.name)} on the Gym league page.${owner ? ' Remove takes someone off the gym and ends a desk paid membership; their account and history stay.' : ''}</span></div>
       <div class="board"><div class="tablewrap"><table class="adT mbT"><thead><tr>${sortTh('first', 'First name')}${sortTh('last', 'Last name')}${sortTh('board', 'Board name')}<th>Type</th><th>Membership</th><th>Waiver</th><th>Contract</th><th class="r">Visits 30 days</th><th>Last visit</th>${owner ? '<th class="r">Owes</th>' : ''}<th></th></tr></thead><tbody>
-      ${list.map(m => { const c = cur(m.id), v = visits(m.id), k = kind(m.id); return `<tr><td>${esc(fn(m.id)) || '<span class="sub">none</span>'}</td><td>${esc(ln(m.id)) || '<span class="sub">none</span>'}</td><td><b><a href="/u/${m.id}">${esc(m.display_name)}</a></b>${zips && !zips.has(m.id) ? ' <span class="pill flat" title="Add their billing ZIP for better card rates">No ZIP</span>' : ''}</td><td>${k === 'owner' ? '<span class="pill acc">Owner</span>' : k === 'coach' ? '<span class="pill acc">Coach</span>' : '<span class="sub">Member</span>'}</td><td>${c ? `${esc(c.plan_name)} ${statusPill(c.status)}` : k !== 'member' ? `<span class="pill up">Free, ${k}</span>` : statusPill('')}</td>
+      ${list.map(m => { const c = cur(m.id), v = visits(m.id), k = kind(m.id); return `<tr><td>${esc(fn(m.id)) || '<span class="sub">none</span>'}</td><td>${esc(ln(m.id)) || '<span class="sub">none</span>'}</td><td><div class="mbWho">${avatar(m, 48)}<div><b><a href="/u/${m.id}">${esc(m.display_name)}</a></b>${zips && !zips.has(m.id) ? ' <span class="pill flat" title="Add their billing ZIP for better card rates">No ZIP</span>' : ''}</div></div></td><td>${k === 'owner' ? '<span class="pill acc">Owner</span>' : k === 'coach' ? '<span class="pill acc">Coach</span>' : '<span class="sub">Member</span>'}</td><td>${c ? `${esc(c.plan_name)} ${statusPill(c.status)}` : k !== 'member' ? `<span class="pill up">Free, ${k}</span>` : statusPill('')}</td>
         <td>${signedDoc(m.id, 'waiver') ? '<span class="pill up">Signed</span>' : '<span class="pill down">Missing</span>'}</td><td>${!docId('contract') ? '<span class="sub">none</span>' : signedDoc(m.id, 'contract') ? '<span class="pill up">Signed</span>' : '<span class="pill flat">Not yet</span>'}</td>
         <td class="r n">${v.filter(a => (a.checked_in_at || '') >= since).length}</td><td>${v[0] && v[0].checked_in_at ? esc(fmtD(v[0].checked_in_at.slice(0, 10))) : '<span class="sub">never</span>'}</td>
         ${owner ? `<td class="r n">${owed(m.id) ? `<b style="color:var(--down)">${money(owed(m.id))}</b>` : ''}</td>` : ''}<td class="r nowrap"><button class="btn ghost sm" data-md="${m.id}">Open</button>${owner ? ` <button class="btn ghost sm" data-rm="${m.id}" aria-label="Remove ${esc(m.display_name)} from ${esc(g.name)}">Remove</button>` : ''}</td></tr>
@@ -491,7 +491,7 @@ export function install(X) {
       owner ? sb.from('invoices').select('*').eq('gym_id', g.id).eq('profile_id', pid).order('created_at', { ascending: false }).limit(50).then(must) : [],
       sb.rpc('level_progress', { p_profile: pid }).then(r => r.data),
       loginStatus(g),
-      sb.from('profiles').select('display_name,birth_year,bodyweight,sex').eq('id', pid).maybeSingle().then(r => r.data),
+      sb.from('profiles').select('id,display_name,birth_year,bodyweight,sex,photo').eq('id', pid).maybeSingle().then(r => r.data),
     ]);
     const d = det || {}, pf = prof || {};
     const fld = (k, label, val, extra = '') => `<div class="field"><label>${label}</label><input data-f="${k}" value="${esc(val ?? '')}" ${extra}></div>`;
@@ -505,7 +505,8 @@ export function install(X) {
         <div class="field"><label>Sex</label><select data-f="sex">${[['', 'Not set'], ['male', 'Male'], ['female', 'Female'], ['unspecified', 'Unspecified']].map(([k, n]) => `<option value="${k}"${(pf.sex || '') === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div></div>
       <div class="row"><button class="btn sm">Save details</button><span class="hint" data-mdm>${d.bill_zip ? '' : 'Add their billing ZIP for better card rates.'}</span></div></form>`;
     const cur = ms.find(m => m.status !== 'canceled');
-    box.innerHTML = `${owner ? editForm : ''}<div class="mdGrid">
+    const head = `<div class="mdHead">${avatar(pf.id ? pf : { display_name: '?' }, 128)}<div><b class="mdNm">${esc([d.first_name, d.last_name].filter(Boolean).join(' ') || pf.display_name || '')}</b><span class="sub">${esc(pf.display_name || '')}</span>${photoTools({ id: pid, photo: pf.photo }, owner)}</div></div>`;
+    box.innerHTML = `${head}${owner ? editForm : ''}<div class="mdGrid">
       <div>${owner ? `<h4>Type</h4><form class="row" data-tyf><select data-ty style="max-width:160px">${[['member', 'Member'], ['coach', 'Coach'], ['owner', 'Owner']].map(([k, n]) => `<option value="${k}"${kind === k ? ' selected' : ''}>${n}</option>`).join('')}</select><button class="btn ghost sm">Save</button></form><p class="sub">Coaches and owners are free members and can run classes.</p>` : ''}<h4>Sign in</h4>${loginRow(lgs.get(pid), pid, owner)}<h4>Contact</h4>${owner ? '' : det ? `<p>${esc(det.legal_name || '')}<br>${esc(det.phone || '')}<br>${esc(det.email || '')}</p><p class="sub">Emergency: ${esc(det.emergency_name || 'not given')} ${esc(det.emergency_phone || '')}</p>` : '<p class="hint">They have not added contact details yet.</p>'}
         <h4>Documents</h4>${sigs.map(s => `<p>${s.kind === 'waiver' ? 'Waiver' : 'Contract'} v${(docs.find(d => d.id === s.doc_id) || {}).version || 'old'} · signed ${esc(fmtD(s.signed_at.slice(0, 10)))} as ${esc(s.signed_name)} <a href="/signed/${s.id}">View</a></p>`).join('') || '<p class="hint">Nothing signed yet.</p>'}</div>
       <div><h4>Level</h4>${lvp ? `<form class="row" data-lvf><select data-lv style="max-width:160px">${[['beginner', 'Beginner'], ['rx', 'Rx'], ['comp', 'Comp']].map(([k, n]) => `<option value="${k}"${lvp.level === k ? ' selected' : ''}>${n}</option>`).join('')}</select><button class="btn ghost sm">Set</button></form>
@@ -518,6 +519,7 @@ export function install(X) {
     </div>`;
     const again = () => route();
     bindLogin(g, box);
+    bindPhoto(box, () => memberDetail(g, pid, box, { kind, owner, plans, ms, sigs, docs }));
     const ef = $('[data-mde]', box);
     if (ef) ef.onsubmit = async e => {
       e.preventDefault();
