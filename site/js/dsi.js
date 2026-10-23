@@ -6,6 +6,12 @@ export const LIFTS = [
   { k: 'clean', db: 'clean', n: 'Clean', b: 1.00, c: 'var(--clean)' },
 ];
 export const LIFT_BY_DB = Object.fromEntries(LIFTS.map(l => [l.db, l]));
+// Benchmark workouts tracked like the lifts: log a time, the best counts, a faster time is a PR. Lower is better.
+export const BENCH = [
+  { k: 'fran', n: 'Fran', d: '21-15-9 thrusters and pull ups, for time', std: 'Rx is 95 lb thrusters for men, 65 lb for women, pull ups chin over the bar. Anything lighter or banded is scaled.', rx: true, c: 'var(--bench)' },
+  { k: 'row2k', n: '2K Row', d: '2,000 meters on the rower, for time', std: 'Any Concept2 style rower. Damper is your call.', rx: false, c: 'var(--squat)' },
+];
+export const BENCH_BY = Object.fromEntries(BENCH.map(b => [b.k, b]));
 // Every lift in the catalog (mirrors public.lifts). Only the four above feed the DSI score.
 export const ALL_LIFTS = [
   ['bench', 'Bench press'], ['squat', 'Back squat'], ['deadlift', 'Deadlift'], ['clean', 'Clean'],

@@ -1,6 +1,7 @@
 import { sb } from './sb.js';
 import * as D from './dsi.js';
 import { install as installExtra } from './extra.js';
+import { install as installBoard } from './board.js';
 import { install as installGym } from './gym.js';
 import { install as installAdmin } from './admin.js';
 import { install as installClub } from './club.js';
@@ -99,23 +100,25 @@ function navGroups() {
       { h: 'Get started', items: [['/pricing', 'Pricing', 'Run $249 or Grow $499'], ['/start', 'Book a setup call', 'We reply within one business day']] }] }]),
     ...(me ? [] : [{ k: 'members', n: 'For members', href: '/members' }]),
   ];
-  if (me) g.push(
-    { k: 'boards', n: 'Boards', sections: [{ h: 'Rankings', items: [['/boards', 'Leaderboard', 'Every lifter ranked by DSI'], ['/prs', 'PR wall', 'The newest personal records'], ['/benchmarks', 'Benchmarks', 'How strong is strong'], ['/gyms', 'Gym league', 'Gyms ranked head to head']] },
-      { h: 'Competition', items: [['/compete', 'Compete', 'Seasons, battles and the league'], ['/season', 'This season', 'Standings for the current season'], ['/battles', 'Weekly battles', 'One lift, one week, one winner']] }] },
-    { k: 'train', n: 'Train', sections: [{ h: 'Every day', items: [['/week', 'The week', 'This week\'s workouts by day'], ...(me && me.gym_id ? [['/classes', 'Book a class', 'Reserve your spot'], ['/mygym#attendance', 'My attendance', 'Every class you have made'], ['/shop/' + me.gym_id, 'Gym shop', 'Drinks, snacks and gear']] : []), ['/training', 'My training', 'Log your own sessions, sets and reps'], ['/log', 'Log a lift', 'Add a set and update your DSI'], ['/tracker', 'Plate tracker', P + 'The camera counts reps and reads the plates']] },
-      { h: 'Get better', items: [['/progress', 'Progress', P + 'Charts for every lift'], ['/plans', 'Goal plans', P + 'A plan to hit your next number'], ['/coach', 'Coach', P + 'Ask about your training'], ['/connect', 'Connected apps', P + 'WHOOP, Apple Health, Health Connect'], ...(me ? [['/import', 'Import history', 'Bring in your old lifts']] : [])] }] });
+  // Signed in: four plain pages, no drop downs. Board, Train, Get better, Compete.
+  if (me) g.push({ k: 'boards', n: 'Board', href: '/boards' }, { k: 'train', n: 'Train', href: '/train' }, { k: 'better', n: 'Get better', href: '/better' }, { k: 'compete', n: 'Compete', href: '/compete' });
   const gyms = S.myGyms || [];
   const offItems = (x, keys) => OFFICE.filter(o => keys.includes(o[0]) && (!o[3] || x.role === 'owner' || (S.me && S.me.role === 'admin'))).map(([k, n, d]) => [officeHref(x.gym_id, k), n, d]);
   if (gyms.length === 1) { const x = gyms[0], nm = x.gym.name || 'Gym';
     g.push({ k: 'office', n: 'Gym office', sections: [{ h: nm + ' · Run the floor', items: [...offItems(x, ['today', 'class', 'schedule', 'wod', 'plan', 'results', 'shop', 'tv'])] }, { h: 'Run the business', items: offItems(x, ['members', 'follow', 'growth', 'insights', 'sell', 'billing', 'website', 'docs', 'staff', 'settings']) }] }); }
   else if (gyms.length) g.push({ k: 'office', n: 'Gym office', sections: gyms.map(x => ({ h: (x.gym.name || 'Gym') + ' office', items: offItems(x, OFFICE.map(o => o[0])) })) });
-  if (me && (me.role === 'admin' || me.role === 'commissioner')) g.push({ k: 'admin', n: 'Admin', sections: [{ h: me.role === 'admin' ? 'Management' : 'Commissioner', items: [...(me.role === 'admin' ? [['/admin', 'Management dashboard', 'Members, gyms and stats'], ['/admin?tab=gyms', 'All gyms', 'Edit gyms and open any office'], ['/admin?tab=requests', 'Requests', 'Gym claims and approvals']] : []), ['/reports', 'Reports', 'Flagged lifts and people'], ['/program', 'Import workouts', 'Load a program for a gym']] }] });
+  if (me && (me.role === 'admin' || me.role === 'commissioner')) g.push({ k: 'admin', n: 'Admin', sections: [{ h: me.role === 'admin' ? 'Management' : 'Commissioner', items: [...(me.role === 'admin' ? [['/admin', 'Management dashboard', 'Members, gyms and stats'], ['/admin?tab=gyms', 'All gyms', 'Edit gyms and open any office'], ['/admin?tab=requests', 'Requests', 'Gym claims and approvals']] : []), ['/reports', 'Reports', 'Flagged lifts and people'], ['/program', 'Import workouts', 'Load a program for a gym']] }, { h: 'Integrations', items: [['/connect', 'Connected apps', 'WHOOP, Apple Health, Health Connect']] }] });
   return g;
 }
-const ROUTE_GROUP = { '': 'home', pricing: 'home', start: 'home', grow: 'home', tour: 'home', switch: 'home', members: 'members', boards: 'boards', prs: 'boards', pr: 'boards', compete: 'boards', season: 'boards', battles: 'boards', gyms: 'boards', benchmarks: 'boards', protests: 'boards', recap: 'boards', u: 'boards',
-  week: 'train', training: 'train', log: 'train', progress: 'train', plans: 'train', coach: 'train', tracker: 'train', connect: 'train', import: 'train', lift: 'train', classes: 'train', mygym: 'me', billing: 'me', sign: 'me', signed: 'me',
-  club: 'office', insights: 'office', website: 'office', sell: 'office', growth: 'office', follow: 'office', dandytv: 'office', shop: 'train', class: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office', admin: 'admin', reports: 'admin', program: 'admin', me: 'me', security: 'me', pro: 'me', rules: 'me', blocked: 'me' };
-const ACCT = () => [['/me', 'Profile', 'Name, gym and lifter details'], ...(S.me.gym_id ? [['/mygym', 'Membership and billing', 'Plan, payments and documents']] : []), ['/me?tab=goals', 'Goals', 'What you are chasing'], ['/me?tab=reminders', 'Reminders', 'Nudges to log'], ['/me?tab=account', 'Account and safety', 'Email, privacy and blocks'], ['/u/' + S.me.id, 'My lifter card', 'Your public page'], ['/pro', 'DSI Pro', 'Membership and perks']];
+const ROUTE_GROUP = { '': 'home', pricing: 'home', start: 'home', grow: 'home', tour: 'home', switch: 'home', members: 'members',
+  boards: 'boards', prs: 'boards', pr: 'boards', gyms: 'boards', benchmarks: 'boards', protests: 'boards', u: 'boards',
+  train: 'train', week: 'train', training: 'train', log: 'train', lift: 'train', classes: 'train', tracker: 'train',
+  better: 'better', progress: 'better', plans: 'better', coach: 'better',
+  compete: 'compete', season: 'compete', battles: 'compete', recap: 'compete',
+  mygym: 'me', billing: 'me', sign: 'me', signed: 'me', shop: 'me', me: 'me', security: 'me', pro: 'me', rules: 'me', blocked: 'me',
+  club: 'office', insights: 'office', website: 'office', sell: 'office', growth: 'office', follow: 'office', dandytv: 'office', class: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office',
+  admin: 'admin', reports: 'admin', program: 'admin', connect: 'admin', import: 'admin' };
+const ACCT = () => [['/me', 'Profile', 'Name, gym and lifter details'], ...(S.me.gym_id ? [['/mygym', 'Membership and billing', 'Plan, payments and documents'], ['/shop/' + S.me.gym_id, 'Gym shop', 'Drinks, snacks and gear']] : []), ['/me?tab=goals', 'Goals', 'What you are chasing'], ['/me?tab=reminders', 'Reminders', 'Nudges to log'], ['/me?tab=account', 'Account and safety', 'Email, privacy and blocks'], ['/u/' + S.me.id, 'My lifter card', 'Your public page'], ['/pro', 'DSI Pro', 'Membership and perks']];
 function buildNav(r) {
   const groups = navGroups(), cur = ROUTE_GROUP[r] ?? '';
   const here = location.pathname + location.search;
@@ -246,7 +249,7 @@ VIEWS.boards = async (_, tok) => {
       <img class="logo" src="/assets/logo.svg" alt="Dandy Strength Index" width="760" height="240">
       <h1 class="vh">Dandy Strength Index™</h1>
       <p class="tag">Your bench, squat, deadlift and clean scored against lifters your age and bodyweight. 500 is the median. Every PR moves the board.</p>
-      <div class="cta">${S.me ? '<a class="btn" href="/log">Log a lift</a><a class="btn ghost" href="/week">This week</a>' : '<a class="btn" href="/join">Join the index</a><a class="btn ghost" href="/week">This week</a>'}</div>
+      <div class="cta">${S.me ? '<a class="btn" href="/train">Train today</a><a class="btn ghost" href="/compete">Compete</a>' : '<a class="btn" href="/join">Join the index</a><a class="btn ghost" href="/week">This week</a>'}</div>
     </div>
     <div class="kpi" aria-label="Index stats">
       <div><b>${board.length}</b><span>Lifters</span></div>
@@ -263,10 +266,7 @@ VIEWS.boards = async (_, tok) => {
       <div class="step"><b>Climb the board</b><p>Every PR moves you up. Follow the daily workout and chase your goals.</p></div>
     </div>
   </section>`}
-  <section class="sec" aria-labelledby="wkprs">
-    <div class="secHead"><div><div class="kicker">This week</div><h2 id="wkprs">Fresh <span>PRs</span></h2><p class="secSub">Every new personal record since Monday.</p></div><a class="btn ghost sm" href="/prs">Full PR wall</a></div>
-    ${weekPRs.length ? `<div class="prGrid">${weekPRs.slice(0, 8).map(prCard).join('')}</div>` : `<div class="prEmpty"><b>No PRs yet this week</b><p>Somebody has to go first. <a href="/log">Log a lift</a>.</p></div>`}
-  </section>
+  <section class="sec bdHead bdUnder">${boardBar('lifters')}</section>
   <section class="sec band" aria-labelledby="kings">
     <div class="secHead"><div><div class="kicker">Heaviest on the board</div><h2 id="kings">Lift <span>kings</span></h2><p class="secSub">Tap a lift to sort the leaderboard by it${isPro() ? '' : ' with DSI Pro'}.</p></div></div>
     <div class="kings">${D.LIFTS.map(l => { const k = [...board].sort((a, b) => b[l.k] - a[l.k])[0]; return k && k[l.k] ? `<button class="king${S.bf.sort === l.k ? ' on' : ''}" style="--c:${l.c}" data-sort="${l.k}"><span class="eyebrow">${l.n}</span><b>${esc(k.name)}</b><span class="kv">${fmt(k[l.k])} lb</span>${isNew(k[l.k + '_date']) ? `<span class="prDateNew">PR ${fmtD(k[l.k + '_date'])}</span>` : ''}</button>` : ''; }).join('')}</div>
@@ -329,6 +329,69 @@ function renderBoard() {
   $$('[data-div]', el).forEach(b => b.onclick = () => { f.div = b.dataset.div; renderBoard(); });
   $$('[data-age]', el).forEach(b => b.onclick = () => { if (!pro && b.dataset.age !== 'all') return go('/pro'); f.age = b.dataset.age; renderBoard(); });
 }
+
+/* ---------- the board's four views share one header ---------- */
+const BOARD_VIEWS = [['lifters', '/boards', 'Lifters'], ['bench', '/benchmarks', 'Benchmarks'], ['prs', '/prs', 'PRs'], ['gyms', '/gyms', 'Gyms']];
+const boardBar = k => `<nav class="tabs bdTabs" aria-label="Board views">${BOARD_VIEWS.map(([v, h, n]) => `<a class="tab" href="${h}"${v === k ? ' aria-current="page" aria-selected="true"' : ''}>${n}</a>`).join('')}</nav>`;
+
+/* ---------- one page made of several views ---------- */
+// Train and Get better each stack existing views on one page. Each view paints into main as usual; its finished
+// page (with its buttons already wired) moves into its own section, then the next one paints. Links that pointed at
+// the old pages are pointed back here so the day picker and tabs stay on this page.
+async function composePage(tok, head, parts, fix) {
+  main.style.visibility = 'hidden';
+  const acc = document.createElement('div');
+  try {
+    for (const [id, title, run] of parts) {
+      main.innerHTML = '';
+      try { await run(); } catch (e) { console.error(e); main.innerHTML = `<div class="prEmpty"><b>${esc(title)} didn't load</b><p class="err">${esc(e.message || e)}</p></div>`; }
+      if (tok !== S.tok) return;
+      const sec = document.createElement('div'); sec.className = 'cmpPart'; sec.id = id;
+      while (main.firstChild) sec.appendChild(main.firstChild);
+      acc.appendChild(sec);
+    }
+    main.innerHTML = head;
+    while (acc.firstChild) main.appendChild(acc.firstChild);
+    if (fix) fix();
+    $$('.cmpJump a', main).forEach(a => a.onclick = e => { e.preventDefault(); const t = document.getElementById(a.getAttribute('href').slice(1)); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    const h = location.hash && document.getElementById(location.hash.slice(1)); if (h) h.scrollIntoView({ block: 'start' }); else window.scrollTo(0, 0);
+  } finally { if (tok === S.tok) main.style.visibility = ''; }
+}
+const jump = list => `<nav class="tabs cmpJump" aria-label="On this page">${list.map(([id, n]) => `<a class="tab" href="#${id}">${esc(n)}</a>`).join('')}</nav>`;
+
+/* ---------- Train: schedule, booking, the workout, your results, your own training, benchmark times ---------- */
+VIEWS.train = async (_, tok) => {
+  if (!S.me) return needLogin(tok, 'train');
+  const day = new URLSearchParams(location.search).get('day') || today(), gym = !!S.me.gym_id;
+  const parts = [
+    ...(gym ? [['book', 'Classes', () => VIEWS.classes(null, tok)]] : []),
+    ['workout', 'The workout', () => VIEWS.week(day, tok)],
+    ['mine', 'Your training', () => VIEWS.training('', tok)],
+    ['bench', 'Benchmarks', () => CTX.benchForm(tok)],
+  ];
+  await composePage(tok, `<section class="sec cmpHead"><div class="kicker">${esc(fmtD(day))}</div><h2>Train</h2>
+      <p class="secSub">Book a class, see the workout, post your results, and log your own sessions and benchmark times. All here.</p>
+      ${jump([...(gym ? [['book', 'Book a class']] : []), ['workout', 'Workout and results'], ['mine', 'Your training'], ['bench', 'Benchmarks']])}</section>`, parts, () => {
+    // Day pickers stay on this page: /classes?day= and /week/<day> become /train?day=
+    $$('a[href^="/classes?day="]', main).forEach(a => { a.setAttribute('href', '/train?day=' + a.getAttribute('href').split('day=')[1] + '#book'); });
+    $$('a[href^="/week/"]', main).forEach(a => { const d = a.getAttribute('href').slice(6, 16); if (/^\d{4}-\d{2}-\d{2}$/.test(d)) a.setAttribute('href', '/train?day=' + d + '#workout'); });
+  });
+};
+
+/* ---------- Get better: progress, goal plans, coach ---------- */
+VIEWS.better = async (_, tok) => {
+  if (!S.me) return needLogin(tok, 'get better');
+  if (!isPro()) return paint(tok, `<section class="sec narrow"><div><div class="kicker">DSI Pro</div><h2>Get <span>better</span></h2>
+    <p class="secSub">Charts for every lift, a week by week plan to hit your next number, and a coach that reads your training and tells you what to fix. All on one page with DSI Pro.</p></div>
+    <div class="tools"><div class="tool"><b>Progress</b><span>Your best over time for every lift, against your goal.</span></div><div class="tool"><b>Goal plans</b><span>A heavy single and 3x3 working weight each week to your date.</span></div><div class="tool"><b>Coach</b><span>Ask about your training. It knows your numbers.</span></div></div>
+    <div class="row"><a class="btn" href="/pro">See DSI Pro</a></div></section>`);
+  const lift = new URLSearchParams(location.search).get('lift') || '';
+  await composePage(tok, `<section class="sec cmpHead"><div class="kicker">DSI Pro</div><h2>Get <span>better</span></h2>
+      <p class="secSub">Where you are, where you are going, and what to do about it.</p>${jump([['progress', 'Progress'], ['plans', 'Goal plans'], ['coach', 'Coach']])}</section>`,
+    [['progress', 'Progress', () => VIEWS.progress(lift, tok)], ['plans', 'Goal plans', () => VIEWS.plans(null, tok)], ['coach', 'Coach', () => VIEWS.coach(null, tok)]], () => {
+    $$('a[href^="/progress/"]', main).forEach(a => a.setAttribute('href', '/better?lift=' + encodeURIComponent(a.getAttribute('href').slice(10)) + '#progress'));
+  });
+};
 
 /* ---------- PR wall ---------- */
 VIEWS.prs = async (day, tok) => {
@@ -753,9 +816,9 @@ VIEWS.me = async (_, tok) => {
       <form class="formCard" id="xmF"><div class="fields">${D.EXTRA_LIFTS.map(([k, n]) => `<div class="field"><label for="xm-${k}">${n}</label><input id="xm-${k}" data-xm="${k}" type="number" inputmode="numeric" min="1" max="1499" step="any" placeholder="${best[k] ? fmt(best[k]) + ' lb now' : 'lb'}"></div>`).join('')}</div>
         <div class="row"><button class="btn sm">Save</button><span class="hint" id="xm-msg">${D.EXTRA_LIFTS.filter(([k]) => !best[k]).length ? `${D.EXTRA_LIFTS.filter(([k]) => !best[k]).length} still missing.` : 'All four on file. Enter a new number any time you hit one.'}</span></div></form></section>
     ${first ? '' : `<section class="sec band"><div class="secHead"><div><div class="kicker">DSI Pro</div><h2>Train with a <span>plan</span></h2></div>${pro ? '<span class="pill up" style="margin:0">Pro active</span>' : '<a class="btn sm" href="/pro">See Pro</a>'}</div>
-      <div class="tools">${tile('/progress', 'Progress charts', 'Every lift over time with your goal line.', 1)}${tile('/plans', 'Goal plans', 'A week by week path to your number.', 1)}${tile('/coach', 'Coach', 'Your weak link and what to train next.', 1)}${tile('/import', 'Import history', 'Paste years of lifts from a spreadsheet.', 1)}${tile('/recap/' + new Date().getFullYear(), 'Year recap', 'Your year in PRs and pounds, ready to share.', 1)}${tile('/battles', 'Weekly battles', 'Call out a lifter for a week.', 1)}</div></section>
+      <div class="tools">${tile('/better', 'Get better', 'Progress charts, goal plans and your coach on one page.', 1)}${tile('/recap/' + new Date().getFullYear(), 'Year recap', 'Your year in PRs and pounds, ready to share.', 1)}${tile('/battles', 'Weekly battles', 'Call out a lifter for a week.', 1)}</div></section>
     <section class="sec"><div class="secHead"><div><div class="kicker">Compete and grow</div><h2>More to <span>do</span></h2></div><button class="btn sm" data-invite>Invite your crew</button></div>
-      <div class="tools">${tile('/gyms', 'Your gym', m.gym_id ? 'See your gym in the league.' : 'Pick your gym and put it on the league.')}${tile('/season', 'This season', 'Most DSI points gained this quarter.', 1)}${tile('/benchmarks', 'Benchmarks', 'Named workouts and every score.')}</div></section>
+      <div class="tools">${tile('/gyms', 'Your gym', m.gym_id ? 'See your gym in the league.' : 'Pick your gym and put it on the league.')}${tile('/compete', 'Compete', 'The season and weekly battles.', 1)}${tile('/benchmarks', 'Benchmarks', 'Fran, the 2K row and class benchmarks.')}</div></section>
     <section class="sec"><div><div class="kicker">Reminders</div><h2>Your <span>reminders</span></h2><p class="secSub">These go to your phone through the DSI app. Turn notifications on in the app once and these settings follow you.</p></div>
       <form class="formCard" id="nf"><div class="fields">
         <div class="field w2"><span class="lbl">Send me</span>
@@ -977,7 +1040,7 @@ VIEWS.reports = async (_, tok) => {
 };
 
 /* ---------- Pro ---------- */
-const PERKS = [['Readiness from your wearable', 'Connect WHOOP, Apple Health or Health Connect and get a green, yellow or red day for lifting.', '/connect'], ['Plate tracker', 'Prop up your phone and lift. It counts your reps, reads the plates and saves the set.', '/tracker'], ['Your target weights', 'Every workout turned into weights built from your own PRs.', '/week'], ['Workout logging and day boards', 'Log what you did and see how you stack up each day.', '/week'], ['Every board and filter', 'Total and single lift boards, age brackets.', '/'], ['Goals, plans and charts', 'Set a date and get a week by week path to your number.', '/plans'], ['Coach', 'Your weak link, your ratios, and what to train next.', '/coach'], ['Video on any set', 'Proof on every lift, not just PRs.', '/log'], ['Full history and imports', 'Every lift you ever logged, plus years more from a spreadsheet.', '/import']];
+const PERKS = [['Readiness from your wearable', 'Connect WHOOP, Apple Health or Health Connect and get a green, yellow or red day for lifting.', '/connect'], ['Your target weights', 'Every workout turned into weights built from your own PRs.', '/week'], ['Workout logging and day boards', 'Log what you did and see how you stack up each day.', '/week'], ['Every board and filter', 'Total and single lift boards, age brackets.', '/'], ['Goals, plans and charts', 'Set a date and get a week by week path to your number.', '/plans'], ['Coach', 'Your weak link, your ratios, and what to train next.', '/coach'], ['Video on any set', 'Proof on every lift, not just PRs.', '/log'], ['Full history and imports', 'Every lift you ever logged, plus years more from a spreadsheet.', '/import']];
 VIEWS.pro = async (_, tok) => {
   const pro = isPro();
   paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">DSI Pro</div><h2>Train with a <span>plan</span></h2><p class="secSub">Everything in Member, plus the tools that turn numbers into progress.</p></div>
@@ -1485,7 +1548,7 @@ VIEWS.join = async (_, tok) => {
 
 /* ---------- compete and grow pages (extra.js) ---------- */
 const CTX = { OFFICE, officeHref, sb, D, S, VIEWS, $, $$, esc, num, fmt, today, pd, fmtD, addDays, monday, toast, must, paint, needLogin, go,
-  loadBoard, loadPeople, nameOf, boardRow, isPro, isStaff, PRO, bindActions, bindVideo, route, videoUrl, normDay, liftRule };
+  loadBoard, loadPeople, nameOf, boardRow, isPro, isStaff, PRO, bindActions, bindVideo, route, videoUrl, normDay, liftRule, boardBar };
 installExtra(CTX);
 installGym(CTX);
 installAdmin(CTX);
@@ -1499,6 +1562,7 @@ installGrowth(CTX);
 installFollow(CTX);
 installKiosk(CTX);
 // Real names and numbers are for signed in members. Visitors get the sample gym and a sign in prompt instead.
+installBoard(CTX);
 for (const [k, what] of [['boards', 'Boards'], ['prs', 'PR walls'], ['pr', 'PRs'], ['u', 'Lifter pages'], ['gyms', 'Gym boards'], ['compete', 'Competitions'], ['season', 'Seasons'], ['battles', 'Battles'], ['recap', 'Year recaps']]) {
   const f = VIEWS[k]; if (f) VIEWS[k] = (a, tok) => (S.me ? f(a, tok) : CTX.membersOnly(tok, what));
 }

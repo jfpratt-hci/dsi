@@ -1770,3 +1770,26 @@ body[data-cmode="work"] .tvMark{background:var(--accent)}
 .offTabs .tab{font-size:16px;padding:8px 10px}
 @media (max-width:640px){.offTabs .tab{font-size:13px;padding:6px 7px}}
 .scDel.armed{border-color:var(--down);color:var(--down)}
+
+/* One page boards and sections */
+.bdHead{padding-bottom:0}
+.bdHead h2{margin-bottom:10px}
+.bdTabs,.cmpJump,.cpJump{flex-wrap:wrap;margin-top:6px}
+.bdTabs .tab,.cmpJump .tab,.cpJump .tab{font-size:17px;padding:8px 12px;white-space:nowrap;text-decoration:none}
+.bdTabs .tab[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+.bdUnder{padding-top:0}
+.cmpHead{padding-bottom:0}
+.cmpPart{scroll-margin-top:72px}
+.cmpPart+.cmpPart{border-top:1px solid var(--line)}
+#season,#battles{scroll-margin-top:72px}
+.bbGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:18px;margin-top:14px}
+.bbCard{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--c);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.bbCard header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.bbCard h3{margin:0;font:900 26px/1 var(--disp);text-transform:uppercase}
+.bbCard header p{margin:4px 0 0;color:var(--muted);font-size:14px}
+.bbStd{margin:0;font-size:13px;color:var(--muted)}
+.bbMe{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;background:var(--panel2);border-radius:8px;padding:8px 12px}
+.bbMe span{font:700 12px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.bbMe b{font:700 24px var(--mono);color:var(--c)}
+.bbFilt{margin-top:6px}
+a.g{text-decoration:none;color:inherit}

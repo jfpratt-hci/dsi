@@ -59,34 +59,18 @@ export function install(X) {
   X.compete = { gainIn, quarter, allEntries, dsiAt };
   document.addEventListener('click', e => { if (e.target.closest('[data-invite]')) { e.preventDefault(); inviteCrew(); } });
 
-  /* ---------- compete hub ---------- */
-  VIEWS.compete = async (_, tok) => {
-    const q = quarter(today()), pro = isPro();
-    const tile = (href, t, d, p) => `<a class="tool" href="${p && !pro ? '/pro' : href}"><b>${t}${p ? ' ' + PRO : ''}</b><span>${d}</span></a>`;
-    paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">Compete and grow</div><h2>Beyond the <span>board</span></h2><p class="secSub">Seasons, battles, your gym, benchmarks and the tools that keep you coming back.</p></div><button class="btn sm" data-invite>Invite your crew</button></div>
-      <div class="tools">
-        ${tile('/season', 'The ' + esc(q.name) + ' season', 'Most DSI points gained this quarter. Resets ' + fmtD(addDays(q.end, 1)) + '.', 1)}
-        ${tile('/battles', 'Weekly battles', 'Call out any lifter for a week. Most DSI gained wins.', 1)}
-        ${tile('/gyms', 'Gym league', 'Your gym against every gym, ranked by its top five lifters.')}
-        ${tile('/benchmarks', 'Benchmark boards', 'Every time anyone has done Fran, Grace and the rest.')}
-        ${tile('/recap/' + new Date().getFullYear(), 'Your year recap', 'PRs, pounds added and your best day of the year.', 1)}
-        ${tile('/tracker', 'Plate tracker', 'The camera counts your reps and reads the plates.', 1)}
-      </div></section>`);
-  };
-
   /* ---------- seasons ---------- */
-  VIEWS.season = async (arg, tok) => {
+  const seasonHtml = (arg, board, by) => {
     const q = /^\d{4}-q[1-4]$/i.test(arg || '') ? quarter(`${arg.slice(0, 4)}-${String((+arg.slice(6) - 1) * 3 + 1).padStart(2, '0')}-01`) : quarter(today());
-    const [board, by] = await Promise.all([loadBoard(), allEntries()]);
     const end = q.end < today() ? q.end : today();
     const rows = board.map(r => ({ r, g: gainIn(by.get(r.profile_id) || [], r, q.start, end) })).filter(x => x.g.pts > 0 || x.g.lb > 0)
       .sort((a, b) => b.g.pts - a.g.pts || b.g.lb - a.g.lb);
     const pro = isPro(), shown = pro ? rows : rows.slice(0, 3);
     const prev = quarter(addDays(q.start, -1)), next = quarter(addDays(q.end, 1)), qid = x => x.y + '-q' + x.q;
     const daysLeft = Math.max(0, Math.round((pd(q.end) - pd(today())) / 864e5));
-    paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">Season ${q.q} · ${fmtD(q.start)} to ${fmtD(q.end)}</div><h2>${esc(q.name.split(' ')[0])} <span>season</span></h2>
+    return (`<section class="sec" id="season"><div class="secHead"><div><div class="kicker">Season ${q.q} · ${fmtD(q.start)} to ${fmtD(q.end)}</div><h2>${esc(q.name.split(' ')[0])} <span>season</span></h2>
       <p class="secSub">Ranked by DSI points gained this season. New lifters start counting from their first day, so joining is not a gain.</p></div>
-      <div class="row"><a class="btn ghost sm" href="/season/${qid(prev)}">← ${esc(prev.name)}</a>${q.end < today() ? `<a class="btn ghost sm" href="/season/${qid(next)}">${esc(next.name)} →</a>` : `<span class="pill acc" style="margin:0">${daysLeft} days left</span>`}</div></div>
+      <div class="row"><a class="btn ghost sm" href="/compete/${qid(prev)}">← ${esc(prev.name)}</a>${q.end < today() ? `<a class="btn ghost sm" href="/compete/${qid(next)}">${esc(next.name)} →</a>` : `<span class="pill acc" style="margin:0">${daysLeft} days left</span>`}</div></div>
       <div class="board"><div class="tablewrap"><table class="lb"><thead><tr><th>#</th><th>Lifter</th><th class="r hl">Points</th><th class="r">DSI</th><th class="r">Lb added</th><th class="r">PRs</th></tr></thead><tbody>
       ${shown.map((x, i) => `<tr class="${S.me && S.me.id === x.r.profile_id ? 'me' : ''}"><td class="pos">${i + 1}</td><td><div class="who">${who(x.r.profile_id)}</div><div class="sub">${esc(x.r.division)}</div></td><td class="r n big">+${x.g.pts}</td><td class="r n">${x.g.start} → ${x.g.end}</td><td class="r n">+${fmt(x.g.lb)}</td><td class="r n">${x.g.prs}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">Nobody has gained yet this season. Hit a PR and take the lead.</td></tr>'}
       </tbody></table></div></div>
@@ -102,11 +86,7 @@ export function install(X) {
     const lead = a.pts !== o.pts ? (a.pts > o.pts ? b.challenger : b.opponent) : a.lb !== o.lb ? (a.lb > o.lb ? b.challenger : b.opponent) : null;
     return { a, o, over, lead, live: b.week_start <= today() && !over };
   }
-  VIEWS.battles = async (id, tok) => {
-    const [board, bres] = await Promise.all([loadBoard(), sb.from('battles').select('*').order('week_start', { ascending: false }).order('created_at', { ascending: false }).limit(200)]);
-    const battles = must(bres);
-    if (!S.people.size) await loadPeople();
-    const by = await allEntries();
+  const battlesHtml = (board, battles, by) => {
     const thisMon = monday(today());
     const card = b => {
       const s = battleScore(b, by, board), meA = S.me && S.me.id === b.challenger, meO = S.me && S.me.id === b.opponent;
@@ -124,7 +104,7 @@ export function install(X) {
     const pro = isPro();
     const others = board.filter(r => !S.me || r.profile_id !== S.me.id).sort((a, b) => a.name.localeCompare(b.name));
     const weeks = [0, 7, 14].map(n => addDays(thisMon, n));
-    if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">Head to head</div><h2>Weekly <span>battles</span></h2><p class="secSub">Call out any lifter for a Monday to Sunday week. Most DSI points gained wins; pounds added breaks a tie.</p></div></div>
+    return (`<section class="sec" id="battles"><div class="secHead"><div><div class="kicker">Head to head</div><h2>Weekly <span>battles</span></h2><p class="secSub">Call out any lifter for a Monday to Sunday week. Most DSI points gained wins; pounds added breaks a tie.</p></div></div>
       ${S.me ? (pro ? `<form class="formCard" id="btF"><div class="fields">
         <div class="field w2"><label for="bt-o">Opponent</label><select id="bt-o" required><option value="">Pick a lifter…</option>${others.map(r => `<option value="${r.profile_id}">${esc(r.name)} · DSI ${r.score}</option>`).join('')}</select></div>
         <div class="field"><label for="bt-w">Week</label><select id="bt-w">${weeks.map((w, i) => `<option value="${w}">${i ? 'Week of ' + fmtD(w) : 'This week'}</option>`).join('')}</select></div>
@@ -132,7 +112,9 @@ export function install(X) {
         <div class="row"><button class="btn" type="submit">Send the challenge</button><span class="hint" id="bt-msg">They get it in their battles list and accept or decline.</span></div></form>`
         : `<div class="formCard"><p class="lede" style="margin:0">Starting a battle is part of DSI Pro. Anyone can accept one.</p><div class="row"><a class="btn sm" href="/pro">See Pro</a></div></div>`) : `<p class="lede"><a href="/login">Sign in</a> to start or answer a battle.</p>`}</section>
       ${mine.length ? `<section class="sec"><h2>Your <span>battles</span></h2><div class="btGrid">${mine.map(card).join('')}</div></section>` : ''}
-      <section class="sec"><h2>Live <span>now</span></h2><div class="btGrid">${live.filter(b => !mine.includes(b)).map(card).join('') || '<p class="empty">No battles running. Start one.</p>'}</div></section>`)) return;
+      <section class="sec"><h2>Live <span>now</span></h2><div class="btGrid">${live.filter(b => !mine.includes(b)).map(card).join('') || '<p class="empty">No battles running. Start one.</p>'}</div></section>`);
+  };
+  const bindBattles = id => {
     bindActions(main());
     $$('[data-bt]').forEach(b => b.onclick = async () => {
       b.disabled = true;
@@ -149,9 +131,31 @@ export function install(X) {
       if (error) { m.textContent = /battles_once/.test(error.message) ? 'You two already have a battle that week.' : error.message; return; }
       toast('Challenge sent to ' + nameOf($('#bt-o').value)); route();
     };
-    if (id) { const el = document.getElementById('b-' + id); if (el) { el.classList.add('focus'); el.scrollIntoView({ block: 'center' }); } }
+    if (id === 'top') { const el = document.getElementById('battles'); if (el) el.scrollIntoView(); }
+    else if (id) { const el = document.getElementById('b-' + id); if (el) { el.classList.add('focus'); el.scrollIntoView({ block: 'center' }); } }
   };
   const main = () => $('#main');
+
+  /* ---------- compete: one page ---------- */
+  // The season standings, weekly battles and your year recap together. /compete/2026-q3 shows a past season;
+  // the old /season and /battles links land here too.
+  VIEWS.compete = async (arg, tok, battleId) => {
+    const [board, bres] = await Promise.all([loadBoard(), sb.from('battles').select('*').order('week_start', { ascending: false }).order('created_at', { ascending: false }).limit(200)]);
+    const battles = must(bres);
+    if (!S.people.size) await loadPeople();
+    const by = await allEntries();
+    const q = quarter(today()), y = new Date().getFullYear();
+    if (!paint(tok, `<section class="sec cpHead"><div class="secHead"><div><div class="kicker">Compete</div><h2>Season, battles and <span>bragging rights</span></h2>
+        <p class="secSub">Gain the most DSI this quarter to win the season. Call out anyone for a one week battle. Your year adds it all up.</p></div>
+        <div class="row"><button class="btn sm" data-invite>Invite your crew</button><a class="btn ghost sm" href="${isPro() ? '/recap/' + y : '/pro'}">Your ${y} recap${isPro() ? '' : ' ' + PRO}</a></div></div>
+        <nav class="tabs cpJump" aria-label="On this page"><a class="tab" href="#season">${esc(q.name)} season</a><a class="tab" href="#battles">Weekly battles</a></nav></section>
+      ${seasonHtml(arg, board, by)}
+      ${battlesHtml(board, battles, by)}`)) return;
+    $$('.cpJump a').forEach(a => a.onclick = e => { e.preventDefault(); const t = document.querySelector(a.getAttribute('href')); if (t) t.scrollIntoView({ behavior: 'smooth' }); });
+    bindBattles(battleId);
+  };
+  VIEWS.season = (arg, tok) => VIEWS.compete(arg, tok);
+  VIEWS.battles = (id, tok) => VIEWS.compete(null, tok, id || 'top');
 
   /* ---------- gym league ---------- */
   VIEWS.gyms = async (id, tok) => {
