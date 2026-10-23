@@ -18,7 +18,7 @@ export function install(X) {
   const isParts = w => !!w && ((w.sections || []).some(s => s.part) || (w.lifts || []).some(l => l.part));
   function partsOf(w, withD) {
     const secs = (w && w.sections) || [], lifts = (w && w.lifts) || [], np = isParts(w);
-    return LET.map((L, i) => { const s = (np ? secs.find(x => x.part === L) : secs[i]) || {}; return { L, name: s.name || '', text: s.text || '', levels: s.levels || null, clock: s.clock || null, gap: s.gap ?? null, time: !!s.time, reps: !!s.reps, lift: lifts.find(l => l.part === L) || null }; })
+    return LET.map((L, i) => { const s = (np ? secs.find(x => x.part === L) : secs[i]) || {}; return { L, name: s.name || '', text: s.text || '', levels: s.levels || null, clock: s.clock || null, gap: s.gap ?? null, time: !!s.time, reps: !!s.reps, bench: s.bench || null, lift: lifts.find(l => l.part === L) || null }; })
       .filter(p => p.L !== 'D' || withD || p.text || p.lift || p.time || p.reps);
   }
   // What a screen shows: the parts with something in them. Older days keep every section they had.
@@ -229,6 +229,7 @@ export function install(X) {
           <label class="tog"><input type="checkbox" data-trk${p.lift ? ' checked' : ''}><span>Weight</span></label>
           <label class="tog"><input type="checkbox" data-time${p.time ? ' checked' : ''}><span>Time</span></label>
           <label class="tog"><input type="checkbox" data-reps${p.reps ? ' checked' : ''}><span>Reps</span></label></div>
+        <div class="wodBench"><label for="wb-${p.L}">Benchmark <small>about once a month</small></label><select id="wb-${p.L}" data-bench><option value="">Not a benchmark</option>${X.D.BENCH.map(b => `<option value="${b.k}"${p.bench === b.k ? ' selected' : ''}>${esc(b.n)} · ${esc(b.d)}</option>`).join('')}</select></div>
         <div class="wodTrk"${p.lift ? '' : ' hidden'}>
           <div class="field"><label for="wn-${p.L}">Movement</label><input id="wn-${p.L}" data-n maxlength="60" value="${esc(l.n || '')}" placeholder="Front squat"></div>
           <div class="field"><label for="ws-${p.L}">Scheme</label><input id="ws-${p.L}" data-sch maxlength="60" value="${esc(l.sch || '')}" placeholder="5 x 3, build"></div>
@@ -298,10 +299,19 @@ export function install(X) {
     });
     /* ---------- order: drag, arrows, add at the start or the end, remove ---------- */
     // Parts are A to D in the order they stand. Moving a part takes everything in it along and the letters follow.
+    $$('[data-bench]').forEach(sel => sel.onchange = () => {
+      const a = sel.closest('[data-part]') || sel.closest('.wodPart') || sel.parentElement.parentElement, b = X.D.BENCH_BY[sel.value];
+      if (!b) return;
+      const tc = $('[data-time]', a); if (tc) tc.checked = true;
+      const t = $('[data-text]', a), n = $('[data-name]', a);
+      if (t && !t.value.trim()) t.value = b.k === 'fran' ? 'Fran, for time\n21-15-9\nThrusters (95/65 lb)\nPull ups' : '2,000 meter row, for time';
+      if (n && !n.value.trim()) n.value = b.n;
+    });
     const grid = $('.wodGrid');
     const clearPart = a => {
       $('[data-text]', a).value = ''; $('[data-name]', a).value = ''; $$('[data-lv]', a).forEach(x => { x.value = ''; });
       ['[data-time]', '[data-reps]'].forEach(q => { const c = $(q, a); if (c) c.checked = false; });
+      const bsel = $('[data-bench]', a); if (bsel) bsel.value = '';
       const t = $('[data-trk]', a); if (t) { t.checked = false; t.dispatchEvent(new Event('change')); }
       const ck = $('.wodClock', a); ck.dataset.auto = ''; $('[data-cm]', a).value = 'up'; $('[data-cmin]', a).value = ''; $('[data-cmin]', a).disabled = false;
     };
@@ -383,10 +393,10 @@ export function install(X) {
         if (a.hidden) continue;
         const L = a.dataset.p, text = $('[data-text]', a).value.trim(), name = $('[data-name]', a).value.trim(), l = build(a);
         if (l && !l.n) { msg.textContent = `Part ${L} logs a weight. Name the movement.`; $('[data-n]', a).focus(); return; }
-        const tm = !!($('[data-time]', a) || {}).checked, rp = !!($('[data-reps]', a) || {}).checked;
+        const bn = ($('[data-bench]', a) || {}).value || '', tm = !!bn || !!($('[data-time]', a) || {}).checked, rp = !!($('[data-reps]', a) || {}).checked;
         const ck = clockIn(a), gp = Math.max(0, Math.min(15, parseInt($('#wd-gap').value, 10) || 0));
         const lv = {}; $$('[data-lv]', a).forEach(x => { const v = x.value.trim(); if (v) lv[x.dataset.lv] = v; });
-        if (text || l || tm || rp) sections.push({ part: L, name: name || PH[L], text, clock: ck, ...(Object.keys(lv).length ? { levels: lv } : {}), ...(sections.length ? { gap: gp } : {}), ...(tm ? { time: true } : {}), ...(rp ? { reps: true } : {}) });
+        if (text || l || tm || rp || bn) sections.push({ part: L, name: name || PH[L], text, clock: ck, ...(Object.keys(lv).length ? { levels: lv } : {}), ...(sections.length ? { gap: gp } : {}), ...(tm ? { time: true } : {}), ...(rp ? { reps: true } : {}), ...(bn ? { bench: bn } : {}) });
         if (l) lifts.push(l);
       }
       if (!sections.length) { msg.textContent = 'Write at least one part.'; return; }

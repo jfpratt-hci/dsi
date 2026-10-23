@@ -1934,3 +1934,12 @@ a.g{text-decoration:none;color:inherit}
 .pcSave{margin-top:2px}
 @media (max-width:640px){.pcBox.wkG small::before{content:none}}
 .wkEmbed+.sec .pcWrap{margin-top:0}
+.pc header{flex-wrap:wrap}
+.pcBm{margin-left:auto;font:800 10px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:#141414;background:var(--accent);border-radius:999px;padding:4px 9px;text-decoration:none}
+.pc.bench{border-color:var(--accent)}
+.trOwnCard{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+.trOwnCard h3{margin:2px 0 4px;font:900 26px/1 var(--disp);text-transform:uppercase}
+.trOwnCard p{margin:0;color:var(--muted);font-size:14px}
+.wodBench{display:grid;gap:4px;margin-top:8px}
+.wodBench label{font:700 11px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.wodBench label small{text-transform:none;letter-spacing:0;font-weight:500}

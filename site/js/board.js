@@ -22,8 +22,8 @@ export function install(X) {
     if (tok !== S.tok || !el.isConnected) return;
     const named = [...new Set(ws.map(w => w.benchmark))];
     el.innerHTML = `<div class="secHead"><div><div class="kicker">Benchmark workouts</div><h2 id="bnh">Benchmark <span>board</span></h2>
-        <p class="secSub">Fran and the 2K row, tracked like the lifts. Fastest time counts, and beating it is a PR.</p></div>
-        <div class="row">${S.me ? '<a class="btn sm" href="/train#bench">Log a time</a>' : '<a class="btn sm" href="/join">Join to log</a>'}</div></div>
+        <p class="secSub">Your gym programs Fran and the 2K row about once a month. Log your time in class and it lands here. Fastest time counts, and beating it is a PR.</p></div>
+</div>
       <div class="row bbFilt"><div class="chips" aria-label="Division">${[['all', 'All'], ['men', 'Men'], ['women', 'Women']].map(([v, t]) => `<button class="chip" data-bdiv="${v}" aria-pressed="${S.bbf.div === v}">${t}</button>`).join('')}</div></div>
       <div class="bbGrid" id="bbGrid"></div>
       ${named.length ? `<p class="bbNamed">Class benchmarks: ${named.map(n => `<a href="/benchmarks/${encodeURIComponent(n)}">${esc(n)}</a>`).join(' · ')}</p>` : ''}`;
@@ -41,7 +41,7 @@ export function install(X) {
           ${me ? `<div class="bbMe"><span>Your best</span><b>${fmtS(me.seconds)}</b><span>#${myPos} of ${list.length} · ${fmtD(me.performed_on)}</span></div>` : ''}
           ${list.length ? `<div class="tablewrap"><table class="lb"><thead><tr><th>#</th><th>Lifter</th><th class="r hl">Time</th><th class="r">Date</th></tr></thead><tbody>
           ${list.map((r, i) => `<tr class="${S.me && S.me.id === r.profile_id ? 'me' : ''}"><td class="pos">${i + 1}</td><td><div class="who"><a href="/u/${r.profile_id}">${esc(nameOf(r.profile_id))}</a></div></td><td class="r n big">${fmtS(r.seconds)}${r.is_pr && r.prev_best && daysAgo(r.performed_on) <= 6 ? `<div class="sub"><span class="prDateNew">PR, was ${fmtS(r.prev_best)}</span></div>` : ''}</td><td class="r n">${fmtD(r.performed_on)}</td></tr>`).join('')}
-          </tbody></table></div>` : `<div class="empty">Nobody has logged ${esc(benchName(b.k, f.std === 'rx'))} yet. First time on the board wins.</div>`}
+          </tbody></table></div>` : `<div class="empty">Nobody has a ${esc(benchName(b.k, f.std === 'rx'))} time yet. It shows up after your gym programs it.</div>`}
         </article>`;
       }).join('');
       $$('[data-bstd]', el).forEach(x => x.onclick = () => { S.bbf.std = x.dataset.bstd; draw(); });
@@ -137,15 +137,7 @@ export function install(X) {
     if (tok !== S.tok) return;
     main().innerHTML = benchHtml(); bindBench(mine);
   };
-  const logLift = VIEWS.log;
-  VIEWS.log = async (a, tok) => {
-    await logLift(a, tok);
-    if (tok !== S.tok || !S.me || !$('#logF')) return;
-    const mine = await myBench();
-    if (tok !== S.tok) return;
-    $('#logF').closest('section').insertAdjacentHTML('afterend', benchHtml()); bindBench(mine);
-    if (location.hash === '#bench') $('#benchLog').scrollIntoView({ block: 'start' });
-  };
+
 
   const benchPrCard = p => { const b = D.BENCH_BY[p.bench] || {}; return `<article class="prCard${daysAgo(p.performed_on) <= 6 ? ' hot' : ''}" style="--c:${b.c || 'var(--muted)'}">
       <div class="prTop"><span class="prTag">${daysAgo(p.performed_on) <= 6 ? 'New PR' : 'PR'}</span><span class="prDate">${fmtD(p.performed_on)}</span></div>

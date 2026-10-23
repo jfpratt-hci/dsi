@@ -381,8 +381,8 @@ VIEWS.train = async (_, tok) => {
   await composePage(tok, `<section class="sec cmpHead trHead"><div class="secHead"><div><div class="kicker">Week of ${esc(fmtD(wk))}</div><h2>Train</h2></div>${gym ? arrows : ''}</div>${gym ? '' : strip}</section>`, [
     ...(gym ? [['book', 'Classes', () => CTX.classWeek(day, tok)]] : []),
     ['workout', 'The workout', () => VIEWS.week(day, tok, { embed: true })],
-    ['mine', 'Your training', () => VIEWS.training('', tok)],
-    ['bench', 'Benchmarks', () => CTX.benchForm(tok)],
+    ['own', 'Your own training', () => paint(tok, `<section class="sec trOwn"><div class="trOwnCard"><div><div class="kicker">Training on your own?</div><h3>Log a <span>session</span></h3><p>Open gym, travel or your own program. Heavy singles on a catalog lift count as PRs.</p></div>
+      <div class="row"><a class="btn" href="/training/new">Log a session</a><a class="btn ghost sm" href="/training">Your sessions</a></div></div></section>`)],
   ]);
 };
 
@@ -601,7 +601,8 @@ VIEWS.week = async (day, tok, opt = {}) => {
         const mineIts = its.filter(it => it.L === p.L);
         const foot = !mineIts.length ? '<div class="pcFoot none">Nothing to log</div>' : !pro ? '<div class="pcFoot none"><a href="/pro">Goal and actual with DSI Pro</a></div>'
           : `<div class="pcFoot">${mineIts.map(it => { if (it.kind === 'w') { const t = D.target(it.lift, meRow); return box(it, 'w', it.lift.id, t ? t + (D.unit(it.lift) !== 'lb' ? ' ' + D.unit(it.lift) : '') : 0); } return box(it, it.kind, it.key, 0); }).join('')}</div>`;
-        return `<article class="pc"><header><i>${p.L}</i><b>${esc(p.name || 'Part ' + p.L)}</b></header><p>${esc(p.text)}</p>${P().levelsHtml(p, 'wkLv', S.me && S.me.level)}${p.lift ? `<div class="pcLift">${esc(p.lift.n)}${p.lift.sch ? ' · ' + esc(p.lift.sch) : ''}${p.lift.why ? `<span>${esc(p.lift.why)}</span>` : ''}</div>` : ''}${foot}</article>`;
+        const bm = p.bench && D.BENCH_BY[p.bench];
+        return `<article class="pc${bm ? ' bench' : ''}"><header><i>${p.L}</i><b>${esc(p.name || 'Part ' + p.L)}</b>${bm ? `<a class="pcBm" href="/boards#bench" title="Your time goes on the ${esc(bm.n)} board">Benchmark</a>` : ''}</header><p>${esc(p.text)}</p>${P().levelsHtml(p, 'wkLv', S.me && S.me.level)}${p.lift ? `<div class="pcLift">${esc(p.lift.n)}${p.lift.sch ? ' · ' + esc(p.lift.sch) : ''}${p.lift.why ? `<span>${esc(p.lift.why)}</span>` : ''}</div>` : ''}${foot}</article>`;
       }).join('');
       const logged = myLog && (Object.keys(myLog.entries || {}).length || myLog.score);
       body = `<form class="pcWrap" id="wkF"><div class="pcHead"><div>${opt.embed ? '' : `<div class="eyebrow">${esc(fmtDW(w.day))}${w.day === tdy ? ' · Today' : ''}${w.source ? ' · ' + esc(w.source) : ''}</div>`}<h3>${esc(w.title)}</h3>${w.rest_note ? `<p class="rest">${esc(w.rest_note)}</p>` : ''}</div>
@@ -609,7 +610,7 @@ VIEWS.week = async (day, tok, opt = {}) => {
         <div class="pcGrid n${Math.min(4, ps.length)}">${cards}</div>
         ${pro && w.score_label ? `<div class="pcScore"><label>${esc(w.score_label)} <input class="wkIn wkScore" type="text" maxlength="40" id="wkScore" value="${esc(myLog?.score || '')}" placeholder="${w.score_type === 'time' ? '12:34' : 'score'}"></label></div>` : ''}
         ${pro && its.length ? `<div class="row pcSave"><button class="btn" type="submit">${logged ? 'Update log' : 'Log it'}</button><span class="hint" id="wkMsg">${logged ? 'Logged. Update any time.' : 'Goals save as you type them. Fill in Actual, then log it.'}</span></div>` : ''}
-      </form>${dayBoard(w, logs.filter(l => l.workout_id === w.id))}`;
+      </form>${opt.embed ? '' : dayBoard(w, logs.filter(l => l.workout_id === w.id))}`;
     } else
     body = `<div class="wkBody">${prog}${mine}</div>${dayBoard(w, logs.filter(l => l.workout_id === w.id))}`;
   }
