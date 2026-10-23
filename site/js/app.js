@@ -176,7 +176,7 @@ const ROUTE_GROUP = { '': 'home', pricing: 'home', start: 'home', grow: 'home', 
   mygym: 'me', billing: 'me', sign: 'me', signed: 'me', shop: 'me', me: 'me', security: 'me', pro: 'me', rules: 'me', blocked: 'me',
   club: 'office', insights: 'office', website: 'office', sell: 'office', growth: 'office', follow: 'office', dandytv: 'office', class: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office',
   admin: 'admin', reports: 'admin', program: 'admin', connect: 'admin', import: 'admin' };
-const ACCT = () => [['/me', 'Profile', 'Name, gym and lifter details'], ...(S.me.gym_id ? [['/mygym', 'Membership and billing', 'Plan, payments and documents']] : []), ['/me?tab=reminders', 'Reminders', 'Nudges to log'], ['/me?tab=account', 'Account and safety', 'Email, privacy and blocks']];
+const ACCT = () => [['/me', 'My profile', S.me.gym_id ? 'Details, membership, billing, reminders and account' : 'Details, reminders and account']];
 function buildNav(r) {
   const groups = navGroups(), cur = ROUTE_GROUP[r] ?? '';
   const here = location.pathname + location.search;
@@ -1031,7 +1031,19 @@ VIEWS.protests = async (_, tok) => {
 
 /* ---------- me: the hub ---------- */
 const LIFT_IDS = D.ALL_LIFTS.map(x => x[0]);
+// Profile is one page: your profile, then membership and billing (gym members), reminders, and account and safety.
 VIEWS.me = async (_, tok) => {
+  if (!S.me || !S.me.display_name || !S.me.gym_id || !VIEWS.mygym) return meCore(_, tok);
+  await composePage(tok, '', [['profile', 'Profile', () => meCore(_, tok)], ['billing', 'Membership and billing', () => VIEWS.mygym(null, tok)]], () => {
+    // Membership sits right under the profile details, before reminders and account.
+    const head = $('#profile section.sec', main), prof = $('#profile [data-part="profile"]', main), bill = $('#billing', main);
+    if (head && prof) head.after(prof);
+    if (bill) (prof || head).after(bill);
+  });
+  const want = new URLSearchParams(location.search).get('tab'), t = want && ($(`[data-part="${want}"]`, main) || (want === 'billing' && $('#billing', main)));
+  if (t) t.scrollIntoView({ block: 'start' });
+};
+async function meCore(_, tok) {
   if (!S.me) return needLogin(tok, 'see your account');
   const [board, goals, bests] = await Promise.all([loadBoard(), sb.from('goals').select('*').eq('profile_id', S.me.id).then(must), sb.from('lift_bests').select('lift,weight_lb').eq('profile_id', S.me.id).then(must)]);
   const m = S.me, first = !m.display_name, pro = isPro();
@@ -1102,14 +1114,11 @@ VIEWS.me = async (_, tok) => {
   };
   // One short page per tab instead of one long page. The tool tiles live in the top menus now.
   if (!first) {
-    const TABS = [['profile', 'Profile'], ['reminders', 'Reminders'], ['account', 'Account and safety']];
-    // Goals and the extra maxes live on the DSI page now.
+    // One page, no tabs: profile, reminders and account all show. Goals and the extra maxes live on the DSI page now.
     if (new URLSearchParams(location.search).get('tab') === 'goals') return go('/dsi', true);
-    const want = new URLSearchParams(location.search).get('tab'), tab = TABS.some(t => t[0] === want) ? want : 'profile';
     const kindOf = sec => { const k = (($('.kicker', sec) || {}).textContent || '').trim(); return k === 'Reminders' ? 'reminders' : k === 'Profile' ? 'profile' : (/chasing/.test(k) || k === 'Four more maxes') ? 'drop' : (k === 'Community' || k === 'Account') ? 'account' : (k === 'DSI Pro' || k === 'Compete and grow') ? 'drop' : null; };
     const secs = $$('section.sec', main);
-    secs.slice(1).forEach(sec => { const k = kindOf(sec); if (k === 'drop') sec.remove(); else if (k && k !== tab) sec.hidden = true; });
-    secs[0].insertAdjacentHTML('beforeend', `<nav class="tabs" aria-label="Account" style="margin-top:20px">${TABS.map(([k, n]) => `<a class="tab" href="/me${k === 'profile' ? '' : '?tab=' + k}"${k === tab ? ' aria-current="page" aria-selected="true"' : ''}>${n}</a>`).join('')}</nav>`);
+    secs.slice(1).forEach(sec => { const k = kindOf(sec); if (k === 'drop') sec.remove(); else if (k) sec.dataset.part = k; });
   }
   bindPhoto(main, () => route());
   const nf = $('#nf');
