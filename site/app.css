@@ -1943,3 +1943,44 @@ a.g{text-decoration:none;color:inherit}
 .wodBench{display:grid;gap:4px;margin-top:8px}
 .wodBench label{font:700 11px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .wodBench label small{text-transform:none;letter-spacing:0;font-weight:500}
+
+/* Get better: goals then coach, even spacing */
+.gbSec{padding-top:28px;padding-bottom:28px}
+.gbSec+.gbSec{border-top:1px solid var(--line)}
+.gbHead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.gbHead h2{margin:0}
+.gbNew{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:16px}
+.gbNew[hidden]{display:none}
+.gbNew .hint{grid-column:1/-1}
+@media (max-width:640px){.gbNew{grid-template-columns:1fr 1fr}.gbNew select{grid-column:1/-1}}
+.gbGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.gbGoal{all:unset;box-sizing:border-box;display:grid;gap:6px;align-content:start;background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--c);border-radius:10px;padding:14px 16px;cursor:pointer;min-width:0}
+.gbGoal:hover{border-color:var(--c)}
+.gbGoal[aria-expanded="true"]{border-color:var(--c);box-shadow:0 0 0 1px var(--c)}
+.gbGoal:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.gbN{font:700 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.gbT{font:900 30px/1 var(--disp);color:var(--ink)}.gbT small{font:600 13px var(--sans);color:var(--muted)}
+.gbGoal .pb{display:block;height:8px;border-radius:4px;background:var(--panel2);overflow:hidden}
+.gbGoal .pb i{display:block;height:100%;background:var(--c)}
+.gbNow{font:600 13px var(--mono);color:var(--ink)}
+.gbWhen{font-size:12px;color:var(--muted)}
+.gbWhen em{font-style:normal;font-weight:700}.gbWhen em.up{color:var(--up)}.gbWhen em.flat{color:var(--flat)}.gbWhen em.down{color:var(--down)}
+.gbGoal.done .gbNow{color:var(--up)}
+#gbOpen:not(:empty){margin-top:14px}
+.gbDetail{background:var(--panel);border:1px solid var(--c);border-radius:10px;padding:16px 18px}
+.gbDHead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.gbDHead b{font:900 22px var(--disp);text-transform:uppercase}.gbDHead span{font:600 14px var(--mono);color:var(--muted)}
+.gbDGrid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:860px){.gbDGrid{grid-template-columns:1fr}}
+.gbDGrid .chartCard{margin:0}
+.gbPlan{display:grid;gap:10px}
+.gbPlan .kpi{margin:0}
+.gbPlan p{margin:0}
+.gbHit{color:var(--up);font-weight:700}
+.gbEdit{display:flex;flex-wrap:wrap;gap:8px;align-items:end;padding-top:10px;border-top:1px solid var(--line)}
+.gbEdit label{display:grid;gap:4px;font:700 11px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.gbEdit input{width:140px}
+.gbLbl{font:700 12px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0 0 10px}
+.gbCoach .sec{padding:0;margin:0 0 18px}
+.gbCoach .sec:last-child{margin-bottom:0}
+.gbCoach .focus{margin:0}

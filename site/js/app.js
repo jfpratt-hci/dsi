@@ -386,19 +386,92 @@ VIEWS.train = async (_, tok) => {
   ]);
 };
 
-/* ---------- Get better: progress, goal plans, coach ---------- */
+/* ---------- Get better: your goals on top (tap one for its chart and plan), then the coach ---------- */
 VIEWS.better = async (_, tok) => {
   if (!S.me) return needLogin(tok, 'get better');
   if (!isPro()) return paint(tok, `<section class="sec narrow"><div><div class="kicker">DSI Pro</div><h2>Get <span>better</span></h2>
-    <p class="secSub">Charts for every lift, a week by week plan to hit your next number, and a coach that reads your training and tells you what to fix. All on one page with DSI Pro.</p></div>
-    <div class="tools"><div class="tool"><b>Progress</b><span>Your best over time for every lift, against your goal.</span></div><div class="tool"><b>Goal plans</b><span>A heavy single and 3x3 working weight each week to your date.</span></div><div class="tool"><b>Coach</b><span>Ask about your training. It knows your numbers.</span></div></div>
+    <p class="secSub">Set goals for any lift, see your progress toward each one with a week by week plan, and get a coach that reads your numbers and tells you what to fix.</p></div>
     <div class="row"><a class="btn" href="/pro">See DSI Pro</a></div></section>`);
-  const lift = new URLSearchParams(location.search).get('lift') || '';
-  await composePage(tok, `<section class="sec cmpHead"><div class="kicker">DSI Pro</div><h2>Get <span>better</span></h2>
-      <p class="secSub">Where you are, where you are going, and what to do about it.</p>${jump([['progress', 'Progress'], ['plans', 'Goal plans'], ['coach', 'Coach']])}</section>`,
-    [['progress', 'Progress', () => VIEWS.progress(lift, tok)], ['plans', 'Goal plans', () => VIEWS.plans(null, tok)], ['coach', 'Coach', () => VIEWS.coach(null, tok)]], () => {
-    $$('a[href^="/progress/"]', main).forEach(a => a.setAttribute('href', '/better?lift=' + encodeURIComponent(a.getAttribute('href').slice(10)) + '#progress'));
+  const [goals, hist, bests] = await Promise.all([
+    sb.from('goals').select('*').eq('profile_id', S.me.id).then(must),
+    sb.from('lift_entries').select('lift,weight_lb,performed_on,is_pr').eq('profile_id', S.me.id).neq('status', 'struck').order('performed_on').then(must),
+    sb.from('lift_bests').select('lift,weight_lb').eq('profile_id', S.me.id).then(must),
+  ]);
+  if (tok !== S.tok) return;
+  // The coach paints as its own page; keep its body, drop its title, and turn its section titles into small labels.
+  main.style.visibility = 'hidden';
+  let coach = '';
+  try {
+    await VIEWS.coach(null, tok);
+    if (tok !== S.tok) return;
+    const tmp = document.createElement('div'); tmp.innerHTML = main.innerHTML;
+    const first = tmp.querySelector('section'); if (first && first.querySelector('h2')) first.remove();
+    tmp.querySelectorAll('h2').forEach(h => { const d = document.createElement('div'); d.className = 'gbLbl'; d.textContent = h.textContent; h.replaceWith(d); });
+    tmp.querySelectorAll('section').forEach(x => x.classList.remove('band'));
+    coach = tmp.innerHTML;
+  } catch (e) { coach = `<div class="prEmpty"><b>The coach didn't load</b><p class="err">${esc(e.message || e)}</p></div>`; }
+  main.style.visibility = '';
+  const best = Object.fromEntries(bests.map(b => [b.lift, num(b.weight_lb)])), bw = num(S.me.bodyweight) || 200;
+  hist.forEach(e => { best[e.lift] = Math.max(best[e.lift] || 0, num(e.weight_lb)); });
+  const plan = g => { // a heavy single and 3x3 working weight each week to the date; every fourth week backs off
+    const b = best[g.lift] || r5(num(g.target_lb) * 0.8), t = num(g.target_lb), start = monday(today());
+    const weeks = Math.max(1, Math.round((pd(g.target_date) - pd(start)) / (7 * 864e5))), per = (t - b) / weeks;
+    const list = Array.from({ length: weeks }, (_, i) => { const wk = i + 1, dl = wk % 4 === 0 && wk !== weeks, top = r5(b + per * wk), use = dl ? r5(top * 0.9) : top; return { wk, from: addDays(start, i * 7), dl, top: use, work: r5(use * 0.85) }; });
+    return { weeks, per, list, pace: per / bw * 100 > 1.25 ? ['Aggressive', 'down'] : per / bw * 100 > 0.6 ? ['Ambitious', 'flat'] : ['On track', 'up'] };
+  };
+  const card = g => {
+    const now = best[g.lift] || 0, t = num(g.target_lb), pct = Math.min(100, Math.round(now / t * 100)), done = now >= t;
+    const pl = g.target_date && !done ? plan(g) : null;
+    return `<button type="button" class="gbGoal${done ? ' done' : ''}" data-goal="${esc(g.lift)}" style="--c:${D.liftColor(g.lift)}" aria-expanded="false">
+      <span class="gbN">${esc(D.liftName(g.lift))}</span><b class="gbT">${fmt(t)} <small>lb</small></b>
+      <span class="pb"><i style="width:${pct}%"></i></span>
+      <span class="gbNow">${now ? `${fmt(now)} now · ${done ? 'Hit it' : fmt(t - now) + ' to go'}` : 'No lift logged yet'}</span>
+      <span class="gbWhen">${g.target_date ? `By ${fmtD(g.target_date)}${pl ? ` · <em class="${pl.pace[1]}">${pl.pace[0]}</em>` : ''}` : 'No date'}</span></button>`;
+  };
+  const detail = g => {
+    const rows = hist.filter(e => e.lift === g.lift), byDay = new Map();
+    rows.forEach(e => byDay.set(e.performed_on, Math.max(byDay.get(e.performed_on) || 0, num(e.weight_lb))));
+    let run = 0; const pts = [...byDay.entries()].sort().map(([d, w]) => { run = Math.max(run, w); return { x: pd(d).getTime(), y: run, d }; });
+    const now = best[g.lift] || 0, t = num(g.target_lb), pl = g.target_date && now < t ? plan(g) : null;
+    return `<div class="gbDetail" style="--c:${D.liftColor(g.lift)}"><div class="gbDHead"><b>${esc(D.liftName(g.lift))}</b><span>${now ? fmt(now) : '·'} → ${fmt(t)} lb${g.target_date ? ' by ' + fmtD(g.target_date) : ''}</span></div>
+      <div class="gbDGrid"><div class="chartCard">${pts.length ? lineChart(pts, D.LIFT_BY_DB[g.lift] ? D.LIFT_BY_DB[g.lift].c : 'var(--accent)', t) : '<p class="empty">Log this lift in class and your progress shows here.</p>'}</div>
+        <div class="gbPlan">${pl ? `<div class="gbLbl">This week</div><div class="kpi" style="grid-template-columns:1fr 1fr"><div><b style="color:var(--accent)">${fmt(pl.list[0].top)}</b><span>Top single</span></div><div><b>${fmt(pl.list[0].work)}</b><span>3 x 3</span></div></div>
+          <p class="sub">${pl.weeks} weeks · +${pl.per.toFixed(1)} lb a week · every fourth week backs off</p>
+          <details><summary>Every week</summary><table class="wkT"><thead><tr><th>Week of</th><th class="r">3 x 3</th><th class="r">Top</th></tr></thead><tbody>${pl.list.map(w => `<tr${w.dl ? ' class="dl"' : ''}><td>${fmtD(w.from)}${w.dl ? ' · back off' : ''}</td><td class="r n">${fmt(w.work)}</td><td class="r n">${fmt(w.top)}</td></tr>`).join('')}</tbody></table></details>`
+          : now >= t ? '<p class="gbHit">Goal hit. Set the next one.</p>' : '<p class="sub">Add a date and DI builds a week by week plan to get there.</p>'}
+          <form class="gbEdit" data-edit="${esc(g.lift)}"><label>Goal <input type="number" inputmode="decimal" min="1" max="1499" step="any" data-t value="${fmt(t)}"></label><label>By <input type="date" data-d value="${g.target_date || ''}" min="${today()}"></label>
+            <button class="btn sm">Save</button><button type="button" class="btn ghost sm" data-del="${esc(g.lift)}">Remove</button></form></div></div></div>`;
+  };
+  const lifts = [...D.LIFTS.map(l => [l.db, D.liftName(l.db)]), ...D.EXTRA_LIFTS, ...D.ALL_LIFTS.filter(([id]) => !D.LIFT_BY_DB[id] && !D.EXTRA_LIFTS.some(x => x[0] === id))];
+  const free = lifts.filter(([id]) => !goals.some(g => g.lift === id));
+  if (!paint(tok, `<section class="sec gbSec"><div class="gbHead"><h2>Goals</h2><button type="button" class="btn sm" id="gbAdd">Add a goal</button></div>
+      <form class="gbNew" id="gbNew" hidden><select id="gbL" aria-label="Lift">${free.map(([id, n]) => `<option value="${esc(id)}">${esc(n)}</option>`).join('')}</select>
+        <input id="gbT" type="number" inputmode="decimal" min="1" max="1499" step="any" placeholder="Goal lb" aria-label="Goal weight" required>
+        <input id="gbD" type="date" min="${today()}" aria-label="By date (optional)" title="By date (optional)">
+        <button class="btn sm">Save goal</button><span class="hint" id="gbMsg">Date is optional. With one, DI builds a weekly plan.</span></form>
+      ${goals.length ? `<div class="gbGrid">${goals.sort((a, b) => D.liftName(a.lift).localeCompare(D.liftName(b.lift))).map(card).join('')}</div><div id="gbOpen"></div>` : '<div class="prEmpty"><b>No goals yet</b><p>Add one for any lift. Tap it later to see your progress and plan.</p></div>'}</section>
+    <section class="sec gbSec gbCoach"><div class="gbHead"><h2>Coach</h2></div>${coach}</section>`)) return;
+  const open = $('#gbOpen');
+  $$('.gbGoal').forEach(b => b.onclick = () => {
+    const was = b.getAttribute('aria-expanded') === 'true';
+    $$('.gbGoal').forEach(x => x.setAttribute('aria-expanded', 'false'));
+    if (was) { open.innerHTML = ''; return; }
+    b.setAttribute('aria-expanded', 'true');
+    open.innerHTML = detail(goals.find(g => g.lift === b.dataset.goal));
+    const f = $('.gbEdit', open);
+    f.onsubmit = async e => { e.preventDefault(); const t = +$('[data-t]', f).value; if (!(t > 0)) return toast('Type a goal weight'); const { error } = await sb.from('goals').upsert({ profile_id: S.me.id, lift: f.dataset.edit, target_lb: t, target_date: $('[data-d]', f).value || null, updated_at: new Date().toISOString() }, { onConflict: 'profile_id,lift' }); if (error) return toast(error.message); toast('Goal saved'); route(); };
+    $('[data-del]', open).onclick = async () => { const { error } = await sb.from('goals').delete().eq('profile_id', S.me.id).eq('lift', f.dataset.edit); if (error) return toast(error.message); toast('Goal removed'); route(); };
+    open.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
+  $('#gbAdd').onclick = () => { const n = $('#gbNew'); n.hidden = !n.hidden; if (!n.hidden) $('#gbT').focus(); };
+  $('#gbNew').onsubmit = async e => {
+    e.preventDefault();
+    const t = +$('#gbT').value, msg = $('#gbMsg');
+    if (!(t > 0)) { msg.textContent = 'Type a goal weight.'; return; }
+    const { error } = await sb.from('goals').upsert({ profile_id: S.me.id, lift: $('#gbL').value, target_lb: t, target_date: $('#gbD').value || null, updated_at: new Date().toISOString() }, { onConflict: 'profile_id,lift' });
+    if (error) { msg.textContent = error.message; return; }
+    toast('Goal added'); route();
+  };
 };
 
 /* ---------- PR wall ---------- */
