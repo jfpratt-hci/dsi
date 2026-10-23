@@ -228,7 +228,7 @@ export function install(X) {
      STAFF: the gym office
      ================================================================= */
   const PRO_SEAT_CENTS = 400;
-  const TABS = [['schedule', 'Schedule'], ['members', 'Members'], ['billing', 'Billing', 1], ['docs', 'Waivers and contracts', 1], ['staff', 'Coaches']];
+  const TABS = [['schedule', 'Schedule'], ['members', 'Members'], ['billing', 'Billing', 1], ['docs', 'Waivers and contracts', 1]];
   // One tab bar across every gym office page: check in, schedule, workouts, results, members, billing, documents, staff, settings.
   function officeBar(g, active) {
     const owner = isOwner(g.id);
@@ -248,10 +248,12 @@ export function install(X) {
     const qs = new URLSearchParams(location.search);
     const tabs = TABS.filter(t => !t[2] || owner);
     // Check in now lives on the Classes page (the coach view).
+    // The Coaches page is gone: coaches are members with a type, pay lives on their member profile, coaching on the Schedule.
+    if (qs.get('tab') === 'staff') return go(`/club/${gid}?tab=members&type=coach`, true);
     if (!qs.get('tab') || qs.get('tab') === 'today') return go(`/class/${gid}${qs.get('day') ? '?day=' + qs.get('day') : ''}`, true);
     const tab = tabs.some(t => t[0] === qs.get('tab')) ? qs.get('tab') : 'schedule';
     const shell = inner => `${officeBar(g, tab)}<section class="sec">${inner}</section>`;
-    const view = { today: tabToday, schedule: tabSchedule, members: tabMembers, billing: tabBilling, docs: tabDocs, staff: tabStaff }[tab];
+    const view = { today: tabToday, schedule: tabSchedule, members: tabMembers, billing: tabBilling, docs: tabDocs }[tab];
     await view(g, tok, shell, qs, owner);
     if (tok === S.tok) { bindAddPerson(g); bindLogin(g, document); }
   };
@@ -321,9 +323,17 @@ export function install(X) {
       <div id="scPanel"></div>
       ${owner ? `<h3 style="margin-top:28px">Weekly <span>classes</span></h3>
       <div class="board"><div class="tablewrap"><table><thead><tr><th>Class</th><th>Days</th><th>Time</th><th>Spots</th><th>Coach</th><th></th></tr></thead><tbody>
-      ${classes.map(c => `<tr><td><b>${esc(c.name)}</b>${c.active ? '' : ' <span class="pill flat">Paused</span>'}</td><td>${c.weekdays.slice().sort().map(i => DOW[i]).join(' ')}</td><td>${hm(c.start_time)} · ${c.duration_min} min</td><td class="n">${c.capacity}</td><td>${esc(c.coach_id ? names.get(c.coach_id) || 'Coach' : '')}</td><td class="r"><button class="btn ghost sm" data-ec="${c.id}">Edit</button></td></tr><tr data-ecf="${c.id}" hidden><td colspan="6">${classForm(c)}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">No weekly classes yet. Add your first one below.</td></tr>'}
+      ${classes.map(c => `<tr><td><b>${esc(c.name)}</b>${c.active ? '' : ' <span class="pill flat">Paused</span>'}</td><td>${c.weekdays.slice().sort().map(i => DOW[i]).join(' ')}</td><td>${hm(c.start_time)} · ${c.duration_min} min</td><td class="n">${c.capacity}</td><td><select class="scCoach" data-cc="${c.id}" aria-label="Coach for ${esc(c.name)} at ${hm(c.start_time)}">${opt(coachOpts, c.coach_id || '')}</select></td><td class="r"><button class="btn ghost sm" data-ec="${c.id}">Edit</button></td></tr><tr data-ecf="${c.id}" hidden><td colspan="6">${classForm(c)}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">No weekly classes yet. Add your first one below.</td></tr>'}
       </tbody></table></div></div>${classForm(null)}` : ''}`))) return;
 
+    // Assign a coach to a weekly class right in the table. Upcoming classes follow; a one off sub stays.
+    $$('[data-cc]').forEach(sel => sel.onchange = async () => {
+      sel.disabled = true;
+      const { error } = await sb.from('classes').update({ coach_id: sel.value || null }).eq('id', sel.dataset.cc);
+      sel.disabled = false;
+      if (error) return toast(error.message);
+      toast(sel.value ? `${names.get(sel.value) || 'Coach'} coaches this class now` : 'No coach on this class'); route();
+    });
     $$('.scS').forEach(b => b.onclick = () => {
       const s = ss.find(x => x.id === b.dataset.s);
       $('#scPanel').innerHTML = `<form class="formCard" id="spF"><div class="formH">${esc(s.name)} <span class="sub">${esc(dayName(dayOf(s.starts_at, g.tz)))} at ${tAt(s.starts_at, g.tz)} · ${cnt(s.id)} of ${s.capacity} booked</span></div><div class="fields">
@@ -415,7 +425,7 @@ export function install(X) {
       const note = `Hi ${v('first')}, you're set up at ${g.name} on Dandy. Sign in at dandystrength.com/login with ${v('email')} to book classes and see the workout.`;
       const done = $('[data-done]', f.parentElement);
       done.hidden = false;
-      done.innerHTML = r.how === 'no_email' ? `<b>${esc(r.name)} is ${who} of ${esc(g.name)}.</b> No email yet. When you have it, add it from ${role === 'member' ? 'their Open panel on Members' : 'the Coaches list'} and they can sign in.`
+      done.innerHTML = r.how === 'no_email' ? `<b>${esc(r.name)} is ${who} of ${esc(g.name)}.</b> No email yet. When you have it, add it from their Open panel on Members and they can sign in.`
         : `<b>${esc(r.name)} is ${who} of ${esc(g.name)}.</b> ${r.how === 'existing' ? 'They already had a login, so it is linked now.' : 'Their profile is waiting for them the first time they sign in with that email.'}
         <div class="row"><input readonly value="${esc(note)}" aria-label="Message to send them"><button type="button" class="btn ghost sm" data-copy>Copy message</button><a class="btn ghost sm" href="/u/${r.profile_id}">Open profile</a></div>`;
       const cp = $('[data-copy]', done); if (cp) cp.onclick = async () => { try { await navigator.clipboard.writeText(note); toast('Copied. Text or email it to them.'); } catch { $('input', done).select(); } };
@@ -434,7 +444,7 @@ export function install(X) {
       sb.from('bookings').select('profile_id,checked_in_at,session_id').eq('gym_id', g.id).eq('status', 'attended').order('checked_in_at', { ascending: false }).limit(2000).then(must),
       owner ? sb.from('plans').select('*').eq('gym_id', g.id).eq('active', true).order('price_cents').then(must) : [],
       owner ? sb.from('invoices').select('profile_id,amount_cents,status').eq('gym_id', g.id).eq('status', 'open').then(must) : [],
-      sb.from('gym_staff').select('profile_id,role').eq('gym_id', g.id).then(must),
+      sb.from('gym_staff').select('profile_id,role,pay_rate,pay_type').eq('gym_id', g.id).then(must),
     ]);
     const dets = members.length ? ((await sb.from('member_details').select('profile_id,first_name,last_name,bill_zip').in('profile_id', members.map(m => m.id))).data || []) : [];
     const detOf = new Map(dets.map(x => [x.profile_id, x]));
@@ -442,6 +452,7 @@ export function install(X) {
     const fn = id => (detOf.get(id) || {}).first_name || '', ln = id => (detOf.get(id) || {}).last_name || '';
     // Coaches and owners are members too, just another type, and free.
     const typeOf = new Map(staffRows.map(x => [x.profile_id, x.role])), kind = id => typeOf.get(id) || 'member';
+    const payOf = id => { const x = staffRows.find(r => r.profile_id === id); return x && x.pay_rate != null ? `$${num(x.pay_rate)} per ${x.pay_type === 'hour' ? 'hour' : 'class'}` : ''; };
     const show = ['member', 'coach'].includes(qs.get('type')) ? qs.get('type') : 'all';
     const cur = id => ms.find(m => m.profile_id === id && m.status !== 'canceled');
     const docId = k => (docs.find(d => d.kind === k) || {}).id;
@@ -461,7 +472,7 @@ export function install(X) {
     const typeChips = `<div class="chips mbType" aria-label="Show">${[['all', `All ${members.length}`], ['member', `Members ${members.length - nCoach}`], ['coach', `Coaches ${nCoach}`]].map(([v, n]) => `<a class="chip" href="/club/${g.id}?tab=members&type=${v}${q ? '&q=' + encodeURIComponent(q) : ''}${sortQ}" aria-pressed="${show === v}">${n}</a>`).join('')}</div>`;
     if (!paint(tok, shell(`${owner ? addPersonForm(g, 'member') : ''}${typeChips}<div class="row adSearch"><label class="vh" for="mq">Search members</label><input id="mq" placeholder="Search by name" value="${esc(qs.get('q') || '')}" style="max-width:300px"><span class="hint">${list.length} of ${members.length} members. Members join by picking ${esc(g.name)} on the Gym league page.${owner ? ' Remove takes someone off the gym and ends a desk paid membership; their account and history stay.' : ''}</span></div>
       <div class="board"><div class="tablewrap"><table class="adT mbT"><thead><tr>${sortTh('first', 'First name')}${sortTh('last', 'Last name')}${sortTh('board', 'Board name')}<th>Type</th><th>Membership</th><th>Waiver</th><th>Contract</th><th class="r">Visits 30 days</th><th>Last visit</th>${owner ? '<th class="r">Owes</th>' : ''}<th></th></tr></thead><tbody>
-      ${list.map(m => { const c = cur(m.id), v = visits(m.id), k = kind(m.id); return `<tr><td>${esc(fn(m.id)) || '<span class="sub">none</span>'}</td><td>${esc(ln(m.id)) || '<span class="sub">none</span>'}</td><td><div class="mbWho">${avatar(m, 48)}<div><b><a href="/u/${m.id}">${esc(m.display_name)}</a></b>${zips && !zips.has(m.id) ? ' <span class="pill flat" title="Add their billing ZIP for better card rates">No ZIP</span>' : ''}</div></div></td><td>${k === 'owner' ? '<span class="pill acc">Owner</span>' : k === 'coach' ? '<span class="pill acc">Coach</span>' : '<span class="sub">Member</span>'}</td><td>${c ? `${esc(c.plan_name)} ${statusPill(c.status)}` : k !== 'member' ? `<span class="pill up">Free, ${k}</span>` : statusPill('')}</td>
+      ${list.map(m => { const c = cur(m.id), v = visits(m.id), k = kind(m.id); return `<tr><td>${esc(fn(m.id)) || '<span class="sub">none</span>'}</td><td>${esc(ln(m.id)) || '<span class="sub">none</span>'}</td><td><div class="mbWho">${avatar(m, 48)}<div><b><a href="/u/${m.id}">${esc(m.display_name)}</a></b>${zips && !zips.has(m.id) ? ' <span class="pill flat" title="Add their billing ZIP for better card rates">No ZIP</span>' : ''}</div></div></td><td>${k === 'owner' ? '<span class="pill acc">Owner</span>' : k === 'coach' ? '<span class="pill acc">Coach</span>' : '<span class="sub">Member</span>'}</td><td>${c ? `${esc(c.plan_name)} ${statusPill(c.status)}` : k !== 'member' ? `<span class="pill up">Free, ${k}</span>${owner && payOf(m.id) ? `<span class="sub" style="display:block">${payOf(m.id)}</span>` : ''}` : statusPill('')}</td>
         <td>${signedDoc(m.id, 'waiver') ? '<span class="pill up">Signed</span>' : '<span class="pill down">Missing</span>'}</td><td>${!docId('contract') ? '<span class="sub">none</span>' : signedDoc(m.id, 'contract') ? '<span class="pill up">Signed</span>' : '<span class="pill flat">Not yet</span>'}</td>
         <td class="r n">${v.filter(a => (a.checked_in_at || '') >= since).length}</td><td>${v[0] && v[0].checked_in_at ? esc(fmtD(v[0].checked_in_at.slice(0, 10))) : '<span class="sub">never</span>'}</td>
         ${owner ? `<td class="r n">${owed(m.id) ? `<b style="color:var(--down)">${money(owed(m.id))}</b>` : ''}</td>` : ''}<td class="r nowrap"><button class="btn ghost sm" data-md="${m.id}">Open</button>${owner ? ` <button class="btn ghost sm" data-rm="${m.id}" aria-label="Remove ${esc(m.display_name)} from ${esc(g.name)}">Remove</button>` : ''}</td></tr>
@@ -494,6 +505,14 @@ export function install(X) {
       sb.from('profiles').select('id,display_name,birth_year,bodyweight,sex,photo').eq('id', pid).maybeSingle().then(r => r.data),
     ]);
     const d = det || {}, pf = prof || {};
+    // Coaches and owners: their pay rate and what they have coached this month.
+    let payBlock = '';
+    if (owner && kind !== 'member') {
+      const st = (await sb.from('gym_staff').select('pay_rate,pay_type').eq('gym_id', g.id).eq('profile_id', pid).maybeSingle()).data || {};
+      const mo = (await coachPay(g, today().slice(0, 8) + '01', today())).find(x => x.s.profile_id === pid);
+      payBlock = `<h4>Pay</h4><form class="row" data-payf><input data-rate inputmode="decimal" value="${st.pay_rate != null ? num(st.pay_rate) : ''}" placeholder="$" aria-label="Pay rate" style="max-width:90px"><select data-ptype style="max-width:130px">${[['class', 'per class'], ['hour', 'per hour']].map(([k, n]) => `<option value="${k}"${(st.pay_type || 'class') === k ? ' selected' : ''}>${n}</option>`).join('')}</select><button class="btn ghost sm">Save</button></form>
+        <p class="sub">${mo ? `This month: ${mo.classes} class${mo.classes === 1 ? '' : 'es'}, ${fmtHrs(mo.hrs)} hours${st.pay_rate != null ? `, $${mo.owed.toFixed(2)}` : ''}. ` : ''}<a href="/club/${g.id}?tab=billing#coachpay">Coach pay</a> · <a href="/club/${g.id}?tab=schedule">Assign classes</a></p>`;
+    }
     const fld = (k, label, val, extra = '') => `<div class="field"><label>${label}</label><input data-f="${k}" value="${esc(val ?? '')}" ${extra}></div>`;
     const editForm = `<form class="formCard mdEdit" data-mde><div class="fields">
         ${fld('first_name', 'First name', d.first_name, 'maxlength="60"')}${fld('last_name', 'Last name', d.last_name, 'maxlength="60"')}${fld('display_name', 'Board name', pf.display_name, 'maxlength="24"')}
@@ -507,7 +526,7 @@ export function install(X) {
     const cur = ms.find(m => m.status !== 'canceled');
     const head = `<div class="mdHead">${avatar(pf.id ? pf : { display_name: '?' }, 128)}<div><b class="mdNm">${esc([d.first_name, d.last_name].filter(Boolean).join(' ') || pf.display_name || '')}</b><span class="sub">${esc(pf.display_name || '')}</span>${photoTools({ id: pid, photo: pf.photo }, owner)}</div></div>`;
     box.innerHTML = `${head}${owner ? editForm : ''}<div class="mdGrid">
-      <div>${owner ? `<h4>Type</h4><form class="row" data-tyf><select data-ty style="max-width:160px">${[['member', 'Member'], ['coach', 'Coach'], ['owner', 'Owner']].map(([k, n]) => `<option value="${k}"${kind === k ? ' selected' : ''}>${n}</option>`).join('')}</select><button class="btn ghost sm">Save</button></form><p class="sub">Coaches and owners are free members and can run classes.</p>` : ''}<h4>Sign in</h4>${loginRow(lgs.get(pid), pid, owner)}<h4>Contact</h4>${owner ? '' : det ? `<p>${esc(det.legal_name || '')}<br>${esc(det.phone || '')}<br>${esc(det.email || '')}</p><p class="sub">Emergency: ${esc(det.emergency_name || 'not given')} ${esc(det.emergency_phone || '')}</p>` : '<p class="hint">They have not added contact details yet.</p>'}
+      <div>${owner ? `<h4>Type</h4><form class="row" data-tyf><select data-ty style="max-width:160px">${[['member', 'Member'], ['coach', 'Coach'], ['owner', 'Owner']].map(([k, n]) => `<option value="${k}"${kind === k ? ' selected' : ''}>${n}</option>`).join('')}</select><button class="btn ghost sm">Save</button></form><p class="sub">Coaches and owners are free members and can run classes.</p>${payBlock}` : ''}<h4>Sign in</h4>${loginRow(lgs.get(pid), pid, owner)}${owner ? '' : '<h4>Contact</h4>'}${owner ? '' : det ? `<p>${esc(det.legal_name || '')}<br>${esc(det.phone || '')}<br>${esc(det.email || '')}</p><p class="sub">Emergency: ${esc(det.emergency_name || 'not given')} ${esc(det.emergency_phone || '')}</p>` : '<p class="hint">They have not added contact details yet.</p>'}
         <h4>Documents</h4>${sigs.map(s => `<p>${s.kind === 'waiver' ? 'Waiver' : 'Contract'} v${(docs.find(d => d.id === s.doc_id) || {}).version || 'old'} · signed ${esc(fmtD(s.signed_at.slice(0, 10)))} as ${esc(s.signed_name)} <a href="/signed/${s.id}">View</a></p>`).join('') || '<p class="hint">Nothing signed yet.</p>'}</div>
       <div><h4>Level</h4>${lvp ? `<form class="row" data-lvf><select data-lv style="max-width:160px">${[['beginner', 'Beginner'], ['rx', 'Rx'], ['comp', 'Comp']].map(([k, n]) => `<option value="${k}"${lvp.level === k ? ' selected' : ''}>${n}</option>`).join('')}</select><button class="btn ghost sm">Set</button></form>
         <p class="sub">${lvp.level_by === 'coach' ? 'Set by a coach. ' : 'Moves up on its own. '}${lvp.level === 'beginner' ? `${lvp.rx_logs} of 3 Rx logs, or ${lvp.weighted_logs} of 8 logs and ${lvp.prs} of 2 PRs` : lvp.level === 'rx' ? `${lvp.comp_logs} of 3 Comp logs` : 'Top level'}</p>` : '<p class="sub">Not set</p>'}
@@ -526,6 +545,12 @@ export function install(X) {
       const p = Object.fromEntries($$('[data-f]', ef).map(i => [i.dataset.f, i.value.trim()])), m = $('[data-mdm]', ef);
       if (p.bill_zip && !/^\d{5}(-\d{4})?$/.test(p.bill_zip)) { m.textContent = 'Billing ZIP is 5 digits, like 45150, or ZIP+4.'; return; }
       try { await rpc('gym_set_details', { p_gym: g.id, p_profile: pid, p }); m.textContent = 'Saved.'; toast('Details saved'); } catch (err) { m.textContent = err.message; }
+    };
+    const pfm = $('[data-payf]', box);
+    if (pfm) pfm.onsubmit = async e => {
+      e.preventDefault(); const r = $('[data-rate]', pfm).value.trim();
+      const { error } = await sb.from('gym_staff').update({ pay_rate: r ? parseFloat(r.replace(/[^0-9.]/g, '')) : null, pay_type: $('[data-ptype]', pfm).value }).eq('gym_id', g.id).eq('profile_id', pid);
+      if (error) return toast(error.message); toast('Pay saved');
     };
     const tf = $('[data-tyf]', box);
     if (tf) tf.onsubmit = async e => { e.preventDefault(); try { const t = await rpc('gym_set_type', { p_gym: g.id, p_profile: pid, p_type: $('[data-ty]', tf).value }); toast(t === 'member' ? 'Now a member' : `Now ${t === 'owner' ? 'an owner' : 'a coach'}`); route(); } catch (err) { toast(err.message); } };
@@ -565,6 +590,9 @@ export function install(X) {
   /* ----- Billing ----- */
   async function tabBilling(g, tok, shell, qs) {
     const month = today().slice(0, 7);
+    const cpFrom = /^\d{4}-\d{2}-\d{2}$/.test(qs.get('from') || '') ? qs.get('from') : today().slice(0, 8) + '01';
+    const cpTo = /^\d{4}-\d{2}-\d{2}$/.test(qs.get('to') || '') ? qs.get('to') : today();
+    const cp = await coachPay(g, cpFrom, cpTo);
     const [plans, ms, inv, pays, dplan] = await Promise.all([
       sb.from('plans').select('*').eq('gym_id', g.id).order('price_cents').then(must),
       sb.from('memberships').select('*').eq('gym_id', g.id).then(must),
@@ -615,7 +643,15 @@ export function install(X) {
       ${pays.map(p => `<tr><td>${esc(fmtD(p.created_at.slice(0, 10)))}</td><td>${esc((p.profile_id && names.get(p.profile_id)) || p.payer_name || p.payer_email || 'Guest')}</td><td>${esc(p.description || p.kind)}</td><td class="r n">${money(p.amount_cents)}${p.refunded_cents ? `<span class="sub">${money(p.refunded_cents)} refunded</span>` : ''}</td>
         <td>${{ succeeded: '<span class="pill up">Paid</span>', refunded: '<span class="pill">Refunded</span>', partially_refunded: '<span class="pill">Part refunded</span>', disputed: '<span class="pill down">Disputed</span>' }[p.status] || esc(p.status)}</td>
         <td class="r">${p.stripe_payment_intent && ['succeeded', 'partially_refunded'].includes(p.status) ? `<button class="btn ghost sm" data-refund="${p.id}" data-left="${p.amount_cents - p.refunded_cents}">Refund</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">No card payments yet.</td></tr>'}
-      </tbody></table></div></div>`))) return;
+      </tbody></table></div></div>
+      <div class="secHead" style="margin-top:28px" id="coachpay"><h3>Coach <span>pay</span></h3><span class="hint">Set each coach's rate on their profile in Members. Assign coaches to classes on the Schedule.</span></div>
+      <form class="row" id="hpF"><input type="date" id="hp-f" value="${cpFrom}" style="max-width:170px"><span>to</span><input type="date" id="hp-t" value="${cpTo}" style="max-width:170px"><button class="btn ghost sm">Show</button><button type="button" class="btn ghost sm" id="hpCsv">Download CSV</button></form>
+      <div class="board"><div class="tablewrap"><table><thead><tr><th>Coach</th><th class="r">Classes</th><th class="r">Hours</th><th class="r">Rate</th><th class="r">Pay</th></tr></thead><tbody>
+      ${cp.map(p => `<tr><td>${esc(p.name)}</td><td class="r n">${p.classes}</td><td class="r n">${fmtHrs(p.hrs)}</td><td class="r n">${p.s.pay_rate != null ? '$' + num(p.s.pay_rate) + ' per ' + (p.s.pay_type === 'hour' ? 'hour' : 'class') : '<span class="sub">not set</span>'}</td><td class="r n"><b>$${p.owed.toFixed(2)}</b></td></tr>`).join('') || '<tr><td colspan="5" class="empty">No coaches yet.</td></tr>'}
+      <tr><td><b>Total</b></td><td class="r n">${cp.reduce((t, p) => t + p.classes, 0)}</td><td class="r n">${fmtHrs(cp.reduce((t, p) => t + p.hrs, 0))}</td><td></td><td class="r n"><b>$${cp.reduce((t, p) => t + p.owed, 0).toFixed(2)}</b></td></tr></tbody></table></div></div>
+      <p class="hint">Counts classes that already happened, were not canceled, and had the coach on them.</p>`))) return;
+    $('#hpF').onsubmit = e => { e.preventDefault(); go(`/club/${g.id}?tab=billing&from=${$('#hp-f').value}&to=${$('#hp-t').value}#coachpay`); };
+    $('#hpCsv').onclick = () => csv(`${g.name} coach pay ${cpFrom} to ${cpTo}.csv`, [['Coach', 'Classes', 'Hours', 'Rate', 'Per', 'Pay'], ...cp.map(p => [p.name, p.classes, fmtHrs(p.hrs), p.s.pay_rate ?? '', p.s.pay_type, p.owed.toFixed(2)])]);
     const stMsg = $('#stMsg');
     const check = async () => { try { const r = await call('status', { gym: g.id }); stMsg.textContent = r.ready ? 'Card payments are on.' : r.connected ? 'Stripe still needs a few details. Click Finish Stripe setup.' : 'Not connected yet.'; if (r.ready !== g.stripe_ready) route(); } catch (e) { stMsg.textContent = e.message; } };
     if (ret === 'done') check();
@@ -667,51 +703,18 @@ export function install(X) {
     });
   }
 
-  /* ----- Staff: pay, availability, swaps, hours ----- */
-  async function tabStaff(g, tok, shell, qs, owner) {
-    const from = /^\d{4}-\d{2}-\d{2}$/.test(qs.get('from') || '') ? qs.get('from') : today().slice(0, 8) + '01';
-    const to = /^\d{4}-\d{2}-\d{2}$/.test(qs.get('to') || '') ? qs.get('to') : today();
-    const lgs = owner ? await loginStatus(g) : new Map();
-    const [staff, avail, swaps, mine, coached] = await Promise.all([
+  /* ----- Coach pay (shown on Billing) ----- */
+  // Coach pay for a date range: classes that already happened, were not canceled, and had the coach on them.
+  async function coachPay(g, from, to) {
+    const [staff, coached] = await Promise.all([
       sb.from('gym_staff').select('*').eq('gym_id', g.id).then(must),
-      sb.from('coach_availability').select('*').eq('gym_id', g.id).order('weekday').order('start_time').then(must),
-      sb.from('swap_requests').select('*,session:sessions(name,starts_at)').eq('gym_id', g.id).eq('status', 'open').order('created_at').then(must),
-      sb.from('sessions').select('*').eq('gym_id', g.id).eq('coach_id', S.me.id).eq('status', 'scheduled').gte('starts_at', new Date().toISOString()).order('starts_at').limit(14).then(must),
-      sb.from('sessions').select('coach_id,starts_at,ends_at').eq('gym_id', g.id).eq('status', 'scheduled').gte('starts_at', from + 'T00:00:00Z').lt('starts_at', addDays(to, 1) + 'T06:00:00Z').lt('starts_at', new Date().toISOString()).then(must),
+      sb.from('sessions').select('coach_id,starts_at,ends_at').eq('gym_id', g.id).eq('status', 'scheduled').not('coach_id', 'is', null).gte('starts_at', from + 'T00:00:00Z').lt('starts_at', addDays(to, 1) + 'T06:00:00Z').lt('starts_at', new Date().toISOString()).then(must),
     ]);
-    const names = await people(staff.map(s => s.profile_id).concat(swaps.map(s => s.from_coach)));
-    const nm = id => names.get(id) || 'Coach';
-    const pay = staff.map(s => { const c = coached.filter(x => x.coach_id === s.profile_id && dayOf(x.starts_at, g.tz) >= from && dayOf(x.starts_at, g.tz) <= to); const hrs = c.reduce((t, x) => t + (Date.parse(x.ends_at) - Date.parse(x.starts_at)) / 36e5, 0); return { s, classes: c.length, hrs, owed: num(s.pay_rate) * (s.pay_type === 'hour' ? hrs : c.length) }; });
-    const fmtHrs = h => (Math.round(h * 100) / 100).toString();
-    const sw = swaps.map(r => `<div class="row swRow"><span><b>${esc(r.session ? r.session.name : 'Class')}</b> ${esc(r.session ? new Date(r.session.starts_at).toLocaleString('en-US', { timeZone: g.tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '')} · from ${esc(nm(r.from_coach))}${r.to_coach ? ' to ' + esc(nm(r.to_coach)) : ' to anyone'}${r.note ? ` <span class="sub">"${esc(r.note)}"</span>` : ''}</span>
-      ${r.from_coach !== S.me.id && (!r.to_coach || r.to_coach === S.me.id) ? `<button class="btn sm" data-take="${r.id}">Take it</button>` : ''}${r.from_coach === S.me.id || owner ? `<button class="btn ghost sm" data-csw="${r.id}">Cancel</button>` : ''}</div>`).join('');
-    if (!paint(tok, shell(`${owner ? addPersonForm(g, 'coach') : ''}<div class="stGrid">
-      <div><h3>Swaps</h3>${sw || '<p class="hint">No open swaps.</p>'}
-        <h3 style="margin-top:20px">Your next <span>classes</span></h3>${mine.map(s => `<form class="row swRow" data-sw="${s.id}"><span><b>${esc(s.name)}</b> ${esc(new Date(s.starts_at).toLocaleString('en-US', { timeZone: g.tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</span><select data-to style="max-width:160px">${opt([['', 'Any coach'], ...staff.filter(x => x.profile_id !== S.me.id).map(x => [x.profile_id, nm(x.profile_id)])], '')}</select><input data-note maxlength="200" placeholder="Note" style="max-width:150px"><button class="btn ghost sm">Ask for a swap</button></form>`).join('') || '<p class="hint">You are not on any upcoming classes.</p>'}
-        <h3 style="margin-top:20px">When you can <span>coach</span></h3>
-        ${avail.filter(a => a.profile_id === S.me.id).map(a => `<div class="row swRow"><span>${DOW[a.weekday]} ${hm(a.start_time)} to ${hm(a.end_time)}</span><button class="btn ghost sm" data-rma="${a.id}">Remove</button></div>`).join('') || '<p class="hint">Add the times you are free to coach.</p>'}
-        <form class="row" id="avF"><select id="av-d" style="max-width:110px">${opt(DOW.map((d, i) => [i, d]), 1)}</select><input id="av-s" type="time" value="05:00" style="max-width:130px"><input id="av-e" type="time" value="09:00" style="max-width:130px"><button class="btn sm">Add</button></form></div>
-      <div><h3>Coaches</h3><div class="board"><div class="tablewrap"><table><thead><tr><th>Coach</th><th>Available</th>${owner ? '<th>Pay</th>' : ''}</tr></thead><tbody>
-        ${staff.map(s => `<tr><td><b>${esc(nm(s.profile_id))}</b>${s.role === 'owner' ? ' <span class="pill acc">Owner</span>' : ''}${owner && lgs.get(s.profile_id) && !lgs.get(s.profile_id).has_login ? loginRow(lgs.get(s.profile_id), s.profile_id, owner) : ''}</td><td class="sub">${avail.filter(a => a.profile_id === s.profile_id).map(a => `${DOW[a.weekday]} ${hm(a.start_time)}–${hm(a.end_time)}`).join(', ') || 'not set'}</td>
-        ${owner ? `<td><form class="row" data-pay="${s.profile_id}"><input data-rate inputmode="decimal" value="${s.pay_rate != null ? num(s.pay_rate) : ''}" placeholder="$" style="max-width:80px"><select data-type style="max-width:120px">${opt([['class', 'per class'], ['hour', 'per hour']], s.pay_type)}</select><button class="btn ghost sm">Save</button></form></td>` : ''}</tr>`).join('')}
-        </tbody></table></div></div><p class="hint">Owners add coaches on the <a href="/gym/${g.id}">gym page</a>.</p>
-        ${owner ? `<h3 style="margin-top:20px">Hours and <span>pay</span></h3><form class="row" id="hpF"><input type="date" id="hp-f" value="${from}" style="max-width:170px"><span>to</span><input type="date" id="hp-t" value="${to}" style="max-width:170px"><button class="btn ghost sm">Show</button><button type="button" class="btn ghost sm" id="hpCsv">Download CSV</button></form>
-        <div class="board"><div class="tablewrap"><table><thead><tr><th>Coach</th><th class="r">Classes</th><th class="r">Hours</th><th class="r">Rate</th><th class="r">Pay</th></tr></thead><tbody>
-        ${pay.map(p => `<tr><td>${esc(nm(p.s.profile_id))}</td><td class="r n">${p.classes}</td><td class="r n">${fmtHrs(p.hrs)}</td><td class="r n">${p.s.pay_rate != null ? '$' + num(p.s.pay_rate) + ' per ' + p.s.pay_type : '<span class="sub">not set</span>'}</td><td class="r n"><b>$${p.owed.toFixed(2)}</b></td></tr>`).join('')}
-        <tr><td><b>Total</b></td><td class="r n">${pay.reduce((t, p) => t + p.classes, 0)}</td><td class="r n">${fmtHrs(pay.reduce((t, p) => t + p.hrs, 0))}</td><td></td><td class="r n"><b>$${pay.reduce((t, p) => t + p.owed, 0).toFixed(2)}</b></td></tr></tbody></table></div></div>
-        <p class="hint">Counts classes that already happened, were not canceled, and had the coach on them.</p>` : ''}</div></div>`))) return;
-    $$('[data-take]').forEach(b => b.onclick = async () => { try { await rpc('take_swap', { p_id: b.dataset.take }); toast('The class is yours'); route(); } catch (e) { toast(e.message); } });
-    $$('[data-csw]').forEach(b => b.onclick = async () => { try { await rpc('cancel_swap', { p_id: b.dataset.csw }); route(); } catch (e) { toast(e.message); } });
-    $$('[data-sw]').forEach(f => f.onsubmit = async e => { e.preventDefault(); try { await rpc('request_swap', { p_session: f.dataset.sw, p_to: $('[data-to]', f).value || null, p_note: $('[data-note]', f).value.trim() || null }); toast('Swap request sent'); route(); } catch (err) { toast(err.message); } });
-    $$('[data-rma]').forEach(b => b.onclick = async () => { const { error } = await sb.from('coach_availability').delete().eq('id', b.dataset.rma); if (error) return toast(error.message); route(); });
-    $('#avF').onsubmit = async e => { e.preventDefault(); const { error } = await sb.from('coach_availability').insert({ gym_id: g.id, profile_id: S.me.id, weekday: +$('#av-d').value, start_time: $('#av-s').value, end_time: $('#av-e').value }); if (error) return toast(/end_time/.test(error.message) ? 'End after the start time.' : error.message); route(); };
-    $$('[data-pay]').forEach(f => f.onsubmit = async e => { e.preventDefault(); const r = $('[data-rate]', f).value.trim(); const { error } = await sb.from('gym_staff').update({ pay_rate: r ? parseFloat(r.replace(/[^0-9.]/g, '')) : null, pay_type: $('[data-type]', f).value }).eq('gym_id', g.id).eq('profile_id', f.dataset.pay); if (error) return toast(error.message); toast('Pay saved'); route(); });
-    const hp = $('#hpF');
-    if (hp) {
-      hp.onsubmit = e => { e.preventDefault(); go(`/club/${g.id}?tab=staff&from=${$('#hp-f').value}&to=${$('#hp-t').value}`); };
-      $('#hpCsv').onclick = () => csv(`${g.name} coach pay ${from} to ${to}.csv`, [['Coach', 'Classes', 'Hours', 'Rate', 'Per', 'Pay'], ...pay.map(p => [nm(p.s.profile_id), p.classes, fmtHrs(p.hrs), p.s.pay_rate ?? '', p.s.pay_type, p.owed.toFixed(2)])]);
-    }
+    const names = await people(staff.map(s => s.profile_id));
+    return staff.map(s => { const c = coached.filter(x => x.coach_id === s.profile_id && dayOf(x.starts_at, g.tz) >= from && dayOf(x.starts_at, g.tz) <= to); const hrs = c.reduce((t, x) => t + (Date.parse(x.ends_at) - Date.parse(x.starts_at)) / 36e5, 0);
+      return { s, name: names.get(s.profile_id) || 'Coach', classes: c.length, hrs, owed: num(s.pay_rate) * (s.pay_type === 'hour' ? hrs : c.length) }; }).sort((x, y) => y.classes - x.classes || x.name.localeCompare(y.name));
   }
+  const fmtHrs = h => (Math.round(h * 100) / 100).toString();
 
   /* =================================================================
      MEMBERS
