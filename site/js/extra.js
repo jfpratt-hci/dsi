@@ -154,8 +154,8 @@ export function install(X) {
     $$('.cpJump a').forEach(a => a.onclick = e => { e.preventDefault(); const t = document.querySelector(a.getAttribute('href')); if (t) t.scrollIntoView({ behavior: 'smooth' }); });
     bindBattles(battleId);
   };
-  VIEWS.season = (arg, tok) => VIEWS.compete(arg, tok);
-  VIEWS.battles = (id, tok) => VIEWS.compete(null, tok, id || 'top');
+  // The Compete page is off for now: its links land on the Board's monthly gains.
+  VIEWS.compete = VIEWS.season = VIEWS.battles = (_, tok) => { history.replaceState(null, '', '/boards#gains'); return VIEWS.boards(null, tok); };
 
   /* ---------- gym league ---------- */
   VIEWS.gyms = async (id, tok) => {

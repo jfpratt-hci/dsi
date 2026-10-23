@@ -106,7 +106,7 @@ function navGroups() {
     ...(me ? [] : [{ k: 'members', n: 'For members', href: '/members' }]),
   ];
   // Signed in: four plain pages, no drop downs. Board, Train, Get better, Compete.
-  if (me) g.push({ k: 'boards', n: 'Board', href: '/boards' }, { k: 'train', n: 'Train', href: '/train' }, { k: 'better', n: 'Get better', href: '/better' }, { k: 'compete', n: 'Compete', href: '/compete' });
+  if (me) g.push({ k: 'boards', n: 'Board', href: '/boards' }, { k: 'train', n: 'Train', href: '/train' }, { k: 'better', n: 'Get better', href: '/better' });
   const gyms = S.myGyms || [];
   const offItems = (x, keys) => OFFICE.filter(o => keys.includes(o[0]) && (!o[3] || x.role === 'owner' || (S.me && S.me.role === 'admin'))).map(([k, n, d]) => [officeHref(x.gym_id, k), n, d]);
   if (gyms.length === 1) { const x = gyms[0], nm = x.gym.name || 'Gym';
@@ -119,7 +119,7 @@ const ROUTE_GROUP = { '': 'home', pricing: 'home', start: 'home', grow: 'home', 
   boards: 'boards', prs: 'boards', pr: 'boards', gyms: 'boards', benchmarks: 'boards', protests: 'boards', u: 'boards',
   train: 'train', week: 'train', training: 'train', log: 'train', lift: 'train', classes: 'train', tracker: 'train',
   better: 'better', progress: 'better', plans: 'better', coach: 'better',
-  compete: 'compete', season: 'compete', battles: 'compete', recap: 'compete',
+  compete: 'boards', season: 'boards', battles: 'boards', recap: 'me',
   mygym: 'me', billing: 'me', sign: 'me', signed: 'me', shop: 'me', me: 'me', security: 'me', pro: 'me', rules: 'me', blocked: 'me',
   club: 'office', insights: 'office', website: 'office', sell: 'office', growth: 'office', follow: 'office', dandytv: 'office', class: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office',
   admin: 'admin', reports: 'admin', program: 'admin', connect: 'admin', import: 'admin' };
@@ -254,7 +254,7 @@ VIEWS.boards = async (_, tok) => {
       <img class="logo" src="/assets/logo.svg" alt="Dandy Strength Index" width="760" height="240">
       <h1 class="vh">Dandy Strength Index™</h1>
       <p class="tag">Your bench, squat, deadlift and clean scored against lifters your age and bodyweight. 500 is the median. Every PR moves the board.</p>
-      <div class="cta">${S.me ? '<a class="btn" href="/train">Train today</a><a class="btn ghost" href="/compete">Compete</a>' : '<a class="btn" href="/join">Join the index</a><a class="btn ghost" href="/week">This week</a>'}</div>
+      <div class="cta">${S.me ? '<a class="btn" href="/train">Train today</a><a class="btn ghost" href="#gains">Monthly gains</a>' : '<a class="btn" href="/join">Join the index</a><a class="btn ghost" href="/week">This week</a>'}</div>
     </div>
     <div class="kpi" aria-label="Index stats">
       <div><b>${board.length}</b><span>Lifters</span></div>
@@ -851,7 +851,7 @@ VIEWS.me = async (_, tok) => {
     ${first ? '' : `<section class="sec band"><div class="secHead"><div><div class="kicker">DSI Pro</div><h2>Train with a <span>plan</span></h2></div>${pro ? '<span class="pill up" style="margin:0">Pro active</span>' : '<a class="btn sm" href="/pro">See Pro</a>'}</div>
       <div class="tools">${tile('/better', 'Get better', 'Progress charts, goal plans and your coach on one page.', 1)}${tile('/recap/' + new Date().getFullYear(), 'Year recap', 'Your year in PRs and pounds, ready to share.', 1)}${tile('/battles', 'Weekly battles', 'Call out a lifter for a week.', 1)}</div></section>
     <section class="sec"><div class="secHead"><div><div class="kicker">Compete and grow</div><h2>More to <span>do</span></h2></div><button class="btn sm" data-invite>Invite your crew</button></div>
-      <div class="tools">${tile('/compete', 'Compete', 'The season and weekly battles.', 1)}${tile('/benchmarks', 'Benchmarks', 'Fran, the 2K row and class benchmarks.')}</div></section>
+      <div class="tools">${tile('/benchmarks', 'Benchmarks', 'Fran, the 2K row and class benchmarks.')}</div></section>
     <section class="sec"><div><div class="kicker">Reminders</div><h2>Your <span>reminders</span></h2><p class="secSub">These go to your phone through the DSI app. Turn notifications on in the app once and these settings follow you.</p></div>
       <form class="formCard" id="nf"><div class="fields">
         <div class="field w2"><span class="lbl">Send me</span>

@@ -1873,3 +1873,34 @@ a.g{text-decoration:none;color:inherit}
   .cb b{font-size:12px}.cbS{font-size:10px}
   .cb button{font-size:10px;padding:5px 0}
 }
+
+/* class buttons: same size as the day buttons, the whole button reserves or cancels */
+.calList{grid-auto-rows:auto!important;gap:6px!important}
+.cal .cb{all:unset;box-sizing:border-box;display:grid;justify-items:center;align-content:center;gap:2px;height:66px;padding:6px 4px;border-radius:8px;background:var(--panel);border:1px solid var(--line);text-align:center;cursor:pointer;min-width:0;overflow:hidden;transition:background .15s,border-color .15s}
+.cal .cb b{font:700 15px/1.05 var(--mono);color:var(--ink);white-space:nowrap}
+.cal .cbN{font:700 10px/1.1 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal .cbS{font:700 10px/1.1 var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal .cb.open{border-color:var(--accent)}
+.cal .cb.open .cbS{color:var(--accent)}
+.cal .cb.open:hover{background:var(--accent)}.cal .cb.open:hover *{color:#141414}
+.cal .cb.full:hover{border-color:var(--flat)}
+.cal .cb.mine,.cal .cb.in{background:color-mix(in srgb,var(--up) 18%,var(--panel));border-color:var(--up)}
+.cal .cb.mine .cbS,.cal .cb.in .cbS{color:var(--up)}
+.cal .cb.wait{border-color:var(--flat)}.cal .cb.wait .cbS{color:var(--flat)}
+.cal .cb.mine:hover,.cal .cb.wait:hover{border-color:var(--down)}
+.cal .cb.ask{background:color-mix(in srgb,var(--down) 18%,var(--panel));border-color:var(--down)}
+.cal .cb.ask .cbS{color:var(--down);font-size:0}.cal .cb.ask .cbS::after{content:"Tap to cancel";font-size:10px}
+.cal .cb.done,.cal .cb.off,.cal .cb:disabled{cursor:default}
+.cal .cb.done{opacity:.5}.cal .cb.off{opacity:.5}.cal .cb.off b{text-decoration:line-through}
+.cal .cb.open:disabled{border-color:var(--line);opacity:.6}.cal .cb.open:disabled:hover{background:var(--panel)}.cal .cb.open:disabled:hover *{color:inherit}
+.cal .cb.busy{opacity:.6}
+.cal .cb:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+@media (max-width:700px){
+  .cal .cb{height:54px;padding:4px 2px}
+  .cal .cb b{font-size:12px}.cal .cbN{display:none}
+  .cal .cb.ask .cbS::after{content:"Cancel?";font-size:9px}
+  .calDay{min-height:54px}
+}
+.calDay{height:60px;box-sizing:border-box;align-content:center}
+.cal .cb{height:60px}
+@media (max-width:700px){.calDay,.cal .cb{height:54px}}

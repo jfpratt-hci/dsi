@@ -3,7 +3,7 @@
 // app.js calls install(ctx) after the other views exist and before the members only wrapping.
 
 export function install(X) {
-  const { sb, D, S, VIEWS, $, $$, esc, fmtD, addDays, monday, today, toast, must, needLogin, loadBoard, loadPeople, nameOf, boardRow, boardBar, inGym } = X;
+  const { sb, D, S, VIEWS, $, $$, esc, fmtD, addDays, monday, today, toast, must, needLogin, loadBoard, loadPeople, nameOf, boardRow, boardBar, inGym, fmt } = X;
   const main = () => $('#main');
   const fmtS = s => { s = Math.round(+s || 0); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, '0'); return h ? `${h}:${String(m).padStart(2, '0')}:${x}` : `${m}:${x}`; };
   const parseS = v => { v = String(v || '').trim(); const m = v.match(/^(?:(\d+):)?(\d{1,2}):(\d{2})$/); return m ? (+(m[1] || 0)) * 3600 + +m[2] * 60 + +m[3] : NaN; };
@@ -56,6 +56,29 @@ export function install(X) {
     return VIEWS.boards(null, tok);
   };
 
+  /* ---------- DSI gains for the month: who moved their number the most ---------- */
+  // Points gained since the first of the month (or across last month). New lifters count from their first day, so joining is not a gain.
+  S.gmon = S.gmon || 'this';
+  const gainsSection = async (el, tok) => {
+    const by = await X.compete.allEntries();
+    if (tok !== S.tok || !el.isConnected) return;
+    const draw = () => {
+      const t = today(), first = t.slice(0, 8) + '01', lastFirst = addDays(first, -1).slice(0, 8) + '01';
+      const [from, to] = S.gmon === 'this' ? [first, t] : [lastFirst, addDays(first, -1)];
+      const mname = new Date(from + 'T12:00:00').toLocaleDateString('en-US', { month: 'long' });
+      const rows = S.board.map(r => ({ r, g: X.compete.gainIn(by.get(r.profile_id) || [], r, from, to) })).filter(x => x.g.pts > 0 || x.g.lb > 0)
+        .sort((a, b) => b.g.pts - a.g.pts || b.g.lb - a.g.lb);
+      el.innerHTML = `<div class="secHead"><div><div class="kicker">${esc(mname)} · ${S.gmon === 'this' ? `through ${fmtD(t)}` : 'final'}</div><h2 id="gnh">DSI <span>gains</span></h2>
+          <p class="secSub">Who moved their DSI the most this month. Every PR on the four lifts counts.</p></div>
+          <div class="chips">${[['this', 'This month'], ['last', 'Last month']].map(([v, n]) => `<button class="chip" data-gmon="${v}" aria-pressed="${S.gmon === v}">${n}</button>`).join('')}</div></div>
+        <div class="board"><div class="tablewrap"><table class="lb"><thead><tr><th>#</th><th>Lifter</th><th class="r hl">Points</th><th class="r">DSI</th><th class="r">Lb added</th><th class="r">PRs</th></tr></thead><tbody>
+        ${rows.map((x, i) => `<tr class="${S.me && S.me.id === x.r.profile_id ? 'me' : ''}"><td class="pos">${i + 1}</td><td><div class="who"><a href="/u/${x.r.profile_id}">${esc(x.r.name)}</a></div></td><td class="r n big">+${x.g.pts}</td><td class="r n">${x.g.start} → ${x.g.end}</td><td class="r n">+${fmt(x.g.lb)}</td><td class="r n">${x.g.prs}</td></tr>`).join('') || `<tr><td colspan="6" class="empty">Nobody has gained yet ${S.gmon === 'this' ? 'this month. Hit a PR and take the lead.' : 'last month.'}</td></tr>`}
+        </tbody></table></div></div>`;
+      $$('[data-gmon]', el).forEach(b => b.onclick = () => { S.gmon = b.dataset.gmon; draw(); });
+    };
+    draw();
+  };
+
   /* ---------- the Board: benchmark PRs join the week's PRs, benchmarks fill the second board ---------- */
   const board = VIEWS.boards;
   VIEWS.boards = async (a, tok) => {
@@ -69,7 +92,10 @@ export function install(X) {
     if (tok !== S.tok) return;
     const g = $('#wkGrid');
     if (g && feed.length) { if (!g.querySelector('.prGrid')) g.innerHTML = '<div class="prGrid"></div>'; g.querySelector('.prGrid').insertAdjacentHTML('beforeend', feed.map(benchPrCard).join('')); }
-    if (location.hash === '#bench') $('#bench').scrollIntoView({ block: 'start' });
+    const bs = $('#bench');
+    if (bs) { bs.insertAdjacentHTML('afterend', '<section class="sec" id="gains" aria-labelledby="gnh"><div id="gainsSec"><p class="empty">Adding up this month…</p></div></section>'); await gainsSection($('#gainsSec'), tok); }
+    if (tok !== S.tok) return;
+    if (location.hash === '#bench' || location.hash === '#gains') { const t = $(location.hash); if (t) t.scrollIntoView({ block: 'start' }); }
   };
 
   /* ---------- log a benchmark time (on Train, and under Log a lift) ---------- */
