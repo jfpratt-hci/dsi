@@ -12,7 +12,7 @@ export function install(X) {
   const { sb, S, VIEWS, $, esc, fmt, paint, go } = X;
 
   const TIERS = [
-    { k: 'run', n: 'Run', p: 249, who: 'Everything to run the gym', line: 'Booking, billing on your Stripe, waivers, staff, Dandy TV, DI programming, the DSI and the Growth game.' },
+    { k: 'run', n: 'Run', p: 249, who: 'Everything to run the gym', line: 'Booking, billing on your Stripe, waivers, coaches, Dandy TV, DI programming, the DSI and the Growth game.' },
     { k: 'grow', n: 'Grow', p: 499, who: 'Run, plus a website that sells', line: 'A new website built and run by us, lead texting, your store and events online, and DSI Pro for every Unlimited member.' },
   ];
   X.TIERS = TIERS;
@@ -159,7 +159,7 @@ export function install(X) {
   const planCards = (cta = true) => `<div class="dmPlans">${TIERS.map(t => `<article class="plCard${t.k === 'grow' ? ' dmPick' : ''}">${t.k === 'grow' ? '<span class="dmBadge">Most growth</span>' : ''}<b class="plName">${t.n}</b><span class="hmAmt">$${t.p}<small>/mo</small></span><span class="hmWho2">${esc(t.who)}</span>
       <ul class="plList">${CARD[t.k].map(x => `<li>${esc(x)}</li>`).join('')}</ul>${cta ? `<a class="btn${t.k === 'grow' ? '' : ' ghost'}" href="/start?tier=${t.k}">Book a setup call</a>` : ''}</article>`).join('')}</div>`;
   const CARD = {
-    run: ['Class booking, check in and attendance', 'Billing and autopay on your own Stripe', 'Waivers and contracts signed online', 'Staff, coach swaps, hours and pay', 'Dandy TV for the class and the lobby', 'Workouts in Parts A to D, each with Beginner, Rx and Comp', 'Every member\'s target, set by DI', 'Dandy Plan DI programming', 'The DSI, the member app and the Growth game', 'Month to month'],
+    run: ['Class booking, check in and attendance', 'Billing and autopay on your own Stripe', 'Waivers and contracts signed online', 'Coaches, class swaps, hours and pay', 'Dandy TV for the class and the lobby', 'Workouts in Parts A to D, each with Beginner, Rx and Comp', 'Every member\'s target, set by DI', 'Dandy Plan DI programming', 'The DSI, the member app and the Growth game', 'Month to month'],
     grow: ['Everything in Run', 'A new website, built and run by us, on your domain', 'A text us line and a lead inbox', 'Store, events and appointments on your site', 'Review requests after class', 'DSI Pro for every Unlimited member', 'A growth plan we set with you each season', '2 month minimum, no setup fee'],
   };
   const endCta = (h = 'See what Dandy can do for your gym', p = 'Book a 20 minute setup call. We look at your gym with you and show you the plan.') => `<section class="sec plEnd"><div><h2 class="hmH2">${h}</h2><p class="hmSideSub">${p}</p></div><div class="row"><a class="btn" href="/start">Book a setup call</a><a class="btn ghost" href="/tour">Tour the sample gym</a></div></section>`;
@@ -316,7 +316,7 @@ export function install(X) {
 
   /* ---------- pricing ---------- */
   const ROWS = [
-    ['Running the gym', [['Class schedule, booking, check in and attendance', 'y', 'y'], ['Billing, invoices and autopay on your own Stripe', 'y', 'y'], ['Waivers and membership contracts signed online', 'y', 'y'], ['Staff, coach swaps, hours and pay', 'y', 'y'], ['Front desk store for drinks, snacks and gear', 'y', 'y']]],
+    ['Running the gym', [['Class schedule, booking, check in and attendance', 'y', 'y'], ['Billing, invoices and autopay on your own Stripe', 'y', 'y'], ['Waivers and membership contracts signed online', 'y', 'y'], ['Coaches, class swaps, hours and pay', 'y', 'y'], ['Front desk store for drinks, snacks and gear', 'y', 'y']]],
     ['The floor', [['Workouts in Parts A to D with every member\'s target', 'y', 'y'], ['Dandy Plan DI programming', 'y', 'y'], ['Dandy TV for the class and the lobby', 'y', 'y'], ['Log a class: coaches type weights live', 'y', 'y']]],
     ['Members', [['The DSI, boards and the member app', 'y', 'y'], ['DSI Pro', '$4 a member', 'Included for Unlimited members']]],
     ['Growth', [['Growth game and Insights', 'y', 'y'], ['New website, built and run by us', '', 'y'], ['Text us line and lead inbox', '', 'y'], ['Store, events and appointments on your website', '', 'y'], ['Review requests after class', '', 'y'], ['A growth plan we set with you each season', '', 'y']]],

@@ -163,7 +163,7 @@ export function install(X) {
 
     const dues = $('#inDues'); if (dues) dues.onsubmit = async e => { e.preventDefault(); const v = Math.round(num($('#inDuesV').value) * 100) || null; const { error } = await sb.from('gym_insight_settings').upsert({ gym_id: gid, avg_dues_cents: v, exclude_names: d.set.exclude_names || [], updated_at: new Date().toISOString() }); if (error) return toast(error.message); toast('Saved'); VIEWS.insights(gid, S.tok); };
     const setB = $('#inSet'); if (setB) setB.onclick = () => {
-      $('#inPanel').innerHTML = `<form class="formCard" id="inSetF"><h3 class="inH">Leave these people out of member counts</h3><p class="hint">Coaches, staff and kids class. One name per line, as it appears in your attendance.</p>
+      $('#inPanel').innerHTML = `<form class="formCard" id="inSetF"><h3 class="inH">Leave these people out of member counts</h3><p class="hint">Coaches and kids class. One name per line, as it appears in your attendance.</p>
         <textarea id="inEx" rows="6">${esc((d.set.exclude_names || []).join('\n'))}</textarea><div class="row"><button class="btn sm">Save</button></div></form>`;
       $('#inSetF').onsubmit = async e => { e.preventDefault(); const ex = $('#inEx').value.split('\n').map(s => s.trim()).filter(Boolean); const { error } = await sb.from('gym_insight_settings').upsert({ gym_id: gid, exclude_names: ex, avg_dues_cents: d.set.avg_dues_cents, updated_at: new Date().toISOString() }); if (error) return toast(error.message); toast('Saved'); VIEWS.insights(gid, S.tok); };
       $('#inPanel').scrollIntoView({ behavior: 'smooth' });

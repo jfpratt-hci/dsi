@@ -213,7 +213,7 @@ export function install(X) {
      STAFF: the gym office
      ================================================================= */
   const PRO_SEAT_CENTS = 400;
-  const TABS = [['today', 'Check in'], ['schedule', 'Schedule'], ['members', 'Members'], ['billing', 'Billing', 1], ['docs', 'Waivers and contracts', 1], ['staff', 'Staff']];
+  const TABS = [['today', 'Check in'], ['schedule', 'Schedule'], ['members', 'Members'], ['billing', 'Billing', 1], ['docs', 'Waivers and contracts', 1], ['staff', 'Coaches']];
   // One tab bar across every gym office page: check in, schedule, workouts, results, members, billing, documents, staff, settings.
   function officeBar(g, active) {
     const owner = isOwner(g.id);
@@ -226,7 +226,7 @@ export function install(X) {
 
   VIEWS.club = async (gid, tok) => {
     if (!S.me) return needLogin(tok, 'run your gym');
-    if (!isCoach(gid)) return paint(tok, '<section class="prEmpty"><b>Gym staff only</b><p>Owners and coaches run the gym office.</p></section>');
+    if (!isCoach(gid)) return paint(tok, '<section class="prEmpty"><b>Owners and coaches only</b><p>Owners and coaches run the gym office.</p></section>');
     const g = await gymById(gid);
     if (!g) throw new Error('No gym here.');
     const owner = isOwner(gid);
@@ -364,7 +364,7 @@ export function install(X) {
   /* ----- Members ----- */
   // Owners and Dandy admins add a member or a staff member. With a login already, they are linked now;
   // otherwise their profile waits and is theirs the first time they sign in with that email.
-  const addPersonForm = (g, role) => `<details class="formCard apWrap"${location.hash === '#add' ? ' open' : ''}><summary>Add a ${role === 'member' ? 'member' : 'staff member'}</summary>
+  const addPersonForm = (g, role) => `<details class="formCard apWrap"${location.hash === '#add' ? ' open' : ''}><summary>Add a ${role === 'member' ? 'member' : 'coach'}</summary>
     <form class="apF" data-ap><div class="fields">
       <div class="field w2"><label>Name</label><input data-k="name" maxlength="60" required placeholder="First and last name" autocomplete="off"></div>
       <div class="field w2"><label>Email</label><input data-k="email" type="email" required placeholder="They sign in with this" autocomplete="off"></div>
@@ -760,7 +760,7 @@ export function install(X) {
           ${upcoming.length ? `<p class="sub">Coming up: ${upcoming.slice(0, 3).map(a => `${esc(a.session.name)} ${esc(when(a.session.starts_at))}${a.status === 'waitlist' ? ' (waitlist)' : ''}`).join(' · ')}</p>` : ''}
           <ol class="mdAtt">${visits.slice(0, 20).map(a => `<li>${esc(a.session ? a.session.name : 'Class')} <span class="sub">${a.session ? esc(when(a.session.starts_at)) : ''}</span></li>`).join('') || '<li class="hint">No visits yet. Coaches check you in at class.</li>'}</ol>
         </div>
-        <form class="formCard" id="mdF"><div class="formH">Your details <span class="sub">Only you and ${esc(g.name)} staff see these.</span></div><div class="fields">
+        <form class="formCard" id="mdF"><div class="formH">Your details <span class="sub">Only you and ${esc(g.name)} coaches see these.</span></div><div class="fields">
           <div class="field w2"><label for="md-n">Legal name</label><input id="md-n" maxlength="120" value="${esc(det ? det.legal_name || '' : '')}"></div>
           <div class="field w2"><label for="md-e">Email</label><input id="md-e" type="email" maxlength="160" value="${esc(det ? det.email || '' : '')}"></div>
           <div class="field w2"><label for="md-p">Phone</label><input id="md-p" type="tel" maxlength="40" value="${esc(det ? det.phone || '' : '')}"></div>

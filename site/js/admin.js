@@ -151,7 +151,7 @@ export function install(X) {
         const [g, p] = b.dataset.rms.split('|');
         const { error } = await sb.from('gym_staff').delete().eq('gym_id', g).eq('profile_id', p);
         if (error) return toast(error.message);
-        toast('Removed from the gym staff'); route();
+        toast('Removed from the gym coaches'); route();
       });
       $('#ng').onsubmit = async e => {
         e.preventDefault();

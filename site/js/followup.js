@@ -43,7 +43,7 @@ export function install(X) {
   VIEWS.follow = async (gid, tok) => {
     if (!S.me) return needLogin(tok, 'follow up with leads and members');
     if (!gid && (S.myGyms || []).length) return go('/follow/' + S.myGyms[0].gym_id, true);
-    if (!works(gid)) return paint(tok, '<section class="prEmpty"><b>Staff only</b><p>Gym owners and coaches follow up here.</p></section>');
+    if (!works(gid)) return paint(tok, '<section class="prEmpty"><b>Owners and coaches only</b><p>Gym owners and coaches follow up here.</p></section>');
     const qs = new URLSearchParams(location.search), tab = qs.get('t') || 'inbox', pick = qs.get('lead');
     const [g, lineR, leadsR, rulesR, outR, memR] = await Promise.all([
       sb.from('gyms').select('*').eq('id', gid).maybeSingle().then(must),
