@@ -1796,3 +1796,37 @@ a.g{text-decoration:none;color:inherit}
 .bbNamed{margin:14px 0 0;font-size:14px;color:var(--muted)}
 .bbNamed a{color:var(--ink)}
 #bench{scroll-margin-top:72px}
+
+/* Train: week strip on top, then the day's classes, then the workout and your numbers, same width */
+.trHead .secHead{margin-bottom:12px}
+.trWeek{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;gap:8px;align-items:stretch}
+.trArr{display:grid;place-items:center;background:var(--panel);border:1px solid var(--line);border-radius:6px;color:var(--ink);font:700 26px/1 var(--sans);text-decoration:none}
+.trArr:hover{border-color:var(--accent)}
+.trBook .clRow.mine{border-color:var(--up)}
+.wkBody{grid-template-columns:minmax(0,1fr)!important}
+.wkEmbed{padding-bottom:0}
+.wkEmbed .secHead{margin-bottom:8px}
+/* numbers: rows that fit the box, no sideways scroll */
+.wkRows{display:grid}
+.wkRH,.wkR{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) 132px 132px;gap:14px;align-items:center}
+.wkRH{padding:0 0 8px;border-bottom:1px solid var(--line);font:700 11px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.wkRH span:nth-child(n+3){text-align:right}
+.wkR{padding:12px 0;border-bottom:1px solid var(--line)}
+.wkRN{min-width:0}.wkRN b{display:block;overflow-wrap:anywhere}
+.wkRS{font:600 15px var(--mono);color:var(--ink);overflow-wrap:anywhere}
+.wkRY{display:grid;justify-items:end;gap:2px}
+.wkR .wkIn{width:100%;box-sizing:border-box}
+.wkG{display:grid;justify-items:end;gap:3px}
+.wkG small{font:600 11px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.wkGoal{color:var(--accent)}
+.wkGoal::placeholder{color:var(--accent);opacity:.75}
+.wkG.own .wkGoal{border-color:var(--accent)}
+.wkG.own small{color:var(--accent)}
+@media (max-width:640px){
+  .wkRH{display:none}
+  .wkR{grid-template-columns:minmax(0,1fr) minmax(0,1fr);row-gap:8px}
+  .wkRN{grid-column:1/-1}.wkRS{grid-column:1/-1;font-size:14px}
+  .wkG,.wkRY{justify-items:stretch}
+  .wkG small::before{content:"Goal · "}
+}
+.tvGoal.own{color:var(--accent)}

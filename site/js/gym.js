@@ -780,14 +780,14 @@ export function install(X) {
       if (!its.length) return `<div class="tvFTargets tvGoals">${head}<p class="tvGoalsNone">Nothing to log on this part.</p></div>`;
       const cols = `minmax(0,1fr)${l ? ' 5.4cqw' : ''}${its.map(() => ' 7.2cqw').join('')}`;
       const rows = members.map(m => {
-        const ent = ((logOfM(m.id) || {}).entries) || {}, t = l ? D.target(l, st.rowOf(m)) : 0, lv = ((S.people && S.people.get(m.id)) || m).level || null;
+        const lg = logOfM(m.id) || {}, ent = lg.entries || {}, own = l ? num((lg.goals || {})[l.id]) : 0, t = l ? own || D.target(l, st.rowOf(m)) : 0, lv = ((S.people && S.people.get(m.id)) || m).level || null;
         const res = its.map(it => {
           const v = ent[it.key], shown = it.kind === 't' ? fmtT(v) : num(v) ? fmt(num(v)) : '';
           const cls2 = it.kind === 'w' && num(v) ? (t && num(v) >= t ? ' hit' : ' did') : shown ? ' did' : '';
           return ed ? `<input class="tvRes${cls2}" data-rp="${m.id}" data-rk="${esc(it.key)}" data-kind="${it.kind}" value="${esc(shown)}" inputmode="${it.kind === 'w' ? 'decimal' : 'numeric'}" placeholder="${it.kind === 't' ? 'm:ss' : it.kind === 'r' ? 'reps' : '·'}" aria-label="${esc(m.display_name + ' ' + it.label)}" autocomplete="off">`
             : `<b class="tvResV${cls2}">${shown || '·'}</b>`;
         }).join('');
-        return `<li style="grid-template-columns:${cols}"><span>${lv ? `<em class="tvLvC lv-${lv}">${LVC[lv]}</em>` : ''}${esc(m.display_name)}</span>${l ? `<b class="tvGoal">${t || '·'}</b>` : ''}${res}</li>`;
+        return `<li style="grid-template-columns:${cols}"><span>${lv ? `<em class="tvLvC lv-${lv}">${LVC[lv]}</em>` : ''}${esc(m.display_name)}</span>${l ? `<b class="tvGoal${own ? ' own' : ''}"${own ? ' title="Their own goal"' : ''}>${t || '·'}</b>` : ''}${res}</li>`;
       }).join('');
       const labs = its.map(it => `<span>${it.kind === 'w' ? `Did${unit ? ' ' + esc(unit) : ''}` : it.kind === 't' ? 'Time' : 'Reps'}</span>`).join('');
       return `<div class="tvFTargets tvGoals">${head}
@@ -813,7 +813,7 @@ export function install(X) {
       inp.classList.remove('saving');
       if (error) { inp.classList.add('bad'); inp.title = error.message; toast(error.message); return; }
       st.logs = (st.logs || []).filter(x => x.profile_id !== pid).concat([data]);
-      const t = kind === 'w' && st.w.lifts ? D.target((st.w.lifts || []).find(x => x.id === k) || null, st.rowOf(st.members.find(m => m.id === pid) || { id: pid })) : 0, x = num(entries[k]);
+      const t = kind === 'w' && st.w.lifts ? num(((logOfM(pid) || {}).goals || {})[k]) || D.target((st.w.lifts || []).find(x => x.id === k) || null, st.rowOf(st.members.find(m => m.id === pid) || { id: pid })) : 0, x = num(entries[k]);
       inp.classList.toggle('hit', kind === 'w' && !!x && !!t && x >= t); inp.classList.toggle('did', !!v && !(kind === 'w' && t && x >= t));
       if (kind === 't' && x) inp.value = fmtT(x);
       inp.classList.add('saved'); setTimeout(() => inp.classList.remove('saved'), 1200);

@@ -363,23 +363,20 @@ async function composePage(tok, head, parts, fix) {
 }
 const jump = list => `<nav class="tabs cmpJump" aria-label="On this page">${list.map(([id, n]) => `<a class="tab" href="#${id}">${esc(n)}</a>`).join('')}</nav>`;
 
-/* ---------- Train: schedule, booking, the workout, your results, your own training, benchmark times ---------- */
+/* ---------- Train: the week on top; each day shows its classes (one tap to reserve) and its workout ---------- */
 VIEWS.train = async (_, tok) => {
   if (!S.me) return needLogin(tok, 'train');
-  const day = new URLSearchParams(location.search).get('day') || today(), gym = !!S.me.gym_id;
-  const parts = [
-    ...(gym ? [['book', 'Classes', () => VIEWS.classes(null, tok)]] : []),
-    ['workout', 'The workout', () => VIEWS.week(day, tok)],
+  const q = new URLSearchParams(location.search), day = /^\d{4}-\d{2}-\d{2}$/.test(q.get('day') || '') ? q.get('day') : today(), gym = !!S.me.gym_id;
+  const wk = monday(day), tdy = today(), days = [...Array(7)].map((_, i) => addDays(wk, i));
+  const strip = `<div class="trWeek"><a class="trArr" href="/train?day=${addDays(wk, -7)}" aria-label="Last week">‹</a>
+    <nav class="wkDays" aria-label="Days">${days.map(d => `<a class="wd${d === day ? ' on' : ''}${d === tdy ? ' today' : ''}" href="/train?day=${d}"${d === day ? ' aria-current="date"' : ''}><span>${pd(d).toLocaleDateString('en-US', { weekday: 'short' })}</span><b>${pd(d).getDate()}</b></a>`).join('')}</nav>
+    <a class="trArr" href="/train?day=${addDays(wk, 7)}" aria-label="Next week">›</a></div>`;
+  await composePage(tok, `<section class="sec cmpHead trHead"><div class="secHead"><div><div class="kicker">Week of ${esc(fmtD(wk))}${wk !== monday(tdy) ? ` · <a href="/train">Back to today</a>` : ''}</div><h2>Train</h2></div></div>${strip}</section>`, [
+    ...(gym ? [['book', 'Classes', () => CTX.classDay(day, tok)]] : []),
+    ['workout', 'The workout', () => VIEWS.week(day, tok, { embed: true })],
     ['mine', 'Your training', () => VIEWS.training('', tok)],
     ['bench', 'Benchmarks', () => CTX.benchForm(tok)],
-  ];
-  await composePage(tok, `<section class="sec cmpHead"><div class="kicker">${esc(fmtD(day))}</div><h2>Train</h2>
-      <p class="secSub">Book a class, see the workout, post your results, and log your own sessions and benchmark times. All here.</p>
-      ${jump([...(gym ? [['book', 'Book a class']] : []), ['workout', 'Workout and results'], ['mine', 'Your training'], ['bench', 'Benchmarks']])}</section>`, parts, () => {
-    // Day pickers stay on this page: /classes?day= and /week/<day> become /train?day=
-    $$('a[href^="/classes?day="]', main).forEach(a => { a.setAttribute('href', '/train?day=' + a.getAttribute('href').split('day=')[1] + '#book'); });
-    $$('a[href^="/week/"]', main).forEach(a => { const d = a.getAttribute('href').slice(6, 16); if (/^\d{4}-\d{2}-\d{2}$/.test(d)) a.setAttribute('href', '/train?day=' + d + '#workout'); });
-  });
+  ]);
 };
 
 /* ---------- Get better: progress, goal plans, coach ---------- */
@@ -517,7 +514,7 @@ VIEWS.log = async (_, tok) => {
 const canEdit = w => w ? (w.gym_id ? isStaff() || S.myGyms.some(g => g.gym_id === w.gym_id) : isStaff()) : false;
 const P = () => CTX.parts;
 const X_LVN = { beginner: 'Beginner', rx: 'Rx', comp: 'Comp' };
-VIEWS.week = async (day, tok) => {
+VIEWS.week = async (day, tok, opt = {}) => {
   const sel = /^\d{4}-\d{2}-\d{2}$/.test(day || '') ? day : today();
   const start = monday(sel), end = addDays(start, 6);
   const myGym = S.me && S.me.gym_id;
@@ -526,8 +523,8 @@ VIEWS.week = async (day, tok) => {
   const [board, wres, gres] = await Promise.all([loadBoard(), wq, myGym ? sb.from('gyms').select('id,name').eq('id', myGym).maybeSingle() : Promise.resolve({ data: null })]);
   const allW = must(wres), gym = gres.data;
   const hasGym = !!(myGym && allW.some(x => x.gym_id === myGym));
-  const src = !hasGym || new URLSearchParams(location.search).get('src') === 'dsi' ? 'dsi' : 'gym';
-  const qs = src === 'dsi' && hasGym ? '?src=dsi' : '';
+  // A gym member sees their gym's programming; anyone without a gym workout sees the DSI programming.
+  const src = hasGym ? 'gym' : 'dsi', qs = '';
   const wks = allW.filter(x => src === 'gym' ? x.gym_id === myGym : !x.gym_id);
   const ids = wks.map(w => w.id);
   const logs = ids.length ? must(await sb.from('workout_logs').select('*').in('workout_id', ids)) : [];
@@ -538,11 +535,11 @@ VIEWS.week = async (day, tok) => {
   const w = wks.find(x => x.day === sel);
   const myX = S.me ? Object.fromEntries((((await sb.from('lift_bests').select('lift,weight_lb').eq('profile_id', S.me.id).in('lift', D.EXTRA_LIFTS.map(x => x[0]))).data) || []).map(r => [r.lift, +r.weight_lb])) : {};
   const meRow = S.me ? { ...(boardRow(S.me.id) || { bw: num(S.me.bodyweight), sex: S.me.sex, bench: 0, squat: 0, dead: 0, clean: 0 }), ...myX } : null;
-  const myLog = S.me && w ? logs.find(l => l.workout_id === w.id && l.profile_id === S.me.id) : null;
+  let myLog = S.me && w ? logs.find(l => l.workout_id === w.id && l.profile_id === S.me.id) : null;
   const tdy = today();
   const days = [...Array(7)].map((_, i) => addDays(start, i));
   const dayBtns = days.map(d => {
-    const has = wks.find(x => x.day === d), logged = S.me && has && logs.some(l => l.workout_id === has.id && l.profile_id === S.me.id);
+    const has = wks.find(x => x.day === d), logged = S.me && has && logs.some(l => l.workout_id === has.id && l.profile_id === S.me.id && (Object.keys(l.entries || {}).length || l.score));
     return `<a class="wd${d === sel ? ' on' : ''}${d === tdy ? ' today' : ''}" href="/week/${d}${qs}" ${d === sel ? 'aria-current="date"' : ''}><span>${pd(d).toLocaleDateString('en-US', { weekday: 'short' })}</span><b>${pd(d).getDate()}</b>${logged ? '<i title="Logged">✓</i>' : ''}</a>`;
   }).join('');
   let body = '';
@@ -564,23 +561,30 @@ VIEWS.week = async (day, tok) => {
         <div class="tablewrap"><table class="wkT"><thead><tr><th>${P().isParts(w) ? 'Part' : 'Lift'}</th><th>Scheme</th></tr></thead><tbody>${its.map(it => `<tr><td><b>${esc(it.label)}</b><div class="sub">${esc(it.lift ? it.lift.why : it.kind === 'r' ? 'Your total reps' : 'Your time')}</div></td><td class="n">${esc(it.sch)}</td></tr>`).join('')}</tbody></table></div>
         <p class="hint">DSI Pro turns every lift here into a target weight built from your own PRs, then lets you log what you did and rank on the day board.</p><a class="btn" href="/pro">See DSI Pro</a></div>`;
     else {
-      const ent = (myLog && myLog.entries) || {};
+      const ent = (myLog && myLog.entries) || {}, gl = (myLog && myLog.goals) || {};
+      // Goal: DI's number shows faded; type your own and it is your goal for this day (saved right away).
+      const goal = (key, di, kind) => { const own = gl[key] != null && gl[key] !== '' ? gl[key] : null, shown = own == null ? '' : kind === 't' ? P().fmtT(own) : fmt(num(own));
+        return `<div class="wkG${own != null ? ' own' : ''}"><input class="wkIn wkGoal" data-goal="${esc(key)}" data-kind="${kind}" inputmode="${kind === 't' ? 'numeric' : 'decimal'}" maxlength="8" value="${esc(shown)}" placeholder="${di ? esc(String(di)) : kind === 't' ? 'm:ss' : '·'}" aria-label="Your goal"><small data-gnote="${esc(key)}">${own != null ? (di ? `Yours · DI ${esc(String(di))}` : 'Your goal') : di ? 'DI goal' : 'Set a goal'}</small></div>`; };
+      const yours = (key, kind, val, ph, label) => `<input class="wkIn" ${kind === 'w' ? 'type="number" inputmode="decimal" step="any" min="0" max="1499"' : kind === 'r' ? 'type="number" inputmode="numeric" step="1" min="0" max="99999"' : 'inputmode="numeric" maxlength="8"'} data-id="${esc(key)}"${kind !== 'w' ? ` data-kind="${kind}"` : ''} value="${esc(val)}" placeholder="${esc(ph)}" aria-label="${esc(label)}">`;
       mine = `<form class="wkMine" id="wkF"><h3>${esc(S.me.display_name)}'s <span>numbers</span></h3>
-        <div class="tablewrap"><table class="wkT"><thead><tr><th>${P().isParts(w) ? 'Part' : 'Lift'}</th><th>Scheme</th><th class="r">Target</th><th class="r">${P().isParts(w) ? 'Yours' : 'Actual'}</th></tr></thead><tbody>
-        ${its.map(it => { if (it.kind === 'r') return `<tr><td><b>${esc(it.label)}</b><div class="sub">Total reps</div></td><td class="n"></td><td class="r tgt"></td><td class="r"><input class="wkIn" type="number" inputmode="numeric" step="1" min="0" max="99999" data-id="${esc(it.key)}" data-kind="r" value="${esc(ent[it.key] ?? '')}" placeholder="reps" aria-label="${esc(it.label)}"></td></tr>`;
-          if (it.kind === 't') return `<tr><td><b>${esc(it.label)}</b><div class="sub">Minutes and seconds</div></td><td class="n"></td><td class="r tgt"></td><td class="r"><input class="wkIn wkTime" inputmode="numeric" maxlength="8" data-id="${esc(it.key)}" data-kind="t" value="${esc(P().fmtT(ent[it.key]))}" placeholder="m:ss" aria-label="${esc(it.label)}"></td></tr>`;
-          const l = it.lift, t = D.target(l, meRow); return `<tr><td><b>${esc(it.label)}</b><div class="sub">${esc(l.why)}</div></td><td class="n">${esc(l.sch)}</td><td class="r tgt">${t ? t + ' ' + D.unit(l) : 'n/a'}</td><td class="r"><input class="wkIn" type="number" inputmode="numeric" step="any" min="0" max="1499" data-id="${esc(l.id)}" value="${esc(ent[l.id] ?? '')}" placeholder="${t || 'lb'}" aria-label="${esc(l.n)} weight used">${l.part ? '' : `<a class="setsLink" href="/lift/${w.id}/${encodeURIComponent(l.id)}">Sets${(myLog && myLog.sets && myLog.sets[l.id] && myLog.sets[l.id].length) ? ' · ' + myLog.sets[l.id].length : ''}</a>`}</td></tr>`; }).join('')}
-        ${w.score_label ? `<tr><td><b>${esc(w.score_label)}</b><div class="sub">${w.score_type === 'time' ? 'mm:ss' : 'Your score'}</div></td><td></td><td></td><td class="r"><input class="wkIn wkScore" type="text" maxlength="40" id="wkScore" value="${esc(myLog?.score || '')}" placeholder="${w.score_type === 'time' ? '12:34' : 'score'}" aria-label="${esc(w.score_label)}"></td></tr>` : ''}
-        </tbody></table></div>
-        <div class="row"><button class="btn" type="submit">${myLog ? 'Update log' : 'Log it'}</button><span class="hint" id="wkMsg">${myLog ? 'Logged. Update any time.' : 'Hit the targets, then log what you actually did.'}</span></div></form>`;
+        <div class="wkRows"><div class="wkRH"><span>${P().isParts(w) ? 'Part' : 'Lift'}</span><span>Scheme</span><span>Goal</span><span>Did</span></div>
+        ${its.map(it => {
+          if (it.kind === 'r') return `<div class="wkR"><div class="wkRN"><b>${esc(it.label)}</b><div class="sub">Total reps</div></div><div class="wkRS"></div>${goal(it.key, 0, 'r')}<div class="wkRY">${yours(it.key, 'r', ent[it.key] ?? '', 'reps', it.label)}</div></div>`;
+          if (it.kind === 't') return `<div class="wkR"><div class="wkRN"><b>${esc(it.label)}</b><div class="sub">Minutes and seconds</div></div><div class="wkRS"></div>${goal(it.key, 0, 't')}<div class="wkRY">${yours(it.key, 't', P().fmtT(ent[it.key]), 'm:ss', it.label)}</div></div>`;
+          const l = it.lift, t = D.target(l, meRow), u = D.unit(l);
+          return `<div class="wkR"><div class="wkRN"><b>${esc(it.label)}</b><div class="sub">${esc(l.why)}</div></div><div class="wkRS">${esc(l.sch)}</div>${goal(l.id, t ? t + (u !== 'lb' ? ' ' + u : '') : 0, 'w')}<div class="wkRY">${yours(l.id, 'w', ent[l.id] ?? '', t || u, l.n + ' weight used')}${l.part ? '' : `<a class="setsLink" href="/lift/${w.id}/${encodeURIComponent(l.id)}">Sets${(myLog && myLog.sets && myLog.sets[l.id] && myLog.sets[l.id].length) ? ' · ' + myLog.sets[l.id].length : ''}</a>`}</div></div>`; }).join('')}
+        ${w.score_label ? `<div class="wkR"><div class="wkRN"><b>${esc(w.score_label)}</b><div class="sub">${w.score_type === 'time' ? 'mm:ss' : 'Your score'}</div></div><div class="wkRS"></div><div></div><div class="wkRY"><input class="wkIn wkScore" type="text" maxlength="40" id="wkScore" value="${esc(myLog?.score || '')}" placeholder="${w.score_type === 'time' ? '12:34' : 'score'}" aria-label="${esc(w.score_label)}"></div></div>` : ''}
+        </div>
+        <div class="row"><button class="btn" type="submit">${myLog && (Object.keys(myLog.entries || {}).length || myLog.score) ? 'Update log' : 'Log it'}</button><span class="hint" id="wkMsg">${myLog && Object.keys(myLog.entries || {}).length ? 'Logged. Update any time.' : 'Set your goal or keep DI\'s, then log what you actually did.'}</span></div></form>`;
     }
     body = `<div class="wkBody">${prog}${mine}</div>${dayBoard(w, logs.filter(l => l.workout_id === w.id))}`;
   }
-  if (!paint(tok, `<section class="sec"><div class="wkNav"><div><div class="kicker">Week of ${esc(fmtD(start))}</div><h2>The <span>week</span></h2></div>
+  const extras = `${lvG ? `<details class="lvWrap"${(lvE.data || []).length ? ' open' : ''}><summary><span class="lvChip lv-${lvG.level}">${X_LVN[lvG.level]}</span> Your level · how to move up</summary>${P().levelCard(lvG, (lvE.data || [])[0])}</details>` : ''}
+    ${S.me && S.me.display_name && D.EXTRA_LIFTS.some(([k]) => !myX[k]) ? `<p class="wkAsk">${CTX.DI || 'DI'} is missing your ${D.EXTRA_LIFTS.filter(([k]) => !myX[k]).map(([, n]) => n.toLowerCase()).join(', ').replace(/, ([^,]*)$/, ' and $1')}. <a href="/me#maxes">Add them</a> and your class targets cover those lifts too.</p>` : ''}`;
+  if (!paint(tok, opt.embed ? `<section class="sec wkEmbed"><div class="secHead"><div><div class="kicker">${esc(fmtDW(sel))}</div><h2>The <span>workout</span></h2></div>${editTo ? `<div class="row"><a class="btn ghost sm" href="/wod/${editTo}?day=${sel}">Edit workouts</a></div>` : ''}</div>${extras}</section>
+    <section class="sec">${body}</section>` : `<section class="sec"><div class="wkNav"><div><div class="kicker">Week of ${esc(fmtD(start))}</div><h2>The <span>week</span></h2></div>
     <div class="row"><a class="btn ghost sm" href="/week/${addDays(start, -7)}${qs}">← Last week</a>${start !== monday(tdy) ? `<a class="btn ghost sm" href="/week/${tdy}${qs}">Today</a>` : ''}<a class="btn ghost sm" href="/week/${addDays(start, 7)}${qs}">Next week →</a>${editTo ? `<a class="btn sm" href="/wod/${editTo}?day=${sel}">Edit workouts</a><a class="btn ghost sm" href="/program${editTo !== 'dsi' ? '?gym=' + editTo : ''}">Import</a>` : ''}</div></div>
-    ${lvG ? `<details class="lvWrap"${(lvE.data || []).length ? ' open' : ''}><summary><span class="lvChip lv-${lvG.level}">${X_LVN[lvG.level]}</span> Your level · how to move up</summary>${P().levelCard(lvG, (lvE.data || [])[0])}</details>` : ''}
-    ${S.me && S.me.display_name && D.EXTRA_LIFTS.some(([k]) => !myX[k]) ? `<p class="wkAsk">${CTX.DI || 'DI'} is missing your ${D.EXTRA_LIFTS.filter(([k]) => !myX[k]).map(([, n]) => n.toLowerCase()).join(', ').replace(/, ([^,]*)$/, ' and $1')}. <a href="/me#maxes">Add them</a> and your class targets cover those lifts too.</p>` : ''}
-    ${hasGym ? `<div class="tabs" role="tablist" aria-label="Programming"><a class="tab" role="tab" href="/week/${sel}" aria-selected="${src === 'gym'}">${esc(gym ? gym.name : 'My gym')}</a><a class="tab" role="tab" href="/week/${sel}?src=dsi" aria-selected="${src === 'dsi'}">DSI week</a></div>` : ''}
+    ${extras}
     <nav class="wkDays" aria-label="Days">${dayBtns}</nav></section>
     <section class="sec">${body}</section>`)) return;
   bindActions(main, () => route());
@@ -592,6 +596,20 @@ VIEWS.week = async (day, tok) => {
     if (error) return toast(error.message);
     toast(v ? 'Saved as the ' + v + ' benchmark' : 'Benchmark removed'); route();
   };
+  $$('.wkGoal').forEach(i => i.onchange = async () => {
+    const k = i.dataset.goal, kind = i.dataset.kind, v = i.value.trim(), note = $(`[data-gnote="${k}"]`), di = i.placeholder;
+    const goals = { ...((myLog && myLog.goals) || {}) };
+    if (!v) delete goals[k];
+    else { const x = kind === 't' ? P().parseT(v) : Math.max(0, Math.min(kind === 'r' ? 99999 : 1499, Math.round(+v * 2) / 2 || 0)); if (!(x > 0)) { note.textContent = kind === 't' ? 'Use m:ss, like 8:45' : 'Type a number'; return; } goals[k] = x; }
+    const { data, error } = await sb.from('workout_logs').upsert({ workout_id: w.id, profile_id: S.me.id, goals }, { onConflict: 'workout_id,profile_id' }).select().single();
+    if (error) { note.textContent = error.message; return; }
+    if (myLog) Object.assign(myLog, data); else { myLog = data; logs.push(data); }
+    const own = goals[k] != null, real = /\d/.test(di) && di !== 'm:ss';
+    i.closest('.wkG').classList.toggle('own', own);
+    if (own && kind === 't') i.value = P().fmtT(goals[k]);
+    note.textContent = own ? (real ? `Yours · DI ${di}` : 'Your goal') : real ? 'DI goal' : 'Set a goal';
+    toast(own ? 'Goal set' : 'Back to DI\'s goal');
+  });
   const f = $('#wkF');
   if (f) f.onsubmit = async e => {
     e.preventDefault();
@@ -628,6 +646,7 @@ function dayBoard(w, logs) {
   const secs = s => { const m = String(s || '').match(/^(\d+):(\d{1,2})$/); return m ? +m[1] * 60 + +m[2] : 1e9; };
   const rk = P().rankKey(w), key = rk && rk.key, asc = !!rk && rk.kind === 't' && P().isParts(w);
   const ev = (x, k) => num((x.entries || {})[k]);
+  logs = logs.filter(l => Object.keys(l.entries || {}).length || l.score);
   const rows = logs.filter(l => l.status !== 'struck').concat(logs.filter(l => l.status === 'struck'));
   rows.sort((a, b) => (a.status === 'struck') - (b.status === 'struck') || (isT ? secs(a.score) - secs(b.score) : 0) || (asc ? (ev(a, key) || 1e9) - (ev(b, key) || 1e9) : ev(b, key) - ev(a, key)));
   const its = P().boardItems(w, logs);
@@ -636,7 +655,7 @@ function dayBoard(w, logs) {
   ${rows.map((x, i) => {
     const br = boardRow(x.profile_id) || {}, nm = nameOf(x.profile_id), mine = S.me && S.me.id === x.profile_id;
     return `<tr class="${mine ? 'me' : ''}${x.status === 'struck' ? ' struck' : ''}"><td class="pos">${i + 1}</td><td class="who"><a href="/u/${x.profile_id}">${esc(nm)}</a>${x.status === 'protested' ? '<span class="pill flat">Protest</span>' : ''}</td>
-    ${its.map(it => { if (it.kind !== 'w') { const v = ev(x, it.key); return `<td class="r n">${v ? `<b>${P().cell(it, v)}</b>` : '<span class="sub">n/a</span>'}</td>`; } const l = it.lift, v = num(x.entries[l.id]), t = D.target(l, br); return `<td class="r n">${v ? `<span class="${t && v >= t ? 'hit' : ''}">${v}</span>${t ? `<div class="sub">${Math.round(v / t * 100)}% of target</div>` : ''}` : '<span class="sub">n/a</span>'}</td>`; }).join('')}
+    ${its.map(it => { if (it.kind !== 'w') { const v = ev(x, it.key); return `<td class="r n">${v ? `<b>${P().cell(it, v)}</b>` : '<span class="sub">n/a</span>'}</td>`; } const l = it.lift, v = num(x.entries[l.id]), t = num((x.goals || {})[l.id]) || D.target(l, br); return `<td class="r n">${v ? `<span class="${t && v >= t ? 'hit' : ''}">${v}</span>${t ? `<div class="sub">${Math.round(v / t * 100)}% of target</div>` : ''}` : '<span class="sub">n/a</span>'}</td>`; }).join('')}
     ${w.score_label ? `<td class="r n big">${esc(x.score || '')}</td>` : ''}
     <td class="r" data-host>${S.me && !mine && x.status === 'ok' ? `<button class="btn ghost sm" data-protest="workout_log" data-ref="${x.id}" data-title="${esc(nm + ' · ' + fmtD(w.day) + ' log')}">Protest</button>` : ''}</td></tr>`;
   }).join('')}</tbody></table></div>` : '<div class="empty">Log your lifts and you show up here.</div>'}</div>`;

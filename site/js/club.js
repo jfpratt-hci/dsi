@@ -610,6 +610,29 @@ export function install(X) {
     return gymById(S.me.gym_id);
   };
 
+  // One day of classes for the Train page: tap Reserve and you are in (or on the waitlist when it is full).
+  X.classDay = async (day, tok) => {
+    const g = await myGymOr(tok); if (!g) return;
+    const [ss, signed] = await Promise.all([sessionsFor(g, day, day), rpc('has_signed', { p_gym: g.id, p_kind: 'waiver' }).catch(() => true)]);
+    const ids = ss.map(s => s.id);
+    const bk = ids.length ? must(await sb.from('bookings').select('session_id,profile_id,status').in('session_id', ids).neq('status', 'canceled')) : [];
+    const coach = await people(ss.map(s => s.coach_id));
+    const now = new Date().toISOString(), list = ss.filter(s => dayOf(s.starts_at, g.tz) === day);
+    const mineOn = id => (bk.find(b => b.session_id === id && b.profile_id === S.me.id) || {}).status;
+    const dname = new Date(day + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
+    if (!paint(tok, `<section class="sec trBook"><div class="secHead"><div><div class="kicker">${esc(g.name)}</div><h2>${esc(dname)} <span>classes</span></h2></div></div>
+      ${signed ? '' : `<div class="formCard warnCard"><b>Sign the waiver to reserve classes.</b> <a class="btn sm" href="/sign/waiver?gym=${g.id}&next=/train?day=${day}">Sign the waiver</a></div>`}
+      <div class="clList">${list.map(s => {
+        const n = bk.filter(b => b.session_id === s.id && b.status !== 'waitlist').length, wl = bk.filter(b => b.session_id === s.id && b.status === 'waitlist').length, mine = mineOn(s.id), left = s.capacity - n, over = s.ends_at <= now;
+        return `<article class="clRow${s.status === 'canceled' || over ? ' off' : ''}${mine === 'booked' || mine === 'attended' ? ' mine' : ''}"><div class="clT"><b>${tAt(s.starts_at, g.tz)}</b><span>${Math.round((Date.parse(s.ends_at) - Date.parse(s.starts_at)) / 6e4)} min</span></div>
+          <div class="clI"><b>${esc(s.name)}</b><span>${esc(s.coach_id ? 'Coach ' + (coach.get(s.coach_id) || '') : '')}${s.note ? ' · ' + esc(s.note) : ''}</span></div>
+          <div class="clS">${s.status === 'canceled' ? '<span class="pill down">Canceled</span>' : over ? '<span>Done</span>' : left > 0 ? `<span>${left} spot${left === 1 ? '' : 's'} left</span>` : `<span>Full${wl ? ` · ${wl} waiting` : ''}</span>`}</div>
+          <div class="clA">${s.status === 'canceled' ? '' : mine === 'attended' ? '<span class="pill up">Checked in</span>' : over ? '' : mine === 'booked' ? '<span class="pill up">Reserved</span><button class="btn ghost sm" data-cx="' + s.id + '">Cancel</button>' : mine === 'waitlist' ? '<span class="pill flat">Waitlist</span><button class="btn ghost sm" data-cx="' + s.id + '">Leave</button>' : `<button class="btn sm" data-bk="${s.id}"${signed ? '' : ' disabled'}>${left > 0 ? 'Reserve' : 'Join waitlist'}</button>`}</div></article>`;
+      }).join('') || `<div class="prEmpty"><b>No classes ${esc(dname)}</b><p>Pick another day above.</p></div>`}</div></section>`)) return;
+    $$('[data-bk]').forEach(b => b.onclick = async () => { b.disabled = true; b.textContent = 'Reserving…'; try { const st = await rpc('book_session', { p_session: b.dataset.bk }); toast(st === 'waitlist' ? 'You are on the waitlist. We move you in if a spot opens.' : 'Reserved. See you there.'); route(); } catch (e) { toast(e.message); b.disabled = false; b.textContent = 'Reserve'; } });
+    $$('[data-cx]').forEach(b => b.onclick = async () => { try { await rpc('cancel_booking', { p_session: b.dataset.cx }); toast('Canceled'); route(); } catch (e) { toast(e.message); } });
+  };
+
   VIEWS.classes = async (_, tok) => {
     const g = await myGymOr(tok); if (!g) return;
     const from = new Date().toLocaleDateString('en-CA', { timeZone: g.tz }), to = addDays(from, 6);
