@@ -436,7 +436,10 @@ export function install(X) {
       owner ? sb.from('invoices').select('profile_id,amount_cents,status').eq('gym_id', g.id).eq('status', 'open').then(must) : [],
       sb.from('gym_staff').select('profile_id,role').eq('gym_id', g.id).then(must),
     ]);
-    const zips = owner && members.length ? new Set(((await sb.from('member_details').select('profile_id,bill_zip').in('profile_id', members.map(m => m.id))).data || []).filter(x => x.bill_zip).map(x => x.profile_id)) : null;
+    const dets = members.length ? ((await sb.from('member_details').select('profile_id,first_name,last_name,bill_zip').in('profile_id', members.map(m => m.id))).data || []) : [];
+    const detOf = new Map(dets.map(x => [x.profile_id, x]));
+    const zips = owner ? new Set(dets.filter(x => x.bill_zip).map(x => x.profile_id)) : null;
+    const fn = id => (detOf.get(id) || {}).first_name || '', ln = id => (detOf.get(id) || {}).last_name || '';
     // Coaches and owners are members too, just another type, and free.
     const typeOf = new Map(staffRows.map(x => [x.profile_id, x.role])), kind = id => typeOf.get(id) || 'member';
     const show = ['member', 'coach'].includes(qs.get('type')) ? qs.get('type') : 'all';
@@ -446,25 +449,37 @@ export function install(X) {
     const visits = id => att.filter(a => a.profile_id === id);
     const owed = id => inv.filter(i => i.profile_id === id).reduce((t, i) => t + i.amount_cents, 0);
     const q = (qs.get('q') || '').toLowerCase();
-    const list = members.filter(m => (!q || m.display_name.toLowerCase().includes(q)) && (show === 'all' || (show === 'coach' ? kind(m.id) !== 'member' : kind(m.id) === 'member')));
+    const list = members.filter(m => (!q || [m.display_name, fn(m.id), ln(m.id), fn(m.id) + ' ' + ln(m.id)].some(t => t.toLowerCase().includes(q))) && (show === 'all' || (show === 'coach' ? kind(m.id) !== 'member' : kind(m.id) === 'member')));
+    // Sort by first name, last name or board name; tap the header again to flip the order. Blanks go last.
+    const sortBy = ['first', 'last', 'board'].includes(qs.get('sort')) ? qs.get('sort') : 'board', desc = qs.get('dir') === 'desc';
+    const sval = m => sortBy === 'first' ? fn(m.id) : sortBy === 'last' ? ln(m.id) : m.display_name || '';
+    list.sort((a, b) => { const x = sval(a), y = sval(b); if (!x !== !y) return x ? -1 : 1; const c = x.localeCompare(y, undefined, { sensitivity: 'base' }) || (a.display_name || '').localeCompare(b.display_name || ''); return desc ? -c : c; });
+    const keep = `${show !== 'all' ? '&type=' + show : ''}${q ? '&q=' + encodeURIComponent(q) : ''}`;
+    const sortTh = (k, label) => { const on = sortBy === k; return `<th aria-sort="${on ? (desc ? 'descending' : 'ascending') : 'none'}"><a class="thSort${on ? ' on' : ''}" href="/club/${g.id}?tab=members${keep}&sort=${k}${on && !desc ? '&dir=desc' : ''}">${label}<span aria-hidden="true">${on ? (desc ? ' ▼' : ' ▲') : ' ↕'}</span></a></th>`; };
+    const sortQ = sortBy !== 'board' || desc ? `&sort=${sortBy}${desc ? '&dir=desc' : ''}` : '';
     const nCoach = members.filter(m => kind(m.id) !== 'member').length;
-    const typeChips = `<div class="chips mbType" aria-label="Show">${[['all', `All ${members.length}`], ['member', `Members ${members.length - nCoach}`], ['coach', `Coaches ${nCoach}`]].map(([v, n]) => `<a class="chip" href="/club/${g.id}?tab=members&type=${v}${q ? '&q=' + encodeURIComponent(q) : ''}" aria-pressed="${show === v}">${n}</a>`).join('')}</div>`;
-    if (!paint(tok, shell(`${owner ? addPersonForm(g, 'member') : ''}${typeChips}<div class="row adSearch"><label class="vh" for="mq">Search members</label><input id="mq" placeholder="Search members" value="${esc(qs.get('q') || '')}" style="max-width:300px"><span class="hint">${list.length} of ${members.length} members. Members join by picking ${esc(g.name)} on the Gym league page.${owner ? ' Remove takes someone off the gym and ends a desk paid membership; their account and history stay.' : ''}</span></div>
-      <div class="board"><div class="tablewrap"><table class="adT"><thead><tr><th>Member</th><th>Type</th><th>Membership</th><th>Waiver</th><th>Contract</th><th class="r">Visits 30 days</th><th>Last visit</th>${owner ? '<th class="r">Owes</th>' : ''}<th></th></tr></thead><tbody>
-      ${list.map(m => { const c = cur(m.id), v = visits(m.id), k = kind(m.id); return `<tr><td><b><a href="/u/${m.id}">${esc(m.display_name)}</a></b>${zips && !zips.has(m.id) ? ' <span class="pill flat" title="Add their billing ZIP for better card rates">No ZIP</span>' : ''}</td><td>${k === 'owner' ? '<span class="pill acc">Owner</span>' : k === 'coach' ? '<span class="pill acc">Coach</span>' : '<span class="sub">Member</span>'}</td><td>${c ? `${esc(c.plan_name)} ${statusPill(c.status)}` : k !== 'member' ? `<span class="pill up">Free, ${k}</span>` : statusPill('')}</td>
+    const typeChips = `<div class="chips mbType" aria-label="Show">${[['all', `All ${members.length}`], ['member', `Members ${members.length - nCoach}`], ['coach', `Coaches ${nCoach}`]].map(([v, n]) => `<a class="chip" href="/club/${g.id}?tab=members&type=${v}${q ? '&q=' + encodeURIComponent(q) : ''}${sortQ}" aria-pressed="${show === v}">${n}</a>`).join('')}</div>`;
+    if (!paint(tok, shell(`${owner ? addPersonForm(g, 'member') : ''}${typeChips}<div class="row adSearch"><label class="vh" for="mq">Search members</label><input id="mq" placeholder="Search by name" value="${esc(qs.get('q') || '')}" style="max-width:300px"><span class="hint">${list.length} of ${members.length} members. Members join by picking ${esc(g.name)} on the Gym league page.${owner ? ' Remove takes someone off the gym and ends a desk paid membership; their account and history stay.' : ''}</span></div>
+      <div class="board"><div class="tablewrap"><table class="adT mbT"><thead><tr>${sortTh('first', 'First name')}${sortTh('last', 'Last name')}${sortTh('board', 'Board name')}<th>Type</th><th>Membership</th><th>Waiver</th><th>Contract</th><th class="r">Visits 30 days</th><th>Last visit</th>${owner ? '<th class="r">Owes</th>' : ''}<th></th></tr></thead><tbody>
+      ${list.map(m => { const c = cur(m.id), v = visits(m.id), k = kind(m.id); return `<tr><td>${esc(fn(m.id)) || '<span class="sub">none</span>'}</td><td>${esc(ln(m.id)) || '<span class="sub">none</span>'}</td><td><b><a href="/u/${m.id}">${esc(m.display_name)}</a></b>${zips && !zips.has(m.id) ? ' <span class="pill flat" title="Add their billing ZIP for better card rates">No ZIP</span>' : ''}</td><td>${k === 'owner' ? '<span class="pill acc">Owner</span>' : k === 'coach' ? '<span class="pill acc">Coach</span>' : '<span class="sub">Member</span>'}</td><td>${c ? `${esc(c.plan_name)} ${statusPill(c.status)}` : k !== 'member' ? `<span class="pill up">Free, ${k}</span>` : statusPill('')}</td>
         <td>${signedDoc(m.id, 'waiver') ? '<span class="pill up">Signed</span>' : '<span class="pill down">Missing</span>'}</td><td>${!docId('contract') ? '<span class="sub">none</span>' : signedDoc(m.id, 'contract') ? '<span class="pill up">Signed</span>' : '<span class="pill flat">Not yet</span>'}</td>
         <td class="r n">${v.filter(a => (a.checked_in_at || '') >= since).length}</td><td>${v[0] && v[0].checked_in_at ? esc(fmtD(v[0].checked_in_at.slice(0, 10))) : '<span class="sub">never</span>'}</td>
         ${owner ? `<td class="r n">${owed(m.id) ? `<b style="color:var(--down)">${money(owed(m.id))}</b>` : ''}</td>` : ''}<td class="r nowrap"><button class="btn ghost sm" data-md="${m.id}">Open</button>${owner ? ` <button class="btn ghost sm" data-rm="${m.id}" aria-label="Remove ${esc(m.display_name)} from ${esc(g.name)}">Remove</button>` : ''}</td></tr>
-        <tr data-mdp="${m.id}" hidden><td colspan="${owner ? 9 : 8}"><div class="mdBox">Loading…</div></td></tr>`; }).join('') || `<tr><td colspan="9" class="empty">No one here yet.</td></tr>`}
+        <tr data-mdp="${m.id}" hidden><td colspan="${owner ? 11 : 10}"><div class="mdBox">Loading…</div></td></tr>`; }).join('') || `<tr><td colspan="11" class="empty">No one here yet.</td></tr>`}
       </tbody></table></div></div>`))) return;
-    $('#mq').onchange = e => go(`/club/${g.id}?tab=members${show !== 'all' ? '&type=' + show : ''}&q=${encodeURIComponent(e.target.value.trim())}`);
+    $('#mq').onchange = e => go(`/club/${g.id}?tab=members${show !== 'all' ? '&type=' + show : ''}&q=${encodeURIComponent(e.target.value.trim())}${sortQ}`);
     $$('[data-rm]').forEach(b => twoTap(b, 'Tap again to remove', async () => {
       const name = (members.find(m => m.id === b.dataset.rm) || {}).display_name || 'Member';
       await rpc('remove_member', { p_gym: g.id, p_profile: b.dataset.rm });
       toast(`${name} is off ${g.name}. Their lifts and past visits stay in your history.`); route();
     }));
     $$('[data-md]').forEach(b => b.onclick = async () => {
-      const row = $(`[data-mdp="${b.dataset.md}"]`); row.hidden = !row.hidden; if (row.hidden) return;
+      const row = $(`[data-mdp="${b.dataset.md}"]`), opening = row.hidden;
+      // One profile open at a time: opening another closes the one before.
+      $$('[data-mdp]').forEach(r => { if (!r.hidden) { r.hidden = true; $('.mdBox', r).textContent = 'Loading…'; } });
+      $$('[data-md]').forEach(x => x.textContent = 'Open');
+      if (!opening) return;
+      row.hidden = false; b.textContent = 'Close';
       await memberDetail(g, b.dataset.md, $('.mdBox', row), { kind: kind(b.dataset.md), owner, plans, ms: ms.filter(m => m.profile_id === b.dataset.md), sigs: sigs.filter(s => s.profile_id === b.dataset.md), docs });
     });
   }
