@@ -41,7 +41,8 @@ export function install(X) {
   async function sessionsFor(g, from, to) {
     try { await sb.rpc('ensure_sessions', { p_gym: g.id, p_from: from, p_to: to }); } catch {}
     const rows = must(await sb.from('sessions').select('*').eq('gym_id', g.id).gte('starts_at', addDays(from, -1) + 'T00:00:00Z').lt('starts_at', addDays(to, 2) + 'T00:00:00Z').order('starts_at'));
-    return rows.filter(s => { const d = dayOf(s.starts_at, g.tz); return d >= from && d <= to; });
+    // Duplicates left behind by removed weekly classes are canceled and kept out of sight.
+    return rows.filter(s => { if (s.status === 'canceled' && s.note === 'Duplicate of a weekly class') return false; const d = dayOf(s.starts_at, g.tz); return d >= from && d <= to; });
   }
   const gymById = async gid => must(await sb.from('gyms').select('*').eq('id', gid).maybeSingle());
   const people = async ids => { ids = [...new Set(ids.filter(Boolean))]; return ids.length ? new Map(must(await sb.from('profiles').select('id,display_name').in('id', ids)).map(p => [p.id, p.display_name || 'Member'])) : new Map(); };
