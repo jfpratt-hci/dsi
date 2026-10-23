@@ -1830,3 +1830,46 @@ a.g{text-decoration:none;color:inherit}
   .wkG small::before{content:"Goal · "}
 }
 .tvGoal.own{color:var(--accent)}
+
+/* Train: the week's classes as a calendar, every class the same size bubble under its day */
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.calCol{display:grid;grid-template-rows:auto 1fr;gap:8px;min-width:0}
+.calDay{position:relative;display:grid;justify-items:center;gap:2px;padding:8px 4px;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--muted);text-decoration:none}
+.calDay span{font:600 11px var(--sans);letter-spacing:.1em;text-transform:uppercase}
+.calDay b{font:900 26px/1 var(--disp);color:var(--ink)}
+.calDay i{position:absolute;top:4px;right:6px;font-style:normal;font-size:9px;color:var(--up)}
+.calCol.today .calDay{border-color:var(--muted)}
+.calCol.on .calDay{background:var(--ink);border-color:var(--ink)}
+.calCol.on .calDay b,.calCol.on .calDay span{color:var(--bg)}
+.calCol.on .calDay i{color:var(--bg)}
+.calList{display:grid;grid-auto-rows:104px;gap:8px;align-content:start}
+.calNone{margin:6px 0 0;text-align:center;font-size:12px;color:var(--muted)}
+.calCol.past .cb{opacity:.55}
+.cb{display:grid;grid-template-rows:auto auto auto 1fr;gap:2px;min-width:0;padding:9px 10px;border-radius:12px;background:var(--panel);border:1px solid var(--line);overflow:hidden}
+.cb b{font:700 16px/1.1 var(--mono);color:var(--ink);white-space:nowrap}
+.cbN{font:700 12px/1.2 var(--sans);text-transform:uppercase;letter-spacing:.04em;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cbS{font:600 11px var(--sans);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cb button{align-self:end;justify-self:stretch;border-radius:999px;font:800 11px var(--sans);letter-spacing:.06em;text-transform:uppercase;padding:5px 6px;cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--ink)}
+.cb .cbGo{background:var(--accent);border-color:var(--accent);color:#141414}
+.cb .cbGo:disabled{opacity:.45;cursor:not-allowed}
+.cb.full .cbGo{background:var(--panel2);border-color:var(--line);color:var(--ink)}
+.cb.mine,.cb.in{background:color-mix(in srgb,var(--up) 16%,var(--panel));border-color:var(--up)}
+.cb.mine .cbS,.cb.in .cbS{color:var(--up);font-weight:800}
+.cb.wait{border-color:var(--flat)}.cb.wait .cbS{color:var(--flat)}
+.cb.off{opacity:.5}.cb.off b{text-decoration:line-through}
+.cb .cbX:hover{border-color:var(--down);color:var(--down)}
+@media (max-width:700px){
+  .cal{gap:4px}
+  .calDay{padding:6px 2px}.calDay b{font-size:20px}.calDay span{font-size:9px;letter-spacing:.04em}
+  .calList{grid-auto-rows:78px;gap:5px}
+  .cb{padding:6px 4px;border-radius:9px;justify-items:center;text-align:center}
+  .cb b{font-size:11px}.cbN{display:none}.cbS{font-size:9px;max-width:100%}
+  .cb button{font-size:8.5px;letter-spacing:0;padding:4px 2px}
+}
+.cb .sm{display:none}
+.cb .cbX{color:var(--down);border-color:color-mix(in srgb,var(--down) 50%,var(--line));background:transparent}
+@media (max-width:700px){
+  .cb .lg{display:none}.cb .sm{display:inline}
+  .cb b{font-size:12px}.cbS{font-size:10px}
+  .cb button{font-size:10px;padding:5px 0}
+}

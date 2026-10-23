@@ -373,11 +373,13 @@ VIEWS.train = async (_, tok) => {
   if (!S.me) return needLogin(tok, 'train');
   const q = new URLSearchParams(location.search), day = /^\d{4}-\d{2}-\d{2}$/.test(q.get('day') || '') ? q.get('day') : today(), gym = !!S.me.gym_id;
   const wk = monday(day), tdy = today(), days = [...Array(7)].map((_, i) => addDays(wk, i));
+  // Members of a gym get the class calendar on top (it is the week picker too); anyone else gets a plain day strip.
   const strip = `<div class="trWeek"><a class="trArr" href="/train?day=${addDays(wk, -7)}" aria-label="Last week">‹</a>
     <nav class="wkDays" aria-label="Days">${days.map(d => `<a class="wd${d === day ? ' on' : ''}${d === tdy ? ' today' : ''}" href="/train?day=${d}"${d === day ? ' aria-current="date"' : ''}><span>${pd(d).toLocaleDateString('en-US', { weekday: 'short' })}</span><b>${pd(d).getDate()}</b></a>`).join('')}</nav>
     <a class="trArr" href="/train?day=${addDays(wk, 7)}" aria-label="Next week">›</a></div>`;
-  await composePage(tok, `<section class="sec cmpHead trHead"><div class="secHead"><div><div class="kicker">Week of ${esc(fmtD(wk))}${wk !== monday(tdy) ? ` · <a href="/train">Back to today</a>` : ''}</div><h2>Train</h2></div></div>${strip}</section>`, [
-    ...(gym ? [['book', 'Classes', () => CTX.classDay(day, tok)]] : []),
+  const arrows = `<div class="row"><a class="btn ghost sm" href="/train?day=${addDays(wk, -7)}">← Last week</a>${wk !== monday(tdy) ? '<a class="btn ghost sm" href="/train">This week</a>' : ''}<a class="btn ghost sm" href="/train?day=${addDays(wk, 7)}">Next week →</a></div>`;
+  await composePage(tok, `<section class="sec cmpHead trHead"><div class="secHead"><div><div class="kicker">Week of ${esc(fmtD(wk))}</div><h2>Train</h2></div>${gym ? arrows : ''}</div>${gym ? '' : strip}</section>`, [
+    ...(gym ? [['book', 'Classes', () => CTX.classWeek(day, tok)]] : []),
     ['workout', 'The workout', () => VIEWS.week(day, tok, { embed: true })],
     ['mine', 'Your training', () => VIEWS.training('', tok)],
     ['bench', 'Benchmarks', () => CTX.benchForm(tok)],
