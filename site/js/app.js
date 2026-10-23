@@ -176,7 +176,7 @@ const ROUTE_GROUP = { '': 'home', pricing: 'home', start: 'home', grow: 'home', 
   mygym: 'me', billing: 'me', sign: 'me', signed: 'me', shop: 'me', me: 'me', security: 'me', pro: 'me', rules: 'me', blocked: 'me',
   club: 'office', insights: 'office', website: 'office', sell: 'office', growth: 'office', follow: 'office', dandytv: 'office', class: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office',
   admin: 'admin', reports: 'admin', program: 'admin', connect: 'admin', import: 'admin' };
-const ACCT = () => [['/me', 'Profile', 'Name, gym and lifter details'], ...(S.me.gym_id ? [['/mygym', 'Membership and billing', 'Plan, payments and documents']] : []), ['/me?tab=reminders', 'Reminders', 'Nudges to log'], ['/me?tab=account', 'Account and safety', 'Email, privacy and blocks'], ['/u/' + S.me.id, 'My lifter card', 'Your public page'], ['/pro', 'DSI Pro', 'Membership and perks']];
+const ACCT = () => [['/me', 'Profile', 'Name, gym and lifter details'], ...(S.me.gym_id ? [['/mygym', 'Membership and billing', 'Plan, payments and documents']] : []), ['/me?tab=reminders', 'Reminders', 'Nudges to log'], ['/me?tab=account', 'Account and safety', 'Email, privacy and blocks']];
 function buildNav(r) {
   const groups = navGroups(), cur = ROUTE_GROUP[r] ?? '';
   const here = location.pathname + location.search;
