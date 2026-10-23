@@ -106,7 +106,7 @@ function navGroups() {
     ...(me ? [] : [{ k: 'members', n: 'For members', href: '/members' }]),
   ];
   // Signed in: four plain pages, no drop downs. Board, Train, Get better, Compete.
-  if (me) g.push({ k: 'boards', n: 'Board', href: '/boards' }, { k: 'train', n: 'Train', href: '/train' }, { k: 'better', n: 'Get better', href: '/better' });
+  if (me) g.push({ k: 'train', n: 'Train', href: '/train' }, { k: 'boards', n: 'Dandy Boards', href: '/boards' }, { k: 'better', n: 'Get better', href: '/better' });
   const gyms = S.myGyms || [];
   const offItems = (x, keys) => OFFICE.filter(o => keys.includes(o[0]) && (!o[3] || x.role === 'owner' || (S.me && S.me.role === 'admin'))).map(([k, n, d]) => [officeHref(x.gym_id, k), n, d]);
   if (gyms.length === 1) { const x = gyms[0], nm = x.gym.name || 'Gym';
