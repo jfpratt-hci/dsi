@@ -70,20 +70,25 @@ async function loadMe() {
 async function loadBoard() {
   const [rows, profs] = await Promise.all([sb.from('board').select('*').then(must), sb.from('profiles').select('id,tier,role,gym_id').then(must)]);
   const pmap = new Map(profs.map(p => [p.id, p]));
-  S.board = rows.map(r => {
+  S.boardAll = rows.map(r => {
     const pp = pmap.get(r.profile_id) || {};
     const x = { ...r, bw: num(r.bw), age: num(r.age), bench: num(r.bench), squat: num(r.squat), dead: num(r.dead), clean: num(r.clean) };
     x.score = D.score(x); x.total = D.total(x); x.p = D.pcts(x); x.g = D.gains(x); x.pro = pp.tier === 'pro' || ['admin', 'commissioner'].includes(pp.role); x.gym_id = pp.gym_id || null;
     return x;
   });
+  // Gyms only for now: everyone sees the people in their own gym. Someone without a gym sees everyone.
+  const gid = S.me && S.me.gym_id;
+  S.myGymIds = gid ? new Set(profs.filter(p => p.gym_id === gid).map(p => p.id)) : null;
+  S.board = S.boardAll.filter(r => inGym(r.profile_id));
   return S.board;
 }
+const inGym = id => !S.myGymIds || S.myGymIds.has(id);
 async function loadPeople() {
   const rows = must(await sb.from('profiles').select('id,display_name,roast_opt_in,role,division,level'));
   S.people = new Map(rows.map(r => [r.id, r]));
 }
 const nameOf = id => (S.people.get(id) || {}).display_name || 'Someone';
-const boardRow = id => S.board.find(r => r.profile_id === id);
+const boardRow = id => (S.boardAll || S.board).find(r => r.profile_id === id);
 
 /* ---------- navigation ---------- */
 // The top bar is a mega menu, built for who is signed in: everyone gets Boards, Train and Chat;
@@ -240,7 +245,7 @@ function bindActions(root, reload) {
 /* ---------- home: boards ---------- */
 VIEWS.boards = async (_, tok) => {
   const [board, prs] = await Promise.all([loadBoard(), sb.from('pr_feed').select('*').gte('performed_on', monday(today())).order('created_at', { ascending: false }).limit(60)]);
-  const weekPRs = must(prs);
+  const weekPRs = must(prs).filter(p => inGym(p.profile_id));
   const top = [...board].sort((a, b) => b.score - a.score)[0];
   const heavy = [...board].sort((a, b) => b.total - a.total)[0];
   const html = `
@@ -398,10 +403,12 @@ VIEWS.better = async (_, tok) => {
 VIEWS.prs = async (day, tok) => {
   // The wall resets every Monday. Newest PR on top as it comes in. /prs/<date> shows that past week.
   const cur = monday(today()), wk = /^\d{4}-\d{2}-\d{2}$/.test(day || '') ? monday(day) : cur, end = addDays(wk, 7), live = wk === cur;
-  const [feed, prev] = await Promise.all([
+  let [feed, prev] = await Promise.all([
     sb.from('pr_feed').select('*').gte('performed_on', wk).lt('performed_on', end).order('created_at', { ascending: false }).limit(300).then(must),
     sb.from('pr_feed').select('id', { count: 'exact', head: true }).lt('performed_on', wk),
   ]);
+  if (S.myGymIds === undefined) await loadBoard();
+  feed = feed.filter(p => inGym(p.profile_id));
   const hasOlder = (prev.count || 0) > 0;
   if (!paint(tok, `<section class="sec"><div class="secHead"><div><div class="kicker">${live ? 'Resets every Monday' : 'Past week'}</div><h2>PR <span>wall</span></h2>
       <p class="secSub">${live ? `Week of ${fmtD(wk)}. Newest PRs land on top the moment they're logged.` : `Week of ${fmtD(wk)} to ${fmtD(addDays(wk, 6))}.`}</p></div>
@@ -427,6 +434,7 @@ VIEWS.u = async (id, tok) => {
     sb.from('goals').select('*').eq('profile_id', id),
   ]);
   const p = must(prof); if (!p) throw new Error('No lifter here.');
+  if (!inGym(id) && !(S.me && S.me.id === id)) return paint(tok, `<section class="prEmpty"><b>${esc(p.display_name || 'This lifter')} trains at another gym</b><p>For now you see the people in your own gym.</p><p><a class="btn ghost sm" href="/boards">Back to the board</a></p></section>`);
   const r = board.find(x => x.profile_id === id) || { name: p.display_name, bw: num(p.bodyweight), age: p.birth_year ? new Date().getFullYear() - p.birth_year : 0, bench: 0, squat: 0, dead: 0, clean: 0 };
   if (!r.p) { r.score = D.score(r); r.total = D.total(r); r.p = D.pcts(r); }
   const v = D.verdict(r.score), gl = Object.fromEntries(must(goals).map(g => [g.lift, num(g.target_lb)]));
@@ -1571,7 +1579,7 @@ VIEWS.join = async (_, tok) => {
 
 /* ---------- compete and grow pages (extra.js) ---------- */
 const CTX = { OFFICE, officeHref, sb, D, S, VIEWS, $, $$, esc, num, fmt, today, pd, fmtD, addDays, monday, toast, must, paint, needLogin, go,
-  loadBoard, loadPeople, nameOf, boardRow, isPro, isStaff, PRO, bindActions, bindVideo, route, videoUrl, normDay, liftRule, boardBar };
+  loadBoard, loadPeople, nameOf, boardRow, inGym, isPro, isStaff, PRO, bindActions, bindVideo, route, videoUrl, normDay, liftRule, boardBar };
 installExtra(CTX);
 installGym(CTX);
 installAdmin(CTX);

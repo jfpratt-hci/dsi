@@ -103,7 +103,7 @@ export function install(X) {
     // Snatch, push press, squat snatch and squat clean bests, so a part can be a percent of those too.
     const ids = members.map(m => m.id), xb = {};
     if (ids.length) ((await sb.from('lift_bests').select('profile_id,lift,weight_lb').in('profile_id', ids).in('lift', D.EXTRA_LIFTS.map(x => x[0]))).data || []).forEach(r => { (xb[r.profile_id] = xb[r.profile_id] || {})[r.lift] = +r.weight_lb; });
-    const rowOf0 = m => S.board.find(r => r.profile_id === m.id) || { profile_id: m.id, name: m.display_name, sex: m.sex, bw: num(m.bodyweight) || 185, age: m.birth_year ? new Date().getFullYear() - m.birth_year : 30, bench: 0, squat: 0, dead: 0, clean: 0, score: 0, total: 0 };
+    const rowOf0 = m => (S.boardAll || S.board).find(r => r.profile_id === m.id) || { profile_id: m.id, name: m.display_name, sex: m.sex, bw: num(m.bodyweight) || 185, age: m.birth_year ? new Date().getFullYear() - m.birth_year : 30, bench: 0, squat: 0, dead: 0, clean: 0, score: 0, total: 0 };
     const rowOf = m => ({ ...rowOf0(m), ...(xb[m.id] || {}) });
     return { g, members: members.sort((a, b) => a.display_name.localeCompare(b.display_name)), staff, w, logs, rowOf };
   }
@@ -514,7 +514,7 @@ export function install(X) {
       const tv = X.tvConfig ? await X.tvConfig(gid).catch(() => null) : null;
       st = { ...base, tv, yday, prs, lb, q, by, from30, sessions, bookings: bk.error ? [] : bk.data || [], battles: bt.filter(b => ids.includes(b.challenger) || ids.includes(b.opponent)) };
     };
-    const nameOf = id => (st.members.find(m => m.id === id) || {}).display_name || (S.board.find(r => r.profile_id === id) || {}).name || 'Someone';
+    const nameOf = id => (st.members.find(m => m.id === id) || {}).display_name || ((S.boardAll || S.board).find(r => r.profile_id === id) || {}).name || 'Someone';
     const clock = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
     // Who is in class right now. A class running now (from 15 minutes before it starts to when it ends) uses its

@@ -30,7 +30,7 @@ export function install(X) {
     const leads = (leadsR && leadsR.data) || [], newLeads = leads.filter(l => l.status === 'new').length;
     const byId = new Map(profiles.map(p => [p.id, p])), gymBy = new Map(gyms.map(g => [g.id, g]));
     const nm = id => (byId.get(id) || {}).display_name || 'Unfinished signup';
-    const scoreOf = id => (S.board.find(r => r.profile_id === id) || {}).score || 0;
+    const scoreOf = id => ((S.boardAll || S.board).find(r => r.profile_id === id) || {}).score || 0;
     const weekAgo = Date.now() - 7 * 864e5;
     const stats = [
       ['Members', profiles.filter(p => p.display_name).length, `${profiles.filter(p => Date.parse(p.created_at) > weekAgo).length} new this week`],

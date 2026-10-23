@@ -141,7 +141,7 @@ export function install(X) {
   // the old /season and /battles links land here too.
   VIEWS.compete = async (arg, tok, battleId) => {
     const [board, bres] = await Promise.all([loadBoard(), sb.from('battles').select('*').order('week_start', { ascending: false }).order('created_at', { ascending: false }).limit(200)]);
-    const battles = must(bres);
+    const battles = must(bres).filter(b => board.some(r => r.profile_id === b.challenger) || board.some(r => r.profile_id === b.opponent) || (S.me && (b.challenger === S.me.id || b.opponent === S.me.id)));
     if (!S.people.size) await loadPeople();
     const by = await allEntries();
     const q = quarter(today()), y = new Date().getFullYear();
@@ -159,7 +159,8 @@ export function install(X) {
 
   /* ---------- gym league ---------- */
   VIEWS.gyms = async (id, tok) => {
-    const [board, gres, pres] = await Promise.all([loadBoard(), sb.from('gyms').select('*').order('name'), sb.from('profiles').select('id,gym_id').not('gym_id', 'is', null)]);
+    let [board, gres, pres] = await Promise.all([loadBoard(), sb.from('gyms').select('*').order('name'), sb.from('profiles').select('id,gym_id').not('gym_id', 'is', null)]);
+    board = S.boardAll || board; // the league compares gyms, so it sees every gym
     const gyms = must(gres), gymOf = new Map(must(pres).map(p => [p.id, p.gym_id]));
     const members = gid => board.filter(r => gymOf.get(r.profile_id) === gid).sort((a, b) => b.score - a.score);
     if (id) {

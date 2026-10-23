@@ -3,7 +3,7 @@
 // app.js calls install(ctx) after the other views exist and before the members only wrapping.
 
 export function install(X) {
-  const { sb, D, S, VIEWS, $, $$, esc, fmtD, addDays, monday, today, toast, must, needLogin, loadBoard, loadPeople, nameOf, boardRow, boardBar } = X;
+  const { sb, D, S, VIEWS, $, $$, esc, fmtD, addDays, monday, today, toast, must, needLogin, loadBoard, loadPeople, nameOf, boardRow, boardBar, inGym } = X;
   const main = () => $('#main');
   const fmtS = s => { s = Math.round(+s || 0); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, '0'); return h ? `${h}:${String(m).padStart(2, '0')}:${x}` : `${m}:${x}`; };
   const parseS = v => { v = String(v || '').trim(); const m = v.match(/^(?:(\d+):)?(\d{1,2}):(\d{2})$/); return m ? (+(m[1] || 0)) * 3600 + +m[2] * 60 + +m[3] : NaN; };
@@ -15,7 +15,7 @@ export function install(X) {
   S.bbf = S.bbf || { std: 'rx', div: 'all' };
   const benchSection = async (el, tok) => {
     const [rows, ws] = await Promise.all([
-      sb.from('benchmark_entries').select('id,profile_id,bench,seconds,rx,performed_on,is_pr,prev_best,status').neq('status', 'struck').order('performed_on', { ascending: false }).limit(5000).then(must),
+      sb.from('benchmark_entries').select('id,profile_id,bench,seconds,rx,performed_on,is_pr,prev_best,status').neq('status', 'struck').order('performed_on', { ascending: false }).limit(5000).then(r => must(r).filter(x => inGym(x.profile_id))),
       sb.from('workouts').select('day,benchmark').not('benchmark', 'is', null).order('day', { ascending: false }).then(r => r.data || []),
     ]);
     if (!S.people.size) await loadPeople();
@@ -63,7 +63,7 @@ export function install(X) {
     if (tok !== S.tok) return;
     const wk = monday(today());
     const [feed] = await Promise.all([
-      sb.from('bench_pr_feed').select('*').gte('performed_on', wk).order('created_at', { ascending: false }).limit(8).then(r => r.data || []),
+      sb.from('bench_pr_feed').select('*').gte('performed_on', wk).order('created_at', { ascending: false }).limit(40).then(r => (r.data || []).filter(x => inGym(x.profile_id)).slice(0, 8)),
       $('#benchSec') ? benchSection($('#benchSec'), tok) : null,
     ]);
     if (tok !== S.tok) return;
@@ -134,7 +134,7 @@ export function install(X) {
     await prWall(day, tok);
     if (tok !== S.tok) return;
     const wk = /^\d{4}-\d{2}-\d{2}$/.test(day || '') ? monday(day) : monday(today());
-    const feed = ((await sb.from('bench_pr_feed').select('*').gte('performed_on', wk).lt('performed_on', addDays(wk, 7)).order('created_at', { ascending: false }).limit(100)).data) || [];
+    const feed = ((await sb.from('bench_pr_feed').select('*').gte('performed_on', wk).lt('performed_on', addDays(wk, 7)).order('created_at', { ascending: false }).limit(100)).data || []).filter(x => inGym(x.profile_id));
     if (tok !== S.tok || !feed.length) return;
     const grid = $('#prGrid');
     const html = `<section class="sec"><h3>Benchmark <span>PRs</span></h3><div class="prGrid">${feed.map(benchPrCard).join('')}</div></section>`;

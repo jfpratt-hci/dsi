@@ -83,7 +83,7 @@ export function install(X) {
     const ids = members.map(m => m.id);
     const prs = ids.length ? must(await sb.from('lift_entries').select('profile_id,lift,weight_lb,prev_best,performed_on').in('profile_id', ids).eq('is_pr', true).not('prev_best', 'is', null).neq('status', 'struck').gte('performed_on', wk).order('performed_on', { ascending: false }).limit(9)) : [];
     let board = [];
-    try { await X.loadBoard(); board = (S.board || []).filter(r => ids.includes(r.profile_id) && r.score).sort((a, b) => b.score - a.score).slice(0, 6); } catch {}
+    try { await X.loadBoard(); board = (S.boardAll || S.board || []).filter(r => ids.includes(r.profile_id) && r.score).sort((a, b) => b.score - a.score).slice(0, 6); } catch {}
     const coachIds = [...new Set(classes.map(c => c.coach_id).filter(Boolean))];
     const coaches = coachIds.length ? new Map(must(await sb.from('profiles').select('id,display_name').in('id', coachIds)).map(p => [p.id, p.display_name])) : new Map();
     const nameOf = id => (members.find(m => m.id === id) || {}).display_name || 'Member';
