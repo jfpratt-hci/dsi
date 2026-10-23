@@ -43,6 +43,16 @@ Deno.serve(async req => {
     case 'checkout.session.async_payment_failed': {
       const md = o.metadata ?? {};
       const first = ev.type === 'checkout.session.completed';
+      // Keep the billing ZIP they typed at checkout on their member details when it is missing there.
+      const addr = o.customer_details?.address;
+      if (first && addr?.postal_code && o.customer) {
+        const zip = String(addr.postal_code).trim();
+        const { data: sc } = await db.from('stripe_customers').select('profile_id').eq('customer_id', typeof o.customer === 'string' ? o.customer : o.customer.id).maybeSingle();
+        if (sc && /^\d{5}(-\d{4})?$/.test(zip)) {
+          const { data: had } = await db.from('member_details').select('bill_zip').eq('profile_id', sc.profile_id).maybeSingle();
+          if (!had?.bill_zip) await db.from('member_details').upsert({ profile_id: sc.profile_id, bill_line1: addr.line1 ?? null, bill_city: addr.city ?? null, bill_state: addr.state ?? null, bill_zip: zip }, { onConflict: 'profile_id' });
+        }
+      }
       if (ev.type === 'checkout.session.async_payment_failed') {
         await db.from('payments').update({ status: 'failed' }).eq('stripe_checkout_session', o.id);
         break;

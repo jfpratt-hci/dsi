@@ -42,7 +42,8 @@ Deno.serve(async req => {
     const office = (gid: string) => `${SITE}/club/${gid}?tab=billing`;
     const dest = (acct: string, md: Record<string, string>) => ({ on_behalf_of: acct, transfer_data: { destination: acct }, metadata: md });
     // Stripe Managed Payments (Stripe as merchant of record) is on by default for new accounts; gym payments are the gym's own sales, so it stays off.
-    const newSession = (p: Record<string, unknown>) => stripe.checkout.sessions.create({ managed_payments: { enabled: false }, ...p } as any);
+    // Card checkouts always ask for the billing address (the ZIP gets better card rates); a saved customer keeps what they type.
+    const newSession = (p: Record<string, unknown>) => stripe.checkout.sessions.create({ managed_payments: { enabled: false }, billing_address_collection: 'required', ...(p.customer && p.mode !== 'setup' ? { customer_update: { address: 'auto' } } : {}), ...p } as any);
     const notReady = (g: any) => `${g?.name ?? 'This gym'} is not taking cards online yet. Pay at the gym.`;
     // Bank debit (ACH) for memberships and anything $50 or more, when the gym's account can take it. Card for the rest.
     const methods = async (acct: string, amount: number, bankOk: boolean) => {
@@ -101,9 +102,13 @@ Deno.serve(async req => {
     const owns = async (gid: string) => me.role === 'admin' || !!(await admin.from('gym_staff').select('role').eq('gym_id', gid).eq('profile_id', me.id).eq('role', 'owner').maybeSingle()).data;
     // One Stripe customer per Dandy member, shared by every Dandy gym.
     const customerFor = async () => {
+      // Their name and billing address from member details go on the Stripe customer, so cards are checked against the ZIP.
+      const { data: d } = await admin.from('member_details').select('legal_name,bill_line1,bill_city,bill_state,bill_zip').eq('profile_id', me.id).maybeSingle();
+      const address = d?.bill_zip ? { line1: d.bill_line1 ?? undefined, city: d.bill_city ?? undefined, state: d.bill_state ?? undefined, postal_code: d.bill_zip, country: 'US' } : undefined;
+      const name = d?.legal_name || me.display_name || undefined;
       const { data } = await admin.from('stripe_customers').select('customer_id').eq('profile_id', me.id).maybeSingle();
-      if (data) return data.customer_id as string;
-      const c = await stripe.customers.create({ email: u.user.email ?? undefined, name: me.display_name ?? undefined, metadata: { profile_id: me.id } });
+      if (data) { if (address) await stripe.customers.update(data.customer_id, { name, address }).catch(() => {}); return data.customer_id as string; }
+      const c = await stripe.customers.create({ email: u.user.email ?? undefined, name, ...(address ? { address } : {}), metadata: { profile_id: me.id } });
       await admin.from('stripe_customers').insert({ profile_id: me.id, customer_id: c.id });
       return c.id;
     };

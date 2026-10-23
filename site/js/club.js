@@ -383,9 +383,11 @@ export function install(X) {
   // otherwise their profile waits and is theirs the first time they sign in with that email.
   const addPersonForm = (g, role) => `<details class="formCard apWrap"${location.hash === '#add' ? ' open' : ''}><summary>Add a ${role === 'member' ? 'member' : 'coach'}</summary>
     <form class="apF" data-ap><div class="fields">
-      <div class="field w2"><label>Name</label><input data-k="name" maxlength="60" required placeholder="First and last name" autocomplete="off"></div>
+      <div class="field"><label>First name</label><input data-k="first" maxlength="60" required autocomplete="off"></div>
+      <div class="field"><label>Last name</label><input data-k="last" maxlength="60" autocomplete="off"></div>
       <div class="field w2"><label>Email <small>optional, add it later</small></label><input data-k="email" type="email" placeholder="They sign in with this" autocomplete="off"></div>
       <div class="field"><label>Phone <small>optional</small></label><input data-k="phone" type="tel" placeholder="513 555 0100" autocomplete="off"></div>
+      <div class="field"><label>Billing ZIP <small>for card payments</small></label><input data-k="zip" inputmode="numeric" maxlength="10" placeholder="45150" autocomplete="off"></div>
       <div class="field"><label>Add as</label><select data-k="role">${[['member', 'Member'], ['coach', 'Coach'], ['owner', 'Owner']].map(([v, n]) => `<option value="${v}"${v === role ? ' selected' : ''}>${n}</option>`).join('')}</select></div></div>
       <div class="row"><button class="btn sm">Add</button><span class="hint" data-msg>With an email they sign in at dandystrength.com, no password needed. No email yet? Add them now and add it later.</span></div></form>
     <div class="apDone" data-done hidden></div></details>`;
@@ -404,9 +406,13 @@ export function install(X) {
     const v = k => $(`[data-k="${k}"]`, f).value.trim(), msg = $('[data-msg]', f), b = f.querySelector('button');
     b.disabled = true; msg.textContent = 'Adding…';
     try {
-      const r = await rpc('gym_add_person', { p_gym: g.id, p_name: v('name'), p_email: v('email') || null, p_phone: v('phone') || null, p_role: v('role') });
+      const full = [v('first'), v('last')].filter(Boolean).join(' ');
+      if (v('zip') && !/^\d{5}(-\d{4})?$/.test(v('zip'))) throw new Error('Billing ZIP is 5 digits, like 45150.');
+      const r = await rpc('gym_add_person', { p_gym: g.id, p_name: full, p_email: v('email') || null, p_phone: v('phone') || null, p_role: v('role') });
+      // A brand new person: save first and last name and the billing ZIP on their details too.
+      if (r.how === 'created' || r.how === 'no_email') await rpc('gym_set_details', { p_gym: g.id, p_profile: r.profile_id, p: { first_name: v('first'), last_name: v('last'), email: v('email'), phone: v('phone'), bill_zip: v('zip') } });
       const role = v('role'), who = role === 'member' ? 'a member' : 'a ' + role;
-      const note = `Hi ${v('name').split(' ')[0]}, you're set up at ${g.name} on Dandy. Sign in at dandystrength.com/login with ${v('email')} to book classes and see the workout.`;
+      const note = `Hi ${v('first')}, you're set up at ${g.name} on Dandy. Sign in at dandystrength.com/login with ${v('email')} to book classes and see the workout.`;
       const done = $('[data-done]', f.parentElement);
       done.hidden = false;
       done.innerHTML = r.how === 'no_email' ? `<b>${esc(r.name)} is ${who} of ${esc(g.name)}.</b> No email yet. When you have it, add it from ${role === 'member' ? 'their Open panel on Members' : 'the Coaches list'} and they can sign in.`
@@ -430,6 +436,7 @@ export function install(X) {
       owner ? sb.from('invoices').select('profile_id,amount_cents,status').eq('gym_id', g.id).eq('status', 'open').then(must) : [],
       sb.from('gym_staff').select('profile_id,role').eq('gym_id', g.id).then(must),
     ]);
+    const zips = owner && members.length ? new Set(((await sb.from('member_details').select('profile_id,bill_zip').in('profile_id', members.map(m => m.id))).data || []).filter(x => x.bill_zip).map(x => x.profile_id)) : null;
     // Coaches and owners are members too, just another type, and free.
     const typeOf = new Map(staffRows.map(x => [x.profile_id, x.role])), kind = id => typeOf.get(id) || 'member';
     const show = ['member', 'coach'].includes(qs.get('type')) ? qs.get('type') : 'all';
@@ -444,7 +451,7 @@ export function install(X) {
     const typeChips = `<div class="chips mbType" aria-label="Show">${[['all', `All ${members.length}`], ['member', `Members ${members.length - nCoach}`], ['coach', `Coaches ${nCoach}`]].map(([v, n]) => `<a class="chip" href="/club/${g.id}?tab=members&type=${v}${q ? '&q=' + encodeURIComponent(q) : ''}" aria-pressed="${show === v}">${n}</a>`).join('')}</div>`;
     if (!paint(tok, shell(`${owner ? addPersonForm(g, 'member') : ''}${typeChips}<div class="row adSearch"><label class="vh" for="mq">Search members</label><input id="mq" placeholder="Search members" value="${esc(qs.get('q') || '')}" style="max-width:300px"><span class="hint">${list.length} of ${members.length} members. Members join by picking ${esc(g.name)} on the Gym league page.${owner ? ' Remove takes someone off the gym and ends a desk paid membership; their account and history stay.' : ''}</span></div>
       <div class="board"><div class="tablewrap"><table class="adT"><thead><tr><th>Member</th><th>Type</th><th>Membership</th><th>Waiver</th><th>Contract</th><th class="r">Visits 30 days</th><th>Last visit</th>${owner ? '<th class="r">Owes</th>' : ''}<th></th></tr></thead><tbody>
-      ${list.map(m => { const c = cur(m.id), v = visits(m.id), k = kind(m.id); return `<tr><td><b><a href="/u/${m.id}">${esc(m.display_name)}</a></b></td><td>${k === 'owner' ? '<span class="pill acc">Owner</span>' : k === 'coach' ? '<span class="pill acc">Coach</span>' : '<span class="sub">Member</span>'}</td><td>${c ? `${esc(c.plan_name)} ${statusPill(c.status)}` : k !== 'member' ? `<span class="pill up">Free, ${k}</span>` : statusPill('')}</td>
+      ${list.map(m => { const c = cur(m.id), v = visits(m.id), k = kind(m.id); return `<tr><td><b><a href="/u/${m.id}">${esc(m.display_name)}</a></b>${zips && !zips.has(m.id) ? ' <span class="pill flat" title="Add their billing ZIP for better card rates">No ZIP</span>' : ''}</td><td>${k === 'owner' ? '<span class="pill acc">Owner</span>' : k === 'coach' ? '<span class="pill acc">Coach</span>' : '<span class="sub">Member</span>'}</td><td>${c ? `${esc(c.plan_name)} ${statusPill(c.status)}` : k !== 'member' ? `<span class="pill up">Free, ${k}</span>` : statusPill('')}</td>
         <td>${signedDoc(m.id, 'waiver') ? '<span class="pill up">Signed</span>' : '<span class="pill down">Missing</span>'}</td><td>${!docId('contract') ? '<span class="sub">none</span>' : signedDoc(m.id, 'contract') ? '<span class="pill up">Signed</span>' : '<span class="pill flat">Not yet</span>'}</td>
         <td class="r n">${v.filter(a => (a.checked_in_at || '') >= since).length}</td><td>${v[0] && v[0].checked_in_at ? esc(fmtD(v[0].checked_in_at.slice(0, 10))) : '<span class="sub">never</span>'}</td>
         ${owner ? `<td class="r n">${owed(m.id) ? `<b style="color:var(--down)">${money(owed(m.id))}</b>` : ''}</td>` : ''}<td class="r nowrap"><button class="btn ghost sm" data-md="${m.id}">Open</button>${owner ? ` <button class="btn ghost sm" data-rm="${m.id}" aria-label="Remove ${esc(m.display_name)} from ${esc(g.name)}">Remove</button>` : ''}</td></tr>
@@ -463,16 +470,28 @@ export function install(X) {
   }
 
   async function memberDetail(g, pid, box, { kind = 'member', owner, plans, ms, sigs, docs }) {
-    const [det, att, inv, lvp, lgs] = await Promise.all([
+    const [det, att, inv, lvp, lgs, prof] = await Promise.all([
       sb.from('member_details').select('*').eq('profile_id', pid).maybeSingle().then(r => r.data),
       sb.from('bookings').select('checked_in_at,session:sessions(name,starts_at)').eq('gym_id', g.id).eq('profile_id', pid).eq('status', 'attended').order('checked_in_at', { ascending: false }).limit(30).then(must),
       owner ? sb.from('invoices').select('*').eq('gym_id', g.id).eq('profile_id', pid).order('created_at', { ascending: false }).limit(50).then(must) : [],
       sb.rpc('level_progress', { p_profile: pid }).then(r => r.data),
       loginStatus(g),
+      sb.from('profiles').select('display_name,birth_year,bodyweight,sex').eq('id', pid).maybeSingle().then(r => r.data),
     ]);
+    const d = det || {}, pf = prof || {};
+    const fld = (k, label, val, extra = '') => `<div class="field"><label>${label}</label><input data-f="${k}" value="${esc(val ?? '')}" ${extra}></div>`;
+    const editForm = `<form class="formCard mdEdit" data-mde><div class="fields">
+        ${fld('first_name', 'First name', d.first_name, 'maxlength="60"')}${fld('last_name', 'Last name', d.last_name, 'maxlength="60"')}${fld('display_name', 'Board name', pf.display_name, 'maxlength="24"')}
+        ${fld('email', 'Contact email', d.email, 'type="email" maxlength="160"')}${fld('phone', 'Phone', d.phone, 'type="tel" maxlength="40"')}
+        ${fld('emergency_name', 'Emergency contact', d.emergency_name, 'maxlength="120"')}${fld('emergency_phone', 'Emergency phone', d.emergency_phone, 'type="tel" maxlength="40"')}
+        <div class="field w2"><label>Billing street</label><input data-f="bill_line1" value="${esc(d.bill_line1 || '')}" maxlength="120" autocomplete="off"></div>
+        ${fld('bill_city', 'City', d.bill_city, 'maxlength="60"')}${fld('bill_state', 'State', d.bill_state, 'maxlength="2" style="text-transform:uppercase"')}${fld('bill_zip', 'Billing ZIP', d.bill_zip, 'inputmode="numeric" maxlength="10"')}
+        ${fld('birth_year', 'Birth year', pf.birth_year, 'type="number" min="1920" max="2015"')}${fld('bodyweight', 'Bodyweight lb', pf.bodyweight, 'type="number" min="80" max="450" step="any"')}
+        <div class="field"><label>Sex</label><select data-f="sex">${[['', 'Not set'], ['male', 'Male'], ['female', 'Female'], ['unspecified', 'Unspecified']].map(([k, n]) => `<option value="${k}"${(pf.sex || '') === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div></div>
+      <div class="row"><button class="btn sm">Save details</button><span class="hint" data-mdm>${d.bill_zip ? '' : 'Add their billing ZIP for better card rates.'}</span></div></form>`;
     const cur = ms.find(m => m.status !== 'canceled');
-    box.innerHTML = `<div class="mdGrid">
-      <div>${owner ? `<h4>Type</h4><form class="row" data-tyf><select data-ty style="max-width:160px">${[['member', 'Member'], ['coach', 'Coach'], ['owner', 'Owner']].map(([k, n]) => `<option value="${k}"${kind === k ? ' selected' : ''}>${n}</option>`).join('')}</select><button class="btn ghost sm">Save</button></form><p class="sub">Coaches and owners are free members and can run classes.</p>` : ''}<h4>Sign in</h4>${loginRow(lgs.get(pid), pid, owner)}<h4>Contact</h4>${det ? `<p>${esc(det.legal_name || '')}<br>${esc(det.phone || '')}<br>${esc(det.email || '')}</p><p class="sub">Emergency: ${esc(det.emergency_name || 'not given')} ${esc(det.emergency_phone || '')}</p>` : '<p class="hint">They have not added contact details yet.</p>'}
+    box.innerHTML = `${owner ? editForm : ''}<div class="mdGrid">
+      <div>${owner ? `<h4>Type</h4><form class="row" data-tyf><select data-ty style="max-width:160px">${[['member', 'Member'], ['coach', 'Coach'], ['owner', 'Owner']].map(([k, n]) => `<option value="${k}"${kind === k ? ' selected' : ''}>${n}</option>`).join('')}</select><button class="btn ghost sm">Save</button></form><p class="sub">Coaches and owners are free members and can run classes.</p>` : ''}<h4>Sign in</h4>${loginRow(lgs.get(pid), pid, owner)}<h4>Contact</h4>${owner ? '' : det ? `<p>${esc(det.legal_name || '')}<br>${esc(det.phone || '')}<br>${esc(det.email || '')}</p><p class="sub">Emergency: ${esc(det.emergency_name || 'not given')} ${esc(det.emergency_phone || '')}</p>` : '<p class="hint">They have not added contact details yet.</p>'}
         <h4>Documents</h4>${sigs.map(s => `<p>${s.kind === 'waiver' ? 'Waiver' : 'Contract'} v${(docs.find(d => d.id === s.doc_id) || {}).version || 'old'} · signed ${esc(fmtD(s.signed_at.slice(0, 10)))} as ${esc(s.signed_name)} <a href="/signed/${s.id}">View</a></p>`).join('') || '<p class="hint">Nothing signed yet.</p>'}</div>
       <div><h4>Level</h4>${lvp ? `<form class="row" data-lvf><select data-lv style="max-width:160px">${[['beginner', 'Beginner'], ['rx', 'Rx'], ['comp', 'Comp']].map(([k, n]) => `<option value="${k}"${lvp.level === k ? ' selected' : ''}>${n}</option>`).join('')}</select><button class="btn ghost sm">Set</button></form>
         <p class="sub">${lvp.level_by === 'coach' ? 'Set by a coach. ' : 'Moves up on its own. '}${lvp.level === 'beginner' ? `${lvp.rx_logs} of 3 Rx logs, or ${lvp.weighted_logs} of 8 logs and ${lvp.prs} of 2 PRs` : lvp.level === 'rx' ? `${lvp.comp_logs} of 3 Comp logs` : 'Top level'}</p>` : '<p class="sub">Not set</p>'}
@@ -484,6 +503,13 @@ export function install(X) {
     </div>`;
     const again = () => route();
     bindLogin(g, box);
+    const ef = $('[data-mde]', box);
+    if (ef) ef.onsubmit = async e => {
+      e.preventDefault();
+      const p = Object.fromEntries($$('[data-f]', ef).map(i => [i.dataset.f, i.value.trim()])), m = $('[data-mdm]', ef);
+      if (p.bill_zip && !/^\d{5}(-\d{4})?$/.test(p.bill_zip)) { m.textContent = 'Billing ZIP is 5 digits, like 45150, or ZIP+4.'; return; }
+      try { await rpc('gym_set_details', { p_gym: g.id, p_profile: pid, p }); m.textContent = 'Saved.'; toast('Details saved'); } catch (err) { m.textContent = err.message; }
+    };
     const tf = $('[data-tyf]', box);
     if (tf) tf.onsubmit = async e => { e.preventDefault(); try { const t = await rpc('gym_set_type', { p_gym: g.id, p_profile: pid, p_type: $('[data-ty]', tf).value }); toast(t === 'member' ? 'Now a member' : `Now ${t === 'owner' ? 'an owner' : 'a coach'}`); route(); } catch (err) { toast(err.message); } };
     const lf = $('[data-lvf]', box);
@@ -800,11 +826,16 @@ export function install(X) {
           <ol class="mdAtt">${visits.slice(0, 20).map(a => `<li>${esc(a.session ? a.session.name : 'Class')} <span class="sub">${a.session ? esc(when(a.session.starts_at)) : ''}</span></li>`).join('') || '<li class="hint">No visits yet. Coaches check you in at class.</li>'}</ol>
         </div>
         <form class="formCard" id="mdF"><div class="formH">Your details <span class="sub">Only you and ${esc(g.name)} coaches see these.</span></div><div class="fields">
-          <div class="field w2"><label for="md-n">Legal name</label><input id="md-n" maxlength="120" value="${esc(det ? det.legal_name || '' : '')}"></div>
+          <div class="field"><label for="md-fn">First name</label><input id="md-fn" maxlength="60" autocomplete="given-name" value="${esc(det ? det.first_name || '' : '')}"></div>
+          <div class="field"><label for="md-ln">Last name</label><input id="md-ln" maxlength="60" autocomplete="family-name" value="${esc(det ? det.last_name || '' : '')}"></div>
           <div class="field w2"><label for="md-e">Email</label><input id="md-e" type="email" maxlength="160" value="${esc(det ? det.email || '' : '')}"></div>
           <div class="field w2"><label for="md-p">Phone</label><input id="md-p" type="tel" maxlength="40" value="${esc(det ? det.phone || '' : '')}"></div>
           <div class="field w2"><label for="md-en">Emergency contact</label><input id="md-en" maxlength="120" value="${esc(det ? det.emergency_name || '' : '')}"></div>
-          <div class="field w2"><label for="md-ep">Emergency phone</label><input id="md-ep" type="tel" maxlength="40" value="${esc(det ? det.emergency_phone || '' : '')}"></div></div>
+          <div class="field w2"><label for="md-ep">Emergency phone</label><input id="md-ep" type="tel" maxlength="40" value="${esc(det ? det.emergency_phone || '' : '')}"></div>
+          <div class="field w2"><label for="md-b1">Billing street</label><input id="md-b1" maxlength="120" autocomplete="address-line1" value="${esc(det ? det.bill_line1 || '' : '')}"></div>
+          <div class="field"><label for="md-bc">City</label><input id="md-bc" maxlength="60" autocomplete="address-level2" value="${esc(det ? det.bill_city || '' : '')}"></div>
+          <div class="field"><label for="md-bs">State</label><input id="md-bs" maxlength="2" autocomplete="address-level1" style="text-transform:uppercase" value="${esc(det ? det.bill_state || '' : '')}"></div>
+          <div class="field"><label for="md-bz">Billing ZIP</label><input id="md-bz" inputmode="numeric" maxlength="10" autocomplete="postal-code" value="${esc(det ? det.bill_zip || '' : '')}" placeholder="The ZIP on your card"></div></div>
           <label class="check"><input type="checkbox" id="md-sms"${det && det.sms_ok ? ' checked' : ''}><span>Text me from ${esc(g.name)}: PR shout outs, a nudge if I miss a while, and billing notes. Msg and data rates may apply. Reply STOP any time.</span></label>
           <label class="check"><input type="checkbox" id="md-promo"${det && det.sms_promo ? ' checked' : ''}><span>Also text me news, new gear, events and the odd quick survey. A few a month at most.</span></label>
           <div class="row"><button class="btn sm">Save</button><span class="hint" id="md-msg"></span></div></form>
@@ -813,7 +844,7 @@ export function install(X) {
     $$('[data-pay]').forEach(b => b.onclick = () => busy(b, async () => { location.href = (await call('pay', { invoice: b.dataset.pay })).url; }));
     $$('[data-join]').forEach(b => b.onclick = () => busy(b, async () => { location.href = (await call('subscribe', { plan: b.dataset.join })).url; }));
     if ($('#portal')) $('#portal').onclick = e => busy(e.target, async () => { location.href = (await call('portal', { gym: g.id })).url; });
-    $('#mdF').onsubmit = async e => { e.preventDefault(); const { error } = await sb.from('member_details').upsert({ profile_id: S.me.id, legal_name: $('#md-n').value.trim() || null, email: $('#md-e').value.trim() || null, phone: $('#md-p').value.trim() || null, emergency_name: $('#md-en').value.trim() || null, emergency_phone: $('#md-ep').value.trim() || null, ...($('#md-sms') ? { sms_ok: $('#md-sms').checked } : {}), ...($('#md-promo') ? { sms_promo: $('#md-promo').checked } : {}), updated_at: new Date().toISOString() }); $('#md-msg').textContent = error ? error.message : 'Saved.'; };
+    $('#mdF').onsubmit = async e => { e.preventDefault(); if ($('#md-bz').value.trim() && !/^\d{5}(-\d{4})?$/.test($('#md-bz').value.trim())) { $('#md-msg').textContent = 'Billing ZIP is 5 digits, like 45150.'; return; } const { error } = await sb.from('member_details').upsert({ profile_id: S.me.id, first_name: $('#md-fn').value.trim() || null, last_name: $('#md-ln').value.trim() || null, bill_line1: $('#md-b1').value.trim() || null, bill_city: $('#md-bc').value.trim() || null, bill_state: $('#md-bs').value.trim().toUpperCase() || null, bill_zip: $('#md-bz').value.trim() || null, email: $('#md-e').value.trim() || null, phone: $('#md-p').value.trim() || null, emergency_name: $('#md-en').value.trim() || null, emergency_phone: $('#md-ep').value.trim() || null, ...($('#md-sms') ? { sms_ok: $('#md-sms').checked } : {}), ...($('#md-promo') ? { sms_promo: $('#md-promo').checked } : {}), updated_at: new Date().toISOString() }); $('#md-msg').textContent = error ? error.message : 'Saved.'; };
   };
   VIEWS.billing = VIEWS.mygym;
 
