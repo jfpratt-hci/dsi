@@ -266,7 +266,10 @@ VIEWS.boards = async (_, tok) => {
       <div class="step"><b>Climb the board</b><p>Every PR moves you up. Follow the daily workout and chase your goals.</p></div>
     </div>
   </section>`}
-  <section class="sec bdHead bdUnder">${boardBar('lifters')}</section>
+  <section class="sec" aria-labelledby="wkprs">
+    <div class="secHead"><div><div class="kicker">This week</div><h2 id="wkprs">Fresh <span>PRs</span></h2><p class="secSub">Every new personal record since Monday, lifts and benchmarks.</p></div><a class="btn ghost sm" href="/prs">Full PR wall</a></div>
+    <div id="wkGrid">${weekPRs.length ? `<div class="prGrid">${weekPRs.slice(0, 8).map(prCard).join('')}</div>` : `<div class="prEmpty"><b>No PRs yet this week</b><p>Somebody has to go first. <a href="/train">Train today</a>.</p></div>`}</div>
+  </section>
   <section class="sec band" aria-labelledby="kings">
     <div class="secHead"><div><div class="kicker">Heaviest on the board</div><h2 id="kings">Lift <span>kings</span></h2><p class="secSub">Tap a lift to sort the leaderboard by it${isPro() ? '' : ' with DSI Pro'}.</p></div></div>
     <div class="kings">${D.LIFTS.map(l => { const k = [...board].sort((a, b) => b[l.k] - a[l.k])[0]; return k && k[l.k] ? `<button class="king${S.bf.sort === l.k ? ' on' : ''}" style="--c:${l.c}" data-sort="${l.k}"><span class="eyebrow">${l.n}</span><b>${esc(k.name)}</b><span class="kv">${fmt(k[l.k])} lb</span>${isNew(k[l.k + '_date']) ? `<span class="prDateNew">PR ${fmtD(k[l.k + '_date'])}</span>` : ''}</button>` : ''; }).join('')}</div>
@@ -275,6 +278,7 @@ VIEWS.boards = async (_, tok) => {
     <div class="secHead"><div><div class="kicker">The standings</div><h2>Leader<span>board</span></h2><p class="secSub">Filter by division and age, or sort by any lift.</p></div></div>
     <div class="board" id="lb"></div>
   </section>
+  <section class="sec band" id="bench" aria-labelledby="bnh"><div id="benchSec"><p class="empty">Loading benchmarks…</p></div></section>
   ${S.me ? '' : `<section class="sec band cta2"><div class="secHead"><div><div class="kicker">Free to join</div><h2>Where do <span>you</span> rank?</h2><p class="secSub">Enter your four lifts, see your DSI™, and save your spot on the board in under a minute.</p></div><a class="btn" href="/join">Join the index</a></div></section>`}`;
   if (!paint(tok, html)) return;
   $$('.king').forEach(b => b.onclick = () => { if (!isPro()) return go('/pro'); S.bf.sort = b.dataset.sort; renderBoard(); $('#lb').scrollIntoView({ behavior: 'smooth' }); $$('.king').forEach(k => k.classList.toggle('on', k.dataset.sort === S.bf.sort)); });
@@ -818,7 +822,7 @@ VIEWS.me = async (_, tok) => {
     ${first ? '' : `<section class="sec band"><div class="secHead"><div><div class="kicker">DSI Pro</div><h2>Train with a <span>plan</span></h2></div>${pro ? '<span class="pill up" style="margin:0">Pro active</span>' : '<a class="btn sm" href="/pro">See Pro</a>'}</div>
       <div class="tools">${tile('/better', 'Get better', 'Progress charts, goal plans and your coach on one page.', 1)}${tile('/recap/' + new Date().getFullYear(), 'Year recap', 'Your year in PRs and pounds, ready to share.', 1)}${tile('/battles', 'Weekly battles', 'Call out a lifter for a week.', 1)}</div></section>
     <section class="sec"><div class="secHead"><div><div class="kicker">Compete and grow</div><h2>More to <span>do</span></h2></div><button class="btn sm" data-invite>Invite your crew</button></div>
-      <div class="tools">${tile('/gyms', 'Your gym', m.gym_id ? 'See your gym in the league.' : 'Pick your gym and put it on the league.')}${tile('/compete', 'Compete', 'The season and weekly battles.', 1)}${tile('/benchmarks', 'Benchmarks', 'Fran, the 2K row and class benchmarks.')}</div></section>
+      <div class="tools">${tile('/compete', 'Compete', 'The season and weekly battles.', 1)}${tile('/benchmarks', 'Benchmarks', 'Fran, the 2K row and class benchmarks.')}</div></section>
     <section class="sec"><div><div class="kicker">Reminders</div><h2>Your <span>reminders</span></h2><p class="secSub">These go to your phone through the DSI app. Turn notifications on in the app once and these settings follow you.</p></div>
       <form class="formCard" id="nf"><div class="fields">
         <div class="field w2"><span class="lbl">Send me</span>
