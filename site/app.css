@@ -2037,3 +2037,24 @@ td .lgF{margin:6px 0 0}
 .olyL .pill { margin: 0; }
 @media (max-width: 900px) { .olyGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) { .olyGrid { grid-template-columns: 1fr; } }
+/* DSI page: lifter card on top, then the lift matrices and the coach */
+.dsCard { padding-top: 28px; }
+.dsCard article.card { margin: 0; }
+.dsSec .secHead { margin-bottom: 14px; }
+.mxT th, .mxT td { vertical-align: middle; }
+.mxT tbody th { font-weight: 700; white-space: nowrap; text-align: left; }
+.mxDot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--c); margin-right: 10px; }
+.mxIn { width: 110px; padding: 8px 10px; }
+.mxIn.mxDate { width: 160px; }
+.mxIn:disabled { opacity: .35; }
+.mxGoal.ask .mxIn { border-color: var(--accent, #f5c542); box-shadow: 0 0 0 2px rgba(245, 197, 66, .18); }
+.mxProg { min-width: 170px; }
+.mxProg .pb { display: block; height: 8px; border-radius: 4px; background: var(--line, #2a3242); overflow: hidden; margin-bottom: 4px; }
+.mxProg .pb i { display: block; height: 100%; background: var(--c); }
+.mxOpen:not(:empty) { margin-top: 14px; }
+.mxAdd { margin-top: 12px; }
+.mxAdd select { max-width: 220px; }
+.dsTg { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin: 8px 0 22px; }
+.dsTgC { border: 1px solid var(--line, #2a3242); border-top: 3px solid var(--c); border-radius: 12px; padding: 12px 14px; display: grid; gap: 2px; }
+.dsTgC b { font-size: 1.6rem; color: var(--c); }
+.dsTgC small { color: var(--muted, #9aa4b2); }

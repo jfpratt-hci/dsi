@@ -159,7 +159,7 @@ function navGroups() {
     ...(me ? [] : [{ k: 'members', n: 'For members', href: '/members' }]),
   ];
   // Signed in: four plain pages, no drop downs. Board, Train, Get better, Compete.
-  if (me) g.push({ k: 'train', n: 'Train', href: '/train' }, { k: 'boards', n: 'Dandy Boards', href: '/boards' }, { k: 'better', n: 'Get better', href: '/better' });
+  if (me) g.push({ k: 'train', n: 'Train', href: '/train' }, { k: 'boards', n: 'Dandy Boards', href: '/boards' }, { k: 'better', n: 'DSI', href: '/dsi' });
   const gyms = S.myGyms || [];
   const offItems = (x, keys) => OFFICE.filter(o => keys.includes(o[0]) && (!o[3] || x.role === 'owner' || (S.me && S.me.role === 'admin'))).map(([k, n, d]) => [officeHref(x.gym_id, k), n, d]);
   if (gyms.length === 1) { const x = gyms[0], nm = x.gym.name || 'Gym';
@@ -171,12 +171,12 @@ function navGroups() {
 const ROUTE_GROUP = { '': 'home', pricing: 'home', start: 'home', grow: 'home', tour: 'home', switch: 'home', members: 'members',
   boards: 'boards', prs: 'boards', pr: 'boards', gyms: 'boards', benchmarks: 'boards', protests: 'boards', u: 'boards',
   train: 'train', week: 'train', training: 'train', log: 'train', lift: 'train', classes: 'train', tracker: 'train',
-  better: 'better', progress: 'better', plans: 'better', coach: 'better',
+  better: 'better', dsi: 'better', progress: 'better', plans: 'better', coach: 'better',
   compete: 'boards', season: 'boards', battles: 'boards', recap: 'me',
   mygym: 'me', billing: 'me', sign: 'me', signed: 'me', shop: 'me', me: 'me', security: 'me', pro: 'me', rules: 'me', blocked: 'me',
   club: 'office', insights: 'office', website: 'office', sell: 'office', growth: 'office', follow: 'office', dandytv: 'office', class: 'office', plan: 'office', wod: 'office', results: 'office', gym: 'office',
   admin: 'admin', reports: 'admin', program: 'admin', connect: 'admin', import: 'admin' };
-const ACCT = () => [['/me', 'Profile', 'Name, gym and lifter details'], ...(S.me.gym_id ? [['/mygym', 'Membership and billing', 'Plan, payments and documents'], ['/shop/' + S.me.gym_id, 'Gym shop', 'Drinks, snacks and gear']] : []), ['/me?tab=goals', 'Goals', 'What you are chasing'], ['/me?tab=reminders', 'Reminders', 'Nudges to log'], ['/me?tab=account', 'Account and safety', 'Email, privacy and blocks'], ['/u/' + S.me.id, 'My lifter card', 'Your public page'], ['/pro', 'DSI Pro', 'Membership and perks']];
+const ACCT = () => [['/me', 'Profile', 'Name, gym and lifter details'], ...(S.me.gym_id ? [['/mygym', 'Membership and billing', 'Plan, payments and documents']] : []), ['/me?tab=reminders', 'Reminders', 'Nudges to log'], ['/me?tab=account', 'Account and safety', 'Email, privacy and blocks'], ['/u/' + S.me.id, 'My lifter card', 'Your public page'], ['/pro', 'DSI Pro', 'Membership and perks']];
 function buildNav(r) {
   const groups = navGroups(), cur = ROUTE_GROUP[r] ?? '';
   const here = location.pathname + location.search;
@@ -439,101 +439,142 @@ VIEWS.train = async (_, tok) => {
   ]);
 };
 
-/* ---------- Get better: your goals on top (tap one for its chart and plan), then the coach ---------- */
-VIEWS.better = async (_, tok) => {
-  if (!S.me) return needLogin(tok, 'get better');
-  if (!isPro()) return paint(tok, `<section class="sec narrow"><div><div class="kicker">DSI Pro</div><h2>Get <span>better</span></h2>
-    <p class="secSub">Set goals for any lift, see your progress toward each one with a week by week plan, and get a coach that reads your numbers and tells you what to fix.</p></div>
-    <div class="row"><a class="btn" href="/pro">See DSI Pro</a></div></section>`);
-  const [goals, hist, bests] = await Promise.all([
+/* ---------- DSI: your lifter card, your numbers and goals, then the coach built from them ---------- */
+// The four DSI lifts first, then a matrix of the olympic and press lifts. Type your best and it asks for a goal;
+// neither is required. A best higher than what is on file is logged as a lift today. The coach reads all of it.
+VIEWS.better = () => go('/dsi' + location.hash, true);
+VIEWS.dsi = async (_, tok) => {
+  if (!S.me) return needLogin(tok, 'see your DSI');
+  const pro = isPro();
+  const [goals, hist] = await Promise.all([
     sb.from('goals').select('*').eq('profile_id', S.me.id).then(must),
     sb.from('lift_entries').select('lift,weight_lb,performed_on,is_pr').eq('profile_id', S.me.id).neq('status', 'struck').order('performed_on').then(must),
-    sb.from('lift_bests').select('lift,weight_lb').eq('profile_id', S.me.id).then(must),
   ]);
   if (tok !== S.tok) return;
-  // The coach paints as its own page; keep its body, drop its title, and turn its section titles into small labels.
+  // The lifter card and the coach paint as their own pages; keep the parts we want.
   main.style.visibility = 'hidden';
-  let coach = '';
+  let card = '', coach = '';
   try {
-    await VIEWS.coach(null, tok);
-    if (tok !== S.tok) return;
-    const tmp = document.createElement('div'); tmp.innerHTML = main.innerHTML;
-    const first = tmp.querySelector('section'); if (first && first.querySelector('h2')) first.remove();
-    tmp.querySelectorAll('h2').forEach(h => { const d = document.createElement('div'); d.className = 'gbLbl'; d.textContent = h.textContent; h.replaceWith(d); });
-    tmp.querySelectorAll('section').forEach(x => x.classList.remove('band'));
-    coach = tmp.innerHTML;
-  } catch (e) { coach = `<div class="prEmpty"><b>The coach didn't load</b><p class="err">${esc(e.message || e)}</p></div>`; }
-  main.style.visibility = '';
-  const best = Object.fromEntries(bests.map(b => [b.lift, num(b.weight_lb)])), bw = num(S.me.bodyweight) || 200;
-  hist.forEach(e => { best[e.lift] = Math.max(best[e.lift] || 0, num(e.weight_lb)); });
+    try { await VIEWS.u(S.me.id, tok); if (tok !== S.tok) return; const c = $('article.card', main); card = c ? c.outerHTML : ''; } catch (e) { console.error(e); }
+    if (pro) {
+      try {
+        await VIEWS.coach(null, tok);
+        if (tok !== S.tok) return;
+        const tmp = document.createElement('div'); tmp.innerHTML = main.innerHTML;
+        const first = tmp.querySelector('section'); if (first && first.querySelector('h2')) first.remove();
+        tmp.querySelectorAll('h2').forEach(h => { const d = document.createElement('div'); d.className = 'gbLbl'; d.textContent = h.textContent; h.replaceWith(d); });
+        tmp.querySelectorAll('section').forEach(x => x.classList.remove('band'));
+        tmp.querySelectorAll('a[href="/log"]').forEach(x => x.setAttribute('href', '#dsiLifts'));
+        // The lifter card on top already shows where you rank.
+        tmp.querySelectorAll('section').forEach(x => { const l = x.querySelector('.gbLbl'); if (l && /where you rank/i.test(l.textContent)) x.remove(); });
+        coach = tmp.innerHTML;
+      } catch (e) { coach = `<div class="prEmpty"><b>The coach didn't load</b><p class="err">${esc(e.message || e)}</p></div>`; }
+    }
+  } finally { if (tok === S.tok) main.style.visibility = ''; }
+  if (tok !== S.tok) return;
+
+  const best = {}; hist.forEach(e => { best[e.lift] = Math.max(best[e.lift] || 0, num(e.weight_lb)); });
+  const gl = Object.fromEntries(goals.map(g => [g.lift, g])), bw = num(S.me.bodyweight) || 200;
   const plan = g => { // a heavy single and 3x3 working weight each week to the date; every fourth week backs off
     const b = best[g.lift] || r5(num(g.target_lb) * 0.8), t = num(g.target_lb), start = monday(today());
     const weeks = Math.max(1, Math.round((pd(g.target_date) - pd(start)) / (7 * 864e5))), per = (t - b) / weeks;
     const list = Array.from({ length: weeks }, (_, i) => { const wk = i + 1, dl = wk % 4 === 0 && wk !== weeks, top = r5(b + per * wk), use = dl ? r5(top * 0.9) : top; return { wk, from: addDays(start, i * 7), dl, top: use, work: r5(use * 0.85) }; });
     return { weeks, per, list, pace: per / bw * 100 > 1.25 ? ['Aggressive', 'down'] : per / bw * 100 > 0.6 ? ['Ambitious', 'flat'] : ['On track', 'up'] };
   };
-  const card = g => {
-    const now = best[g.lift] || 0, t = num(g.target_lb), pct = Math.min(100, Math.round(now / t * 100)), done = now >= t;
-    const pl = g.target_date && !done ? plan(g) : null;
-    return `<button type="button" class="gbGoal${done ? ' done' : ''}" data-goal="${esc(g.lift)}" style="--c:${D.liftColor(g.lift)}" aria-expanded="false">
-      <span class="gbN">${esc(D.liftName(g.lift))}</span><b class="gbT">${fmt(t)} <small>lb</small></b>
-      <span class="pb"><i style="width:${pct}%"></i></span>
-      <span class="gbNow">${now ? `${fmt(now)} now · ${done ? 'Hit it' : fmt(t - now) + ' to go'}` : 'No lift logged yet'}</span>
-      <span class="gbWhen">${g.target_date ? `By ${fmtD(g.target_date)}${pl ? ` · <em class="${pl.pace[1]}">${pl.pace[0]}</em>` : ''}` : 'No date'}</span></button>`;
+  // This week's target for one lift: from the dated plan, or the next small PR toward the goal.
+  const target = id => {
+    const g = gl[id], now = best[id] || 0, t = g ? num(g.target_lb) : 0;
+    if (!g || !now || now >= t) return null;
+    if (g.target_date) { const w = plan(g).list[0]; return { top: w.top, work: w.work, why: `${fmtD(g.target_date)} goal` }; }
+    const top = Math.min(t, Math.max(r5(now * 1.025), now + 5)); return { top, work: r5(top * 0.85), why: 'Next step to ' + fmt(t) };
   };
-  const detail = g => {
-    const rows = hist.filter(e => e.lift === g.lift), byDay = new Map();
+  const colorOf = (id, i) => D.LIFT_BY_DB[id] ? D.LIFT_BY_DB[id].c : ['var(--bench)', 'var(--squat)', 'var(--dead)', 'var(--clean)'][i % 4];
+  const MAIN = D.LIFTS.map(l => [l.db, D.liftName(l.db)]);
+  const OLY0 = D.EXTRA_LIFTS.map(x => x[0]);
+  const isMain = id => !!D.LIFT_BY_DB[id];
+  let oly = [...OLY0, ...D.ALL_LIFTS.map(x => x[0]).filter(id => !isMain(id) && !OLY0.includes(id) && (best[id] || gl[id]))];
+  const addable = () => D.ALL_LIFTS.filter(([id]) => !isMain(id) && !oly.includes(id));
+
+  const rowHtml = (id, i) => {
+    const g = gl[id], now = best[id] || 0, t = g ? num(g.target_lb) : 0, done = t && now >= t, pct = t && now ? Math.min(100, Math.round(now / t * 100)) : 0;
+    const name = D.liftName(id);
+    return `<tr data-lift="${esc(id)}" style="--c:${colorOf(id, i)}"><th scope="row"><span class="mxDot"></span>${esc(name)}</th>
+      <td><input class="mxIn" data-best type="number" inputmode="decimal" min="1" max="1499" step="any" value="${now ? fmt(now) : ''}" placeholder="lb" aria-label="${esc(name)} best"></td>
+      <td class="mxGoal${now && !t ? ' ask' : ''}"><input class="mxIn" data-goal type="number" inputmode="decimal" min="1" max="1499" step="any" value="${t ? fmt(t) : ''}" placeholder="${now ? 'Goal lb' : '·'}" aria-label="${esc(name)} goal"${now || t ? '' : ' disabled'}></td>
+      <td><input class="mxIn mxDate" data-by type="date" value="${g && g.target_date ? g.target_date : ''}" min="${today()}" aria-label="${esc(name)} goal date, optional"${t ? '' : ' disabled'}></td>
+      <td class="mxProg">${t ? `<span class="pb"><i style="width:${pct}%"></i></span><span class="sub">${done ? 'Goal hit. Set the next one.' : now ? fmt(t - now) + ' lb to go' : 'Add your best'}</span>` : now ? '<span class="sub">Optional: add a goal</span>' : ''}</td>
+      <td class="r">${now ? `<button type="button" class="btn ghost sm" data-chart="${esc(id)}">Progress</button>` : ''}</td></tr>`;
+  };
+  const table = (id, list, foot) => `<div class="board"><div class="tablewrap"><table class="mxT" id="${id}"><thead><tr><th>Lift</th><th>Your best</th><th>Goal</th><th>By <small>(optional)</small></th><th>Progress</th><th></th></tr></thead>
+    <tbody>${list.map(rowHtml).join('')}</tbody></table></div></div>${foot || ''}<div class="mxOpen" data-open="${id}"></div>`;
+  const detail = id => {
+    const g = gl[id], rows = hist.filter(e => e.lift === id), byDay = new Map();
     rows.forEach(e => byDay.set(e.performed_on, Math.max(byDay.get(e.performed_on) || 0, num(e.weight_lb))));
     let run = 0; const pts = [...byDay.entries()].sort().map(([d, w]) => { run = Math.max(run, w); return { x: pd(d).getTime(), y: run, d }; });
-    const now = best[g.lift] || 0, t = num(g.target_lb), pl = g.target_date && now < t ? plan(g) : null;
-    return `<div class="gbDetail" style="--c:${D.liftColor(g.lift)}"><div class="gbDHead"><b>${esc(D.liftName(g.lift))}</b><span>${now ? fmt(now) : '·'} → ${fmt(t)} lb${g.target_date ? ' by ' + fmtD(g.target_date) : ''}</span></div>
-      <div class="gbDGrid"><div class="chartCard">${pts.length ? lineChart(pts, D.LIFT_BY_DB[g.lift] ? D.LIFT_BY_DB[g.lift].c : 'var(--accent)', t) : '<p class="empty">Log this lift in class and your progress shows here.</p>'}</div>
-        <div class="gbPlan">${pl ? `<div class="gbLbl">This week</div><div class="kpi" style="grid-template-columns:1fr 1fr"><div><b style="color:var(--accent)">${fmt(pl.list[0].top)}</b><span>Top single</span></div><div><b>${fmt(pl.list[0].work)}</b><span>3 x 3</span></div></div>
-          <p class="sub">${pl.weeks} weeks · +${pl.per.toFixed(1)} lb a week · every fourth week backs off</p>
+    const now = best[id] || 0, t = g ? num(g.target_lb) : 0, pl = g && g.target_date && now < t ? plan(g) : null;
+    return `<div class="gbDetail" style="--c:${colorOf(id, 0)}"><div class="gbDHead"><b>${esc(D.liftName(id))}</b><span>${now ? fmt(now) : '·'}${t ? ' → ' + fmt(t) : ''} lb${g && g.target_date ? ' by ' + fmtD(g.target_date) : ''}</span></div>
+      <div class="gbDGrid"><div class="chartCard">${pts.length ? lineChart(pts, colorOf(id, 0), t || null) : '<p class="empty">Your lifts show here as you log them.</p>'}</div>
+        <div class="gbPlan">${!pro ? `<p class="sub">Week by week plans and the coach come with DSI Pro.</p><a class="btn sm" href="/pro">See DSI Pro</a>`
+          : pl ? `<div class="gbLbl">This week</div><div class="kpi" style="grid-template-columns:1fr 1fr"><div><b style="color:var(--accent)">${fmt(pl.list[0].top)}</b><span>Top single</span></div><div><b>${fmt(pl.list[0].work)}</b><span>3 x 3</span></div></div>
+          <p class="sub">${pl.weeks} weeks · +${pl.per.toFixed(1)} lb a week · <em class="${pl.pace[1]}">${pl.pace[0]}</em> · every fourth week backs off</p>
           <details><summary>Every week</summary><table class="wkT"><thead><tr><th>Week of</th><th class="r">3 x 3</th><th class="r">Top</th></tr></thead><tbody>${pl.list.map(w => `<tr${w.dl ? ' class="dl"' : ''}><td>${fmtD(w.from)}${w.dl ? ' · back off' : ''}</td><td class="r n">${fmt(w.work)}</td><td class="r n">${fmt(w.top)}</td></tr>`).join('')}</tbody></table></details>`
-          : now >= t ? '<p class="gbHit">Goal hit. Set the next one.</p>' : '<p class="sub">Add a date and DI builds a week by week plan to get there.</p>'}
-          <form class="gbEdit" data-edit="${esc(g.lift)}"><label>PR now <input type="number" inputmode="decimal" min="1" max="1499" step="any" data-p value="${now ? fmt(now) : ''}" placeholder="lb"></label><label>Goal <input type="number" inputmode="decimal" min="1" max="1499" step="any" data-t value="${fmt(t)}"></label><label>By <input type="date" data-d value="${g.target_date || ''}" min="${today()}"></label>
-            <button class="btn sm">Save</button><button type="button" class="btn ghost sm" data-del="${esc(g.lift)}">Remove</button></form></div></div></div>`;
+          : t && now >= t ? '<p class="gbHit">Goal hit. Set the next one.</p>' : t ? '<p class="sub">Add a date and DI builds a week by week plan to get there.</p>' : '<p class="sub">Add a goal and DI coaches you toward it.</p>'}</div></div></div>`;
   };
-  const lifts = [...D.LIFTS.map(l => [l.db, D.liftName(l.db)]), ...D.EXTRA_LIFTS, ...D.ALL_LIFTS.filter(([id]) => !D.LIFT_BY_DB[id] && !D.EXTRA_LIFTS.some(x => x[0] === id))];
-  const free = lifts.filter(([id]) => !goals.some(g => g.lift === id));
-  if (!paint(tok, `<section class="sec gbSec"><div class="gbHead"><h2>Goals</h2><button type="button" class="btn sm" id="gbAdd">Add a goal</button></div>
-      <form class="gbNew" id="gbNew" hidden><select id="gbL" aria-label="Lift">${free.map(([id, n]) => `<option value="${esc(id)}">${esc(n)}</option>`).join('')}</select>
-        <input id="gbP" type="number" inputmode="decimal" min="1" max="1499" step="any" placeholder="Current PR lb" aria-label="Current PR" value="${free.length && best[free[0][0]] ? fmt(best[free[0][0]]) : ''}">
-        <input id="gbT" type="number" inputmode="decimal" min="1" max="1499" step="any" placeholder="Goal lb" aria-label="Goal weight" required>
-        <input id="gbD" type="date" min="${today()}" aria-label="By date (optional)" title="By date (optional)">
-        <button class="btn sm">Save goal</button><span class="hint" id="gbMsg">Your current PR starts the chart. Date is optional; with one, DI builds a weekly plan.</span></form>
-      ${goals.length ? `<div class="gbGrid">${goals.sort((a, b) => D.liftName(a.lift).localeCompare(D.liftName(b.lift))).map(card).join('')}</div><div id="gbOpen"></div>` : '<div class="prEmpty"><b>No goals yet</b><p>Add one for any lift. Tap it later to see your progress and plan.</p></div>'}</section>
-    <section class="sec gbSec gbCoach"><div class="gbHead"><h2>Coach</h2></div>${coach}</section>`)) return;
-  const open = $('#gbOpen');
-  $$('.gbGoal').forEach(b => b.onclick = () => {
-    const was = b.getAttribute('aria-expanded') === 'true';
-    $$('.gbGoal').forEach(x => x.setAttribute('aria-expanded', 'false'));
-    if (was) { open.innerHTML = ''; return; }
-    b.setAttribute('aria-expanded', 'true');
-    open.innerHTML = detail(goals.find(g => g.lift === b.dataset.goal));
-    const f = $('.gbEdit', open);
-    f.onsubmit = async e => { e.preventDefault(); const t = +$('[data-t]', f).value; if (!(t > 0)) return toast('Type a goal weight'); const pr = await savePr(f.dataset.edit, +$('[data-p]', f).value); if (pr && pr !== 'pr') return toast(pr); if (pr) toast('PR logged'); const { error } = await sb.from('goals').upsert({ profile_id: S.me.id, lift: f.dataset.edit, target_lb: t, target_date: $('[data-d]', f).value || null, updated_at: new Date().toISOString() }, { onConflict: 'profile_id,lift' }); if (error) return toast(error.message); toast('Goal saved'); route(); };
-    $('[data-del]', open).onclick = async () => { const { error } = await sb.from('goals').delete().eq('profile_id', S.me.id).eq('lift', f.dataset.edit); if (error) return toast(error.message); toast('Goal removed'); route(); };
-    open.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  });
-  // A current PR higher than what is on file is logged as a lift today, so the goal starts from the real number.
-  const savePr = async (lift, v) => {
-    if (!(v > 0) || v <= (best[lift] || 0)) return null;
-    const { error } = await sb.from('lift_entries').insert({ profile_id: S.me.id, lift, weight_lb: v, performed_on: today(), source: 'manual', note: 'Current PR entered with a goal' });
-    return error ? error.message : 'pr';
+  const targets = () => [...MAIN.map(x => x[0]), ...oly].map(id => [id, target(id)]).filter(x => x[1]);
+  const targetsHtml = () => { const t = targets(); return t.length ? `<div class="gbLbl">Your targets this week</div><div class="dsTg">${t.map(([id, x]) => `<div class="dsTgC" style="--c:${colorOf(id, 0)}"><span class="eyebrow">${esc(D.liftName(id))}</span><b>${fmt(x.top)}</b><span class="sub">Top single · 3 x 3 at ${fmt(x.work)}</span><small>${esc(x.why)}</small></div>`).join('')}</div>` : '<p class="sub">Add a goal above and your weekly targets show here.</p>'; };
+
+  if (!paint(tok, `${card ? `<div class="dsCard">${card}</div>` : ''}
+    <section class="sec dsSec" id="dsiLifts"><div class="secHead"><div><div class="kicker">Your Dandy Strength Index™</div><h2>DSI <span>lifts</span></h2><p class="secSub">Bench, squat, deadlift and clean make your score. Type your best; then it asks for a goal. Both are optional.</p></div></div>
+      ${table('mxMain', MAIN.map(x => x[0]))}</section>
+    <section class="sec dsSec" id="oly"><div class="secHead"><div><div class="kicker">Tracked with PRs, not part of the DSI™</div><h2>Olympic and <span>press</span></h2><p class="secSub">Snatch, front squat, push press, clean and jerk, and any other lift you want to chase.</p></div></div>
+      ${table('mxOly', oly, `<form class="row mxAdd" id="mxAdd"><select id="mxAddL" aria-label="Add a lift">${addable().map(([id, n]) => `<option value="${esc(id)}">${esc(n)}</option>`).join('')}</select><button class="btn ghost sm">Add a lift</button></form>`)}</section>
+    <section class="sec dsSec gbCoach" id="coach"><div class="secHead"><div><div class="kicker">Built from your numbers and goals</div><h2><span>Coach</span></h2></div></div>
+      ${pro ? `<div id="dsTargets">${targetsHtml()}</div>${coach}` : `<div class="prEmpty"><b>Your coach comes with DSI Pro</b><p>Weekly targets for every goal, your weak link, and how your lifts balance.</p><p><a class="btn" href="/pro">See DSI Pro</a></p></div>`}</section>`)) return;
+  bindPhoto(main, () => route());
+  if (location.hash) { const h = $(location.hash); if (h) h.scrollIntoView({ block: 'start' }); }
+
+  const saveGoal = async (id, t, by) => {
+    if (!(t > 0)) { const { error } = await sb.from('goals').delete().eq('profile_id', S.me.id).eq('lift', id); if (error) throw error; delete gl[id]; return; }
+    const row = { profile_id: S.me.id, lift: id, target_lb: t, target_date: by || null, updated_at: new Date().toISOString() };
+    const { error } = await sb.from('goals').upsert(row, { onConflict: 'profile_id,lift' }); if (error) throw error; gl[id] = row;
   };
-  $('#gbAdd').onclick = () => { const n = $('#gbNew'); n.hidden = !n.hidden; if (!n.hidden) $('#gbP').focus(); };
-  $('#gbL').onchange = () => { const b = best[$('#gbL').value]; $('#gbP').value = b ? fmt(b) : ''; };
-  $('#gbNew').onsubmit = async e => {
-    e.preventDefault();
-    const t = +$('#gbT').value, msg = $('#gbMsg');
-    if (!(t > 0)) { msg.textContent = 'Type a goal weight.'; return; }
-    const pr = await savePr($('#gbL').value, +$('#gbP').value);
-    if (pr && pr !== 'pr') { msg.textContent = pr; return; }
-    const { error } = await sb.from('goals').upsert({ profile_id: S.me.id, lift: $('#gbL').value, target_lb: t, target_date: $('#gbD').value || null, updated_at: new Date().toISOString() }, { onConflict: 'profile_id,lift' });
-    if (error) { msg.textContent = error.message; return; }
-    toast(pr ? 'Goal added and your PR is logged' : 'Goal added'); route();
+  const redraw = (tr, focus) => {
+    const id = tr.dataset.lift, i = [...tr.parentNode.children].indexOf(tr);
+    tr.outerHTML = rowHtml(id, i); const nt = $(`tr[data-lift="${CSS.escape(id)}"]`, main); bindRow(nt);
+    if (focus) { const f = $(focus, nt); if (f) f.focus(); }
+    const tg = $('#dsTargets'); if (tg) tg.innerHTML = targetsHtml();
+  };
+  const bindRow = tr => {
+    const id = tr.dataset.lift, bi = $('[data-best]', tr), gi = $('[data-goal]', tr), di = $('[data-by]', tr);
+    bi.onchange = async () => {
+      const v = +bi.value, now = best[id] || 0;
+      if (!v) { bi.value = now ? fmt(now) : ''; return; }
+      if (v <= now) { bi.value = fmt(now); if (v < now) toast(`Your best on file is ${fmt(now)} lb. Log a heavier lift to change it.`); return; }
+      if (v >= 1500) { bi.value = now ? fmt(now) : ''; return toast('That is more than the board allows.'); }
+      const { error } = await sb.from('lift_entries').insert({ profile_id: S.me.id, lift: id, weight_lb: v, performed_on: today(), source: 'manual', note: 'Entered on the DSI page' });
+      if (error) { bi.value = now ? fmt(now) : ''; return toast(error.message); }
+      best[id] = v; hist.push({ lift: id, weight_lb: v, performed_on: today(), is_pr: true });
+      toast(now ? `New best: ${fmt(v)} lb` : `${D.liftName(id)} saved. Want a goal? Type it next.`);
+      redraw(tr, gl[id] ? null : '[data-goal]');
+    };
+    gi.onchange = async () => { try { await saveGoal(id, +gi.value, di.value); toast(+gi.value > 0 ? 'Goal saved' : 'Goal removed'); redraw(tr, +gi.value > 0 && !di.value ? '[data-by]' : null); } catch (e) { toast(e.message); } };
+    di.onchange = async () => { if (!gl[id]) return; try { await saveGoal(id, num(gl[id].target_lb), di.value); toast(di.value ? 'Date saved. DI built a weekly plan.' : 'Date removed'); redraw(tr); } catch (e) { toast(e.message); } };
+    const cb = $('[data-chart]', tr);
+    if (cb) cb.onclick = () => {
+      const box = $(`[data-open="${tr.closest('table').id}"]`, main), on = box.dataset.lift === id;
+      $$('.mxOpen', main).forEach(x => { x.innerHTML = ''; x.dataset.lift = ''; });
+      $$('[data-chart]', main).forEach(x => x.textContent = 'Progress');
+      if (on) return;
+      box.dataset.lift = id; box.innerHTML = detail(id); cb.textContent = 'Close';
+      box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+  };
+  $$('.mxT tbody tr', main).forEach(bindRow);
+  $('#mxAdd').onsubmit = e => {
+    e.preventDefault(); const id = $('#mxAddL').value; if (!id || oly.includes(id)) return;
+    oly.push(id); $('#mxOly tbody').insertAdjacentHTML('beforeend', rowHtml(id, oly.length - 1));
+    const tr = $(`#mxOly tr[data-lift="${CSS.escape(id)}"]`); bindRow(tr); $('[data-best]', tr).focus();
+    $('#mxAddL').innerHTML = addable().map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
   };
 };
 
@@ -752,7 +793,7 @@ VIEWS.week = async (day, tok, opt = {}) => {
     body = `<div class="wkBody">${prog}${mine}</div>${dayBoard(w, logs.filter(l => l.workout_id === w.id))}`;
   }
   const extras = `${lvG ? `<details class="lvWrap"${(lvE.data || []).length ? ' open' : ''}><summary><span class="lvChip lv-${lvG.level}">${X_LVN[lvG.level]}</span> Your level · how to move up</summary>${P().levelCard(lvG, (lvE.data || [])[0])}</details>` : ''}
-    ${S.me && S.me.display_name && D.EXTRA_LIFTS.some(([k]) => !myX[k]) ? `<p class="wkAsk">${CTX.DI || 'DI'} is missing your ${D.EXTRA_LIFTS.filter(([k]) => !myX[k]).map(([, n]) => n.toLowerCase()).join(', ').replace(/, ([^,]*)$/, ' and $1')}. <a href="/me#maxes">Add them</a> and your class targets cover those lifts too.</p>` : ''}`;
+    ${S.me && S.me.display_name && D.EXTRA_LIFTS.some(([k]) => !myX[k]) ? `<p class="wkAsk">${CTX.DI || 'DI'} is missing your ${D.EXTRA_LIFTS.filter(([k]) => !myX[k]).map(([, n]) => n.toLowerCase()).join(', ').replace(/, ([^,]*)$/, ' and $1')}. <a href="/dsi#oly">Add them</a> and your class targets cover those lifts too.</p>` : ''}`;
   if (!paint(tok, opt.embed ? `<section class="sec wkEmbed"><div class="secHead"><div><div class="kicker">${esc(fmtDW(sel))}${sel === tdy ? ' · Today' : ''}</div><h2>The <span>workout</span></h2></div>${editTo && !(w && P().isParts(w) && S.me) ? `<div class="row"><a class="btn ghost sm" href="/wod/${editTo}?day=${sel}">Edit workouts</a></div>` : ''}</div>${extras}</section>
     <section class="sec">${body}</section>` : `<section class="sec"><div class="wkNav"><div><div class="kicker">Week of ${esc(fmtD(start))}</div><h2>The <span>week</span></h2></div>
     <div class="row"><a class="btn ghost sm" href="/week/${addDays(start, -7)}${qs}">← Last week</a>${start !== monday(tdy) ? `<a class="btn ghost sm" href="/week/${tdy}${qs}">Today</a>` : ''}<a class="btn ghost sm" href="/week/${addDays(start, 7)}${qs}">Next week →</a>${editTo ? `<a class="btn sm" href="/wod/${editTo}?day=${sel}">Edit workouts</a><a class="btn ghost sm" href="/program${editTo !== 'dsi' ? '?gym=' + editTo : ''}">Import</a>` : ''}</div></div>
@@ -1012,7 +1053,7 @@ VIEWS.me = async (_, tok) => {
       <form class="formCard" id="xmF"><div class="fields">${D.EXTRA_LIFTS.map(([k, n]) => `<div class="field"><label for="xm-${k}">${n}</label><input id="xm-${k}" data-xm="${k}" type="number" inputmode="numeric" min="1" max="1499" step="any" placeholder="${best[k] ? fmt(best[k]) + ' lb now' : 'lb'}"></div>`).join('')}</div>
         <div class="row"><button class="btn sm">Save</button><span class="hint" id="xm-msg">${D.EXTRA_LIFTS.filter(([k]) => !best[k]).length ? `${D.EXTRA_LIFTS.filter(([k]) => !best[k]).length} still missing.` : 'All four on file. Enter a new number any time you hit one.'}</span></div></form></section>
     ${first ? '' : `<section class="sec band"><div class="secHead"><div><div class="kicker">DSI Pro</div><h2>Train with a <span>plan</span></h2></div>${pro ? '<span class="pill up" style="margin:0">Pro active</span>' : '<a class="btn sm" href="/pro">See Pro</a>'}</div>
-      <div class="tools">${tile('/better', 'Get better', 'Progress charts, goal plans and your coach on one page.', 1)}${tile('/recap/' + new Date().getFullYear(), 'Year recap', 'Your year in PRs and pounds, ready to share.', 1)}${tile('/battles', 'Weekly battles', 'Call out a lifter for a week.', 1)}</div></section>
+      <div class="tools">${tile('/dsi', 'DSI', 'Your lifter card, numbers, goals and coach on one page.')}${tile('/recap/' + new Date().getFullYear(), 'Year recap', 'Your year in PRs and pounds, ready to share.', 1)}${tile('/battles', 'Weekly battles', 'Call out a lifter for a week.', 1)}</div></section>
     <section class="sec"><div class="secHead"><div><div class="kicker">Compete and grow</div><h2>More to <span>do</span></h2></div><button class="btn sm" data-invite>Invite your crew</button></div>
       <div class="tools">${tile('/benchmarks', 'Benchmarks', 'Fran, the 2K row and class benchmarks.')}</div></section>
     <section class="sec"><div><div class="kicker">Reminders</div><h2>Your <span>reminders</span></h2><p class="secSub">These go to your phone through the DSI app. Turn notifications on in the app once and these settings follow you.</p></div>
@@ -1061,9 +1102,11 @@ VIEWS.me = async (_, tok) => {
   };
   // One short page per tab instead of one long page. The tool tiles live in the top menus now.
   if (!first) {
-    const TABS = [['profile', 'Profile'], ['goals', 'Goals'], ['reminders', 'Reminders'], ['account', 'Account and safety']];
+    const TABS = [['profile', 'Profile'], ['reminders', 'Reminders'], ['account', 'Account and safety']];
+    // Goals and the extra maxes live on the DSI page now.
+    if (new URLSearchParams(location.search).get('tab') === 'goals') return go('/dsi', true);
     const want = new URLSearchParams(location.search).get('tab'), tab = TABS.some(t => t[0] === want) ? want : 'profile';
-    const kindOf = sec => { const k = (($('.kicker', sec) || {}).textContent || '').trim(); return k === 'Reminders' ? 'reminders' : k === 'Profile' ? 'profile' : /chasing/.test(k) ? 'goals' : (k === 'Community' || k === 'Account') ? 'account' : (k === 'DSI Pro' || k === 'Compete and grow') ? 'drop' : null; };
+    const kindOf = sec => { const k = (($('.kicker', sec) || {}).textContent || '').trim(); return k === 'Reminders' ? 'reminders' : k === 'Profile' ? 'profile' : (/chasing/.test(k) || k === 'Four more maxes') ? 'drop' : (k === 'Community' || k === 'Account') ? 'account' : (k === 'DSI Pro' || k === 'Compete and grow') ? 'drop' : null; };
     const secs = $$('section.sec', main);
     secs.slice(1).forEach(sec => { const k = kindOf(sec); if (k === 'drop') sec.remove(); else if (k && k !== tab) sec.hidden = true; });
     secs[0].insertAdjacentHTML('beforeend', `<nav class="tabs" aria-label="Account" style="margin-top:20px">${TABS.map(([k, n]) => `<a class="tab" href="/me${k === 'profile' ? '' : '?tab=' + k}"${k === tab ? ' aria-current="page" aria-selected="true"' : ''}>${n}</a>`).join('')}</nav>`);

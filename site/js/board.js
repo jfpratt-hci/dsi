@@ -95,7 +95,7 @@ export function install(X) {
           : '<p class="sub">No one has logged this yet.</p>'}</div>`;
     };
     kings.insertAdjacentHTML('afterend', `<section class="sec" id="oly" aria-labelledby="olyh"><div class="secHead"><div><div class="kicker">Tracked with PRs, not part of the DSI™</div><h2 id="olyh">Olympic and <span>press</span></h2>
-      <p class="secSub">The heaviest snatch, front squat, push press and clean and jerk in the gym. Log them on Train or set a goal on Get better.</p></div></div>
+      <p class="secSub">The heaviest snatch, front squat, push press and clean and jerk in the gym. Log them on Train or set a goal on your DSI page.</p></div></div>
       <div class="olyGrid">${D.EXTRA_LIFTS.map(card).join('')}</div></section>`);
   }
 
