@@ -81,6 +81,24 @@ export function install(X) {
 
   /* ---------- the Board: benchmark PRs join the week's PRs, benchmarks fill the second board ---------- */
   const board = VIEWS.boards;
+  // Snatch, front squat, push press and clean and jerk: tracked with PRs like the main four, not part of the DSI.
+  async function olySection(tok) {
+    const kings = $('section[aria-labelledby="kings"]'); if (!kings) return;
+    const ids = D.EXTRA_LIFTS.map(x => x[0]);
+    const rows = ((await sb.from('lift_bests').select('profile_id,name,lift,weight_lb,performed_on,prev_best').in('lift', ids)).data || []).filter(r => inGym(r.profile_id));
+    if (tok !== S.tok) return;
+    const fresh = d => d >= addDays(today(), -7);
+    const card = ([id, n], i) => {
+      const top = rows.filter(r => r.lift === id).sort((a, b) => b.weight_lb - a.weight_lb).slice(0, 5);
+      return `<div class="olyCard" style="--c:${['var(--bench)', 'var(--squat)', 'var(--dead)', 'var(--clean)'][i % 4]}"><div class="olyH"><span class="eyebrow">${esc(n)}</span>${top[0] ? `<b>${fmt(top[0].weight_lb)} lb</b>` : ''}</div>
+        ${top.length ? `<ol class="olyL">${top.map(r => `<li${S.me && S.me.id === r.profile_id ? ' class="me"' : ''}><a href="/u/${r.profile_id}">${esc(r.name)}</a><span class="n">${fmt(r.weight_lb)}</span>${fresh(r.performed_on) && r.prev_best != null ? '<span class="pill acc">PR</span>' : ''}</li>`).join('')}</ol>`
+          : '<p class="sub">No one has logged this yet.</p>'}</div>`;
+    };
+    kings.insertAdjacentHTML('afterend', `<section class="sec" id="oly" aria-labelledby="olyh"><div class="secHead"><div><div class="kicker">Tracked with PRs, not part of the DSI™</div><h2 id="olyh">Olympic and <span>press</span></h2>
+      <p class="secSub">The heaviest snatch, front squat, push press and clean and jerk in the gym. Log them on Train or set a goal on Get better.</p></div></div>
+      <div class="olyGrid">${D.EXTRA_LIFTS.map(card).join('')}</div></section>`);
+  }
+
   VIEWS.boards = async (a, tok) => {
     await board(a, tok);
     if (tok !== S.tok) return;
@@ -89,6 +107,8 @@ export function install(X) {
       sb.from('bench_pr_feed').select('*').gte('performed_on', wk).order('created_at', { ascending: false }).limit(40).then(r => (r.data || []).filter(x => inGym(x.profile_id)).slice(0, 8)),
       $('#benchSec') ? benchSection($('#benchSec'), tok) : null,
     ]);
+    if (tok !== S.tok) return;
+    await olySection(tok);
     if (tok !== S.tok) return;
     const g = $('#wkGrid');
     if (g && feed.length) { if (!g.querySelector('.prGrid')) g.innerHTML = '<div class="prGrid"></div>'; g.querySelector('.prGrid').insertAdjacentHTML('beforeend', feed.map(benchPrCard).join('')); }

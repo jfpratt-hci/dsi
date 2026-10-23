@@ -100,9 +100,9 @@ export function install(X) {
     if (!g) throw new Error('No gym here.');
     const w = ws.find(x => x.gym_id === gid) || ws.find(x => !x.gym_id) || null;
     const logs = w ? must(await sb.from('workout_logs').select('*').eq('workout_id', w.id)) : [];
-    // Snatch, push press, squat snatch and squat clean bests, so a part can be a percent of those too.
+    // Snatch, front squat, push press, clean and jerk, squat snatch and squat clean bests, so a part can be a percent of those too.
     const ids = members.map(m => m.id), xb = {};
-    if (ids.length) ((await sb.from('lift_bests').select('profile_id,lift,weight_lb').in('profile_id', ids).in('lift', D.EXTRA_LIFTS.map(x => x[0]))).data || []).forEach(r => { (xb[r.profile_id] = xb[r.profile_id] || {})[r.lift] = +r.weight_lb; });
+    if (ids.length) ((await sb.from('lift_bests').select('profile_id,lift,weight_lb').in('profile_id', ids).in('lift', D.TARGET_LIFTS)).data || []).forEach(r => { (xb[r.profile_id] = xb[r.profile_id] || {})[r.lift] = +r.weight_lb; });
     const rowOf0 = m => (S.boardAll || S.board).find(r => r.profile_id === m.id) || { profile_id: m.id, name: m.display_name, sex: m.sex, bw: num(m.bodyweight) || 185, age: m.birth_year ? new Date().getFullYear() - m.birth_year : 30, bench: 0, squat: 0, dead: 0, clean: 0, score: 0, total: 0 };
     const rowOf = m => ({ ...rowOf0(m), ...(xb[m.id] || {}) });
     return { g, members: members.sort((a, b) => a.display_name.localeCompare(b.display_name)), staff, w, logs, rowOf };
@@ -197,7 +197,7 @@ export function install(X) {
   };
 
   /* ---------- edit a day: /wod/<gym id or dsi>?day=YYYY-MM-DD ---------- */
-  const BASE_OPTS = [['squat', 'Squat'], ['dead', 'Deadlift'], ['clean', 'Clean'], ['bench', 'Bench'], ['snatch', 'Snatch'], ['push_press', 'Push press'], ['squat_snatch', 'Squat snatch'], ['squat_clean', 'Squat clean']];
+  const BASE_OPTS = [['squat', 'Squat'], ['dead', 'Deadlift'], ['clean', 'Clean'], ['bench', 'Bench'], ['snatch', 'Snatch'], ['front_squat', 'Front squat'], ['push_press', 'Push press'], ['clean_and_jerk', 'Clean and jerk'], ['squat_snatch', 'Squat snatch'], ['squat_clean', 'Squat clean']];
   VIEWS.wod = async (gid, tok) => {
     if (!S.me) return needLogin(tok, 'edit workouts');
     const dsi = gid === 'dsi';

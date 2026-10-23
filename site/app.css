@@ -2024,3 +2024,16 @@ td .lgF{margin:6px 0 0}
 .cvWho .cvAv { margin-right: 8px; }
 @media (max-width: 640px) { .uWho { flex-direction: column; align-items: flex-start; } .uAv .av { --av: 120px !important; } }
 .scCoach { max-width: 170px; padding-top: 6px; padding-bottom: 6px; }
+/* Boards: olympic and press lifts */
+.olyGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.olyCard { border: 1px solid var(--line, #2a3242); border-top: 3px solid var(--c); border-radius: 12px; padding: 14px 16px; background: var(--card, #161c28); }
+.olyH { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.olyH b { font-size: 1.4rem; color: var(--c); }
+.olyL { list-style: none; margin: 0; padding: 0; counter-reset: o; }
+.olyL li { counter-increment: o; display: grid; grid-template-columns: 22px 1fr auto auto; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line, #2a3242); }
+.olyL li::before { content: counter(o); color: var(--muted, #9aa4b2); font-size: .85em; }
+.olyL li a { text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.olyL li.me a { color: var(--accent, #f5c542); }
+.olyL .pill { margin: 0; }
+@media (max-width: 900px) { .olyGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .olyGrid { grid-template-columns: 1fr; } }

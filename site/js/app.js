@@ -492,16 +492,17 @@ VIEWS.better = async (_, tok) => {
           <p class="sub">${pl.weeks} weeks · +${pl.per.toFixed(1)} lb a week · every fourth week backs off</p>
           <details><summary>Every week</summary><table class="wkT"><thead><tr><th>Week of</th><th class="r">3 x 3</th><th class="r">Top</th></tr></thead><tbody>${pl.list.map(w => `<tr${w.dl ? ' class="dl"' : ''}><td>${fmtD(w.from)}${w.dl ? ' · back off' : ''}</td><td class="r n">${fmt(w.work)}</td><td class="r n">${fmt(w.top)}</td></tr>`).join('')}</tbody></table></details>`
           : now >= t ? '<p class="gbHit">Goal hit. Set the next one.</p>' : '<p class="sub">Add a date and DI builds a week by week plan to get there.</p>'}
-          <form class="gbEdit" data-edit="${esc(g.lift)}"><label>Goal <input type="number" inputmode="decimal" min="1" max="1499" step="any" data-t value="${fmt(t)}"></label><label>By <input type="date" data-d value="${g.target_date || ''}" min="${today()}"></label>
+          <form class="gbEdit" data-edit="${esc(g.lift)}"><label>PR now <input type="number" inputmode="decimal" min="1" max="1499" step="any" data-p value="${now ? fmt(now) : ''}" placeholder="lb"></label><label>Goal <input type="number" inputmode="decimal" min="1" max="1499" step="any" data-t value="${fmt(t)}"></label><label>By <input type="date" data-d value="${g.target_date || ''}" min="${today()}"></label>
             <button class="btn sm">Save</button><button type="button" class="btn ghost sm" data-del="${esc(g.lift)}">Remove</button></form></div></div></div>`;
   };
   const lifts = [...D.LIFTS.map(l => [l.db, D.liftName(l.db)]), ...D.EXTRA_LIFTS, ...D.ALL_LIFTS.filter(([id]) => !D.LIFT_BY_DB[id] && !D.EXTRA_LIFTS.some(x => x[0] === id))];
   const free = lifts.filter(([id]) => !goals.some(g => g.lift === id));
   if (!paint(tok, `<section class="sec gbSec"><div class="gbHead"><h2>Goals</h2><button type="button" class="btn sm" id="gbAdd">Add a goal</button></div>
       <form class="gbNew" id="gbNew" hidden><select id="gbL" aria-label="Lift">${free.map(([id, n]) => `<option value="${esc(id)}">${esc(n)}</option>`).join('')}</select>
+        <input id="gbP" type="number" inputmode="decimal" min="1" max="1499" step="any" placeholder="Current PR lb" aria-label="Current PR" value="${free.length && best[free[0][0]] ? fmt(best[free[0][0]]) : ''}">
         <input id="gbT" type="number" inputmode="decimal" min="1" max="1499" step="any" placeholder="Goal lb" aria-label="Goal weight" required>
         <input id="gbD" type="date" min="${today()}" aria-label="By date (optional)" title="By date (optional)">
-        <button class="btn sm">Save goal</button><span class="hint" id="gbMsg">Date is optional. With one, DI builds a weekly plan.</span></form>
+        <button class="btn sm">Save goal</button><span class="hint" id="gbMsg">Your current PR starts the chart. Date is optional; with one, DI builds a weekly plan.</span></form>
       ${goals.length ? `<div class="gbGrid">${goals.sort((a, b) => D.liftName(a.lift).localeCompare(D.liftName(b.lift))).map(card).join('')}</div><div id="gbOpen"></div>` : '<div class="prEmpty"><b>No goals yet</b><p>Add one for any lift. Tap it later to see your progress and plan.</p></div>'}</section>
     <section class="sec gbSec gbCoach"><div class="gbHead"><h2>Coach</h2></div>${coach}</section>`)) return;
   const open = $('#gbOpen');
@@ -512,18 +513,27 @@ VIEWS.better = async (_, tok) => {
     b.setAttribute('aria-expanded', 'true');
     open.innerHTML = detail(goals.find(g => g.lift === b.dataset.goal));
     const f = $('.gbEdit', open);
-    f.onsubmit = async e => { e.preventDefault(); const t = +$('[data-t]', f).value; if (!(t > 0)) return toast('Type a goal weight'); const { error } = await sb.from('goals').upsert({ profile_id: S.me.id, lift: f.dataset.edit, target_lb: t, target_date: $('[data-d]', f).value || null, updated_at: new Date().toISOString() }, { onConflict: 'profile_id,lift' }); if (error) return toast(error.message); toast('Goal saved'); route(); };
+    f.onsubmit = async e => { e.preventDefault(); const t = +$('[data-t]', f).value; if (!(t > 0)) return toast('Type a goal weight'); const pr = await savePr(f.dataset.edit, +$('[data-p]', f).value); if (pr && pr !== 'pr') return toast(pr); if (pr) toast('PR logged'); const { error } = await sb.from('goals').upsert({ profile_id: S.me.id, lift: f.dataset.edit, target_lb: t, target_date: $('[data-d]', f).value || null, updated_at: new Date().toISOString() }, { onConflict: 'profile_id,lift' }); if (error) return toast(error.message); toast('Goal saved'); route(); };
     $('[data-del]', open).onclick = async () => { const { error } = await sb.from('goals').delete().eq('profile_id', S.me.id).eq('lift', f.dataset.edit); if (error) return toast(error.message); toast('Goal removed'); route(); };
     open.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
-  $('#gbAdd').onclick = () => { const n = $('#gbNew'); n.hidden = !n.hidden; if (!n.hidden) $('#gbT').focus(); };
+  // A current PR higher than what is on file is logged as a lift today, so the goal starts from the real number.
+  const savePr = async (lift, v) => {
+    if (!(v > 0) || v <= (best[lift] || 0)) return null;
+    const { error } = await sb.from('lift_entries').insert({ profile_id: S.me.id, lift, weight_lb: v, performed_on: today(), source: 'manual', note: 'Current PR entered with a goal' });
+    return error ? error.message : 'pr';
+  };
+  $('#gbAdd').onclick = () => { const n = $('#gbNew'); n.hidden = !n.hidden; if (!n.hidden) $('#gbP').focus(); };
+  $('#gbL').onchange = () => { const b = best[$('#gbL').value]; $('#gbP').value = b ? fmt(b) : ''; };
   $('#gbNew').onsubmit = async e => {
     e.preventDefault();
     const t = +$('#gbT').value, msg = $('#gbMsg');
     if (!(t > 0)) { msg.textContent = 'Type a goal weight.'; return; }
+    const pr = await savePr($('#gbL').value, +$('#gbP').value);
+    if (pr && pr !== 'pr') { msg.textContent = pr; return; }
     const { error } = await sb.from('goals').upsert({ profile_id: S.me.id, lift: $('#gbL').value, target_lb: t, target_date: $('#gbD').value || null, updated_at: new Date().toISOString() }, { onConflict: 'profile_id,lift' });
     if (error) { msg.textContent = error.message; return; }
-    toast('Goal added'); route();
+    toast(pr ? 'Goal added and your PR is logged' : 'Goal added'); route();
   };
 };
 
@@ -670,7 +680,7 @@ VIEWS.week = async (day, tok, opt = {}) => {
   if (lvG && S.me) S.me.level = lvG.level;
   if (!S.people.size) await loadPeople();
   const w = wks.find(x => x.day === sel);
-  const myX = S.me ? Object.fromEntries((((await sb.from('lift_bests').select('lift,weight_lb').eq('profile_id', S.me.id).in('lift', D.EXTRA_LIFTS.map(x => x[0]))).data) || []).map(r => [r.lift, +r.weight_lb])) : {};
+  const myX = S.me ? Object.fromEntries((((await sb.from('lift_bests').select('lift,weight_lb').eq('profile_id', S.me.id).in('lift', D.TARGET_LIFTS)).data) || []).map(r => [r.lift, +r.weight_lb])) : {};
   const meRow = S.me ? { ...(boardRow(S.me.id) || { bw: num(S.me.bodyweight), sex: S.me.sex, bench: 0, squat: 0, dead: 0, clean: 0 }), ...myX } : null;
   let myLog = S.me && w ? logs.find(l => l.workout_id === w.id && l.profile_id === S.me.id) : null;
   const tdy = today();

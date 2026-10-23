@@ -23,7 +23,9 @@ export const ALL_LIFTS = [
 const NAMES = Object.fromEntries(ALL_LIFTS);
 export const OTHER_LIFTS = Object.fromEntries(ALL_LIFTS.filter(([id]) => !LIFT_BY_DB[id]));
 // Asked of every member and free to log, but not part of the DSI score. Workouts can set targets from them.
-export const EXTRA_LIFTS = [['snatch', 'Snatch'], ['push_press', 'Push press'], ['squat_snatch', 'Squat snatch'], ['squat_clean', 'Squat clean']];
+export const EXTRA_LIFTS = [['snatch', 'Snatch'], ['front_squat', 'Front squat'], ['push_press', 'Push press'], ['clean_and_jerk', 'Clean and jerk']];
+// Lifts a workout part can take a percent of, beyond the four DSI lifts.
+export const TARGET_LIFTS = [...EXTRA_LIFTS.map(x => x[0]), 'squat_snatch', 'squat_clean'];
 export const liftName = db => NAMES[db] || db;
 export const liftColor = db => (LIFT_BY_DB[db] && LIFT_BY_DB[db].c) || 'var(--muted)';
 
