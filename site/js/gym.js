@@ -730,7 +730,7 @@ export function install(X) {
         const inner = x.k === 'part' ? `${x.p.L ? `<i>${x.p.L}</i>` : ''}<span>${esc(x.p.name || 'Part ' + x.p.L)} · ${x.c.min} min</span>` : x.k === 'gap' ? `<span>${x.b - x.a}′</span>` : `<span>Open · ${Math.round(x.b - x.a)} min</span>`;
         return `<div class="tvSeg ${x.k}${cur ? ' cur' : ''}${done ? ' done' : ''}" style="flex:${x.b - x.a} 1 0"><b style="width:${f * 100}%"></b>${inner}</div>`;
       }).join('')}${live ? `<em class="tvMark" style="left:${Math.min(100, (m / len) * 100)}%"></em>` : ''}</div>
-        ${live ? `<div class="tvEnds"><span>${fmtTime(win.at)} start</span><span>${fmtTime(win.at + len * 60000)} end</span></div>` : ''}`;
+        ${live ? (() => { const pct = Math.max(0, Math.min(100, (m / len) * 100)); return `<div class="tvEnds"><span${pct < 16 ? ' class="hid"' : ''}>${fmtTime(win.at)} start</span><em class="tvNowT" style="left:${Math.max(3, Math.min(97, pct))}%">${fmtTime(Date.now())}</em><span${pct > 84 ? ' class="hid"' : ''}>${fmtTime(win.at + len * 60000)} end</span></div>`; })() : ''}`;
       const fb = $('#tvFocusBox [data-cbar]'), wasEmpty = fb && !fb.innerHTML;
       put(boxes, barHtml);
       if (wasEmpty && focus) fitText();
@@ -765,11 +765,71 @@ export function install(X) {
     };
 
     let focus = null;
+    /* ---------- goals and results for the part on screen ---------- */
+    // Everyone in the class (from the bookings, or the names picked under Who's here) with their goal for this part
+    // and a box for what they actually did. Results save straight to the day's log for that member, the same log the
+    // app and the results page use, so leaderboards, PRs and levels update from here too. Coaches signed in on the TV
+    // can type; anyone else sees the results as they come in.
+    const LVC = { beginner: 'B', rx: 'Rx', comp: 'C' };
+    const canLog = () => !!(S.me && runs(gid) && st && st.w && st.w.gym_id === gid);
+    const logOfM = id => (st.logs || []).find(x => x.profile_id === id);
+    const goalsCard = (p, members, cls) => {
+      const its = items(st.w).filter(it => it.L === p.L), l = p.lift, ed = canLog();
+      const unit = l && D.unit(l) !== 'lb' ? D.unit(l) : (l ? 'lb' : '');
+      const head = `<h3><span>Goals and results</span><button type="button" class="tvWhoBtn" data-whobtn>${cls ? esc(cls.label) : "Who's here?"}</button></h3>`;
+      if (!its.length) return `<div class="tvFTargets tvGoals">${head}<p class="tvGoalsNone">Nothing to log on this part.</p></div>`;
+      const cols = `minmax(0,1fr)${l ? ' 5.4cqw' : ''}${its.map(() => ' 7.2cqw').join('')}`;
+      const rows = members.map(m => {
+        const ent = ((logOfM(m.id) || {}).entries) || {}, t = l ? D.target(l, st.rowOf(m)) : 0, lv = ((S.people && S.people.get(m.id)) || m).level || null;
+        const res = its.map(it => {
+          const v = ent[it.key], shown = it.kind === 't' ? fmtT(v) : num(v) ? fmt(num(v)) : '';
+          const cls2 = it.kind === 'w' && num(v) ? (t && num(v) >= t ? ' hit' : ' did') : shown ? ' did' : '';
+          return ed ? `<input class="tvRes${cls2}" data-rp="${m.id}" data-rk="${esc(it.key)}" data-kind="${it.kind}" value="${esc(shown)}" inputmode="${it.kind === 'w' ? 'decimal' : 'numeric'}" placeholder="${it.kind === 't' ? 'm:ss' : it.kind === 'r' ? 'reps' : '·'}" aria-label="${esc(m.display_name + ' ' + it.label)}" autocomplete="off">`
+            : `<b class="tvResV${cls2}">${shown || '·'}</b>`;
+        }).join('');
+        return `<li style="grid-template-columns:${cols}"><span>${lv ? `<em class="tvLvC lv-${lv}">${LVC[lv]}</em>` : ''}${esc(m.display_name)}</span>${l ? `<b class="tvGoal">${t || '·'}</b>` : ''}${res}</li>`;
+      }).join('');
+      const labs = its.map(it => `<span>${it.kind === 'w' ? `Did${unit ? ' ' + esc(unit) : ''}` : it.kind === 't' ? 'Time' : 'Reps'}</span>`).join('');
+      return `<div class="tvFTargets tvGoals">${head}
+        <div class="tvGoalsH" style="grid-template-columns:${cols}"><span>${members.length} in class</span>${l ? `<span>DI goal</span>` : ''}${labs}</div>
+        ${members.length ? `<ol>${rows}</ol>` : `<p class="tvGoalsNone">No one in this class yet. Tap Who's here.</p>`}
+        ${ed ? '' : `<p class="tvGoalsHint">Coaches signed in on this screen can type results here.</p>`}</div>`;
+    };
+    // Save one box. Weights to the half pound, times as m:ss, reps as a count. Blank clears it.
+    let editing = 0, owed = false;
+    const saveRes = async inp => {
+      const pid = inp.dataset.rp, k = inp.dataset.rk, kind = inp.dataset.kind, v = inp.value.trim();
+      const had = logOfM(pid), entries = { ...((had && had.entries) || {}) };
+      if (!v) { if (entries[k] == null) return; delete entries[k]; }
+      else {
+        const x = kind === 't' ? parseT(v) : kind === 'r' ? Math.max(0, Math.min(99999, Math.round(+v) || 0)) : Math.max(0, Math.min(1499, Math.round(+v * 2) / 2 || 0));
+        if (kind === 't' && !(x > 0)) { inp.classList.add('bad'); inp.title = 'Use minutes and seconds, like 8:45'; return; }
+        if (entries[k] === x) return;
+        entries[k] = x;
+      }
+      inp.classList.remove('bad'); inp.classList.add('saving');
+      const row = { workout_id: st.w.id, profile_id: pid, entries, score: (had && had.score) || null, sets: (had && had.sets) || {} };
+      const { data, error } = await sb.from('workout_logs').upsert(row, { onConflict: 'workout_id,profile_id' }).select().single();
+      inp.classList.remove('saving');
+      if (error) { inp.classList.add('bad'); inp.title = error.message; toast(error.message); return; }
+      st.logs = (st.logs || []).filter(x => x.profile_id !== pid).concat([data]);
+      const t = kind === 'w' && st.w.lifts ? D.target((st.w.lifts || []).find(x => x.id === k) || null, st.rowOf(st.members.find(m => m.id === pid) || { id: pid })) : 0, x = num(entries[k]);
+      inp.classList.toggle('hit', kind === 'w' && !!x && !!t && x >= t); inp.classList.toggle('did', !!v && !(kind === 'w' && t && x >= t));
+      if (kind === 't' && x) inp.value = fmtT(x);
+      inp.classList.add('saved'); setTimeout(() => inp.classList.remove('saved'), 1200);
+    };
+    const bindGoals = box => {
+      const ins = [...box.querySelectorAll('.tvRes')];
+      ins.forEach((inp, i) => {
+        inp.onfocus = () => { editing++; lastTouch = Date.now(); };
+        inp.onblur = async () => { await saveRes(inp); editing = Math.max(0, editing - 1); setTimeout(() => { if (!editing && owed) { owed = false; refresh(); } }, 300); };
+        inp.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); const nx = ins[i + 1]; if (nx) nx.focus(); else inp.blur(); } if (e.key === 'Escape') inp.blur(); };
+      });
+    };
     const focusHtml = () => {
       const ps = st && st.w ? shownParts(st.w) : [], p = ps.find(x => x.L === focus);
       if (!p) return '';
-      const { rowOf, logs } = st, members = inClass(), cls = classNow(), l = p.lift;
-      const tg = l ? members.map(m => { const t = D.target(l, rowOf(m)), v = num((((logs.find(x => x.profile_id === m.id) || {}).entries) || {})[l.id]); return { n: m.display_name, t, v, lv: ((S.people && S.people.get(m.id)) || m).level || null }; }).filter(x => x.t || x.v) : [];
+      const members = inClass(), cls = classNow(), l = p.lift;
       return `<div class="tvFocus" role="dialog" aria-modal="true" aria-label="Part ${p.L}">
         <header class="tvFHead"><nav class="tvFTabs">${ps.map(x => `<button type="button" data-fpart="${x.L}"${x.L === p.L ? ' aria-current="true"' : ''}><i>${x.L}</i><span>${esc(x.name || 'Part ' + x.L)}</span></button>`).join('')}</nav>
           <div class="tvNow sm" data-cnow></div><div class="tvClock">${clock()}</div><button type="button" class="tvFClose" id="tvFClose" aria-label="Close (Esc)">×</button></header>
@@ -779,8 +839,7 @@ export function install(X) {
             <p class="tvFText" id="tvFText">${esc(p.text)}</p>${levelsHtml(p, 'tvLv big')}
             ${l ? `<div class="tvFLift">${esc(l.n)}${l.sch ? ` · ${esc(l.sch)}` : ''}${l.why ? `<span>${esc(l.why)}</span>` : ''}</div>` : ''}
             ${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>
-          <div class="tvFSide">${timerCard(p)}
-          ${tg.length ? `<div class="tvFTargets"><h3>Your targets <small class="tvDiBy">by DI</small>${l && D.unit(l) !== 'lb' ? ` <small>${esc(D.unit(l))}</small>` : ''}<button type="button" class="tvWhoBtn" data-whobtn>${cls ? esc(cls.label) : "Who's here?"}</button></h3><ol>${tg.map(x => `<li class="${x.v ? (x.t && x.v >= x.t ? 'hit' : 'did') : ''}"><span>${x.lv ? `<em class="tvLvC lv-${x.lv}">${{ beginner: 'B', rx: 'Rx', comp: 'C' }[x.lv]}</em>` : ''}${esc(x.n)}</span><b>${x.v || x.t}</b></li>`).join('')}</ol></div>` : ''}</div>
+          <div class="tvFSide">${goalsCard(p, members, cls)}</div>
         </div></div>`;
     };
     // Make the part's words as big as the screen allows.
@@ -801,7 +860,7 @@ export function install(X) {
       box.querySelectorAll('[data-fpart]').forEach(b => b.onclick = () => showFocus(b.dataset.fpart));
       box.querySelectorAll('[data-whobtn]').forEach(b => b.onclick = showWho);
       $('#tvFClose').onclick = () => showFocus(null);
-      bindTimer(); pill();
+      bindGoals(box); pill();
     };
     // The workout screen: one text size for every part, as big as fits. iPads mirrored to a TV are 4:3, so a fixed size runs off.
     const fitCards = () => {
@@ -857,11 +916,10 @@ export function install(X) {
     document.addEventListener('visibilitychange', onVis);
     const onKey = e => {
       if (tok !== S.tok) { document.removeEventListener('keydown', onKey); return showFocus(null); }
+      if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
       if (focus) {
         const ps = shownParts(st.w).map(x => x.L), i = ps.indexOf(focus);
         if (e.key === 'Escape') { e.preventDefault(); return showFocus(null); }
-        if (e.key === 's' || e.key === 'S') { e.preventDefault(); return toggleTimer(focus); }
-        if (e.key === 'r' || e.key === 'R') { e.preventDefault(); if (tm && tm.L === focus) { tm = null; lastBeep = ''; } return showFocus(focus); }
         const step = { ArrowRight: 1, ArrowDown: 1, PageDown: 1, ' ': 1, ArrowLeft: -1, ArrowUp: -1, PageUp: -1 }[e.key];
         if (step) { e.preventDefault(); return showFocus(ps[(i + step + ps.length) % ps.length]); }
       }
@@ -886,7 +944,7 @@ export function install(X) {
     if (tok !== S.tok) return;
     draw();
     let busy = false, lastDay = today();
-    const refresh = async () => { if (busy || tok !== S.tok) return; busy = true; try { await load(); draw(); } catch (e) { console.error(e); } busy = false; };
+    const refresh = async () => { if (busy || tok !== S.tok) return; if (editing) { owed = true; return; } busy = true; try { await load(); draw(); } catch (e) { console.error(e); } busy = false; };
     const ch = sb.channel('tv-' + gid)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'workout_logs' }, p => { const wid = (p.new || {}).workout_id; if (st && ((st.w && wid === st.w.id) || (st.yday.w && wid === st.yday.w.id))) refresh(); })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'lift_entries' }, p => { alertPR(p.new); refresh(); })
