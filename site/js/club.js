@@ -236,7 +236,7 @@ export function install(X) {
     const shell = inner => `${officeBar(g, tab)}<section class="sec">${inner}</section>`;
     const view = { today: tabToday, schedule: tabSchedule, members: tabMembers, billing: tabBilling, docs: tabDocs, staff: tabStaff }[tab];
     await view(g, tok, shell, qs, owner);
-    if (tok === S.tok) bindAddPerson(g);
+    if (tok === S.tok) { bindAddPerson(g); bindLogin(g, document); }
   };
 
   /* ----- Check in ----- */
@@ -367,24 +367,35 @@ export function install(X) {
   const addPersonForm = (g, role) => `<details class="formCard apWrap"${location.hash === '#add' ? ' open' : ''}><summary>Add a ${role === 'member' ? 'member' : 'coach'}</summary>
     <form class="apF" data-ap><div class="fields">
       <div class="field w2"><label>Name</label><input data-k="name" maxlength="60" required placeholder="First and last name" autocomplete="off"></div>
-      <div class="field w2"><label>Email</label><input data-k="email" type="email" required placeholder="They sign in with this" autocomplete="off"></div>
+      <div class="field w2"><label>Email <small>optional, add it later</small></label><input data-k="email" type="email" placeholder="They sign in with this" autocomplete="off"></div>
       <div class="field"><label>Phone <small>optional</small></label><input data-k="phone" type="tel" placeholder="513 555 0100" autocomplete="off"></div>
       <div class="field"><label>Add as</label><select data-k="role">${[['member', 'Member'], ['coach', 'Coach'], ['owner', 'Owner']].map(([v, n]) => `<option value="${v}"${v === role ? ' selected' : ''}>${n}</option>`).join('')}</select></div></div>
-      <div class="row"><button class="btn sm">Add</button><span class="hint" data-msg>They get in by signing in at dandystrength.com with this email. No password needed.</span></div></form>
+      <div class="row"><button class="btn sm">Add</button><span class="hint" data-msg>With an email they sign in at dandystrength.com, no password needed. No email yet? Add them now and add it later.</span></div></form>
     <div class="apDone" data-done hidden></div></details>`;
+  // Sign in: who already has a login, and an email box for anyone who does not yet (owners and admins).
+  const loginRow = (st, pid, owner) => !st ? '' : st.has_login ? `<p class="sub">Signs in as ${esc(st.email || 'their own login')}</p>`
+    : owner ? `<form class="row lgF" data-lg="${pid}"><input type="email" data-e value="${esc(st.email || '')}" placeholder="Email to sign in with" aria-label="Email to sign in with" style="max-width:240px"><button class="btn ghost sm">${st.email ? 'Change' : 'Add email'}</button><span class="hint" data-lmsg>${st.email ? 'Waiting for them to sign in.' : 'No email yet, so they cannot sign in.'}</span></form>` : `<p class="sub">${st.email ? 'Has not signed in yet.' : 'No email yet.'}</p>`;
+  const bindLogin = (g, root) => $$('[data-lg]', root).forEach(f => f.onsubmit = async e => {
+    e.preventDefault();
+    const m = $('[data-lmsg]', f);
+    try { const em = await rpc('gym_set_email', { p_gym: g.id, p_profile: f.dataset.lg, p_email: $('[data-e]', f).value }); m.textContent = `Saved. They sign in with ${em}.`; toast('Email saved'); }
+    catch (err) { m.textContent = err.message; }
+  });
+  const loginStatus = async g => { try { return new Map((await rpc('gym_login_status', { p_gym: g.id }) || []).map(x => [x.profile_id, x])); } catch { return new Map(); } };
   const bindAddPerson = g => $$('[data-ap]').forEach(f => f.onsubmit = async e => {
     e.preventDefault();
     const v = k => $(`[data-k="${k}"]`, f).value.trim(), msg = $('[data-msg]', f), b = f.querySelector('button');
     b.disabled = true; msg.textContent = 'Adding…';
     try {
-      const r = await rpc('gym_add_person', { p_gym: g.id, p_name: v('name'), p_email: v('email'), p_phone: v('phone') || null, p_role: v('role') });
+      const r = await rpc('gym_add_person', { p_gym: g.id, p_name: v('name'), p_email: v('email') || null, p_phone: v('phone') || null, p_role: v('role') });
       const role = v('role'), who = role === 'member' ? 'a member' : 'a ' + role;
       const note = `Hi ${v('name').split(' ')[0]}, you're set up at ${g.name} on Dandy. Sign in at dandystrength.com/login with ${v('email')} to book classes and see the workout.`;
       const done = $('[data-done]', f.parentElement);
       done.hidden = false;
-      done.innerHTML = `<b>${esc(r.name)} is ${who} of ${esc(g.name)}.</b> ${r.how === 'existing' ? 'They already had a login, so it is linked now.' : 'Their profile is waiting for them the first time they sign in with that email.'}
+      done.innerHTML = r.how === 'no_email' ? `<b>${esc(r.name)} is ${who} of ${esc(g.name)}.</b> No email yet. When you have it, add it from ${role === 'member' ? 'their Open panel on Members' : 'the Coaches list'} and they can sign in.`
+        : `<b>${esc(r.name)} is ${who} of ${esc(g.name)}.</b> ${r.how === 'existing' ? 'They already had a login, so it is linked now.' : 'Their profile is waiting for them the first time they sign in with that email.'}
         <div class="row"><input readonly value="${esc(note)}" aria-label="Message to send them"><button type="button" class="btn ghost sm" data-copy>Copy message</button><a class="btn ghost sm" href="/u/${r.profile_id}">Open profile</a></div>`;
-      $('[data-copy]', done).onclick = async () => { try { await navigator.clipboard.writeText(note); toast('Copied. Text or email it to them.'); } catch { $('input', done).select(); } };
+      const cp = $('[data-copy]', done); if (cp) cp.onclick = async () => { try { await navigator.clipboard.writeText(note); toast('Copied. Text or email it to them.'); } catch { $('input', done).select(); } };
       f.reset(); $('[data-k="role"]', f).value = role; msg.textContent = 'Added. Add another or refresh to see them in the list.';
     } catch (err) { msg.textContent = err.message; }
     b.disabled = false;
@@ -429,15 +440,16 @@ export function install(X) {
   }
 
   async function memberDetail(g, pid, box, { owner, plans, ms, sigs, docs }) {
-    const [det, att, inv, lvp] = await Promise.all([
+    const [det, att, inv, lvp, lgs] = await Promise.all([
       sb.from('member_details').select('*').eq('profile_id', pid).maybeSingle().then(r => r.data),
       sb.from('bookings').select('checked_in_at,session:sessions(name,starts_at)').eq('gym_id', g.id).eq('profile_id', pid).eq('status', 'attended').order('checked_in_at', { ascending: false }).limit(30).then(must),
       owner ? sb.from('invoices').select('*').eq('gym_id', g.id).eq('profile_id', pid).order('created_at', { ascending: false }).limit(50).then(must) : [],
       sb.rpc('level_progress', { p_profile: pid }).then(r => r.data),
+      loginStatus(g),
     ]);
     const cur = ms.find(m => m.status !== 'canceled');
     box.innerHTML = `<div class="mdGrid">
-      <div><h4>Contact</h4>${det ? `<p>${esc(det.legal_name || '')}<br>${esc(det.phone || '')}<br>${esc(det.email || '')}</p><p class="sub">Emergency: ${esc(det.emergency_name || 'not given')} ${esc(det.emergency_phone || '')}</p>` : '<p class="hint">They have not added contact details yet.</p>'}
+      <div><h4>Sign in</h4>${loginRow(lgs.get(pid), pid, owner)}<h4>Contact</h4>${det ? `<p>${esc(det.legal_name || '')}<br>${esc(det.phone || '')}<br>${esc(det.email || '')}</p><p class="sub">Emergency: ${esc(det.emergency_name || 'not given')} ${esc(det.emergency_phone || '')}</p>` : '<p class="hint">They have not added contact details yet.</p>'}
         <h4>Documents</h4>${sigs.map(s => `<p>${s.kind === 'waiver' ? 'Waiver' : 'Contract'} v${(docs.find(d => d.id === s.doc_id) || {}).version || 'old'} · signed ${esc(fmtD(s.signed_at.slice(0, 10)))} as ${esc(s.signed_name)} <a href="/signed/${s.id}">View</a></p>`).join('') || '<p class="hint">Nothing signed yet.</p>'}</div>
       <div><h4>Level</h4>${lvp ? `<form class="row" data-lvf><select data-lv style="max-width:160px">${[['beginner', 'Beginner'], ['rx', 'Rx'], ['comp', 'Comp']].map(([k, n]) => `<option value="${k}"${lvp.level === k ? ' selected' : ''}>${n}</option>`).join('')}</select><button class="btn ghost sm">Set</button></form>
         <p class="sub">${lvp.level_by === 'coach' ? 'Set by a coach. ' : 'Moves up on its own. '}${lvp.level === 'beginner' ? `${lvp.rx_logs} of 3 Rx logs, or ${lvp.weighted_logs} of 8 logs and ${lvp.prs} of 2 PRs` : lvp.level === 'rx' ? `${lvp.comp_logs} of 3 Comp logs` : 'Top level'}</p>` : '<p class="sub">Not set</p>'}
@@ -448,6 +460,7 @@ export function install(X) {
         <form class="row" data-addi style="margin-top:8px"><input data-d maxlength="200" placeholder="What for, like Drop in or T shirt" style="max-width:220px" required><input data-a inputmode="decimal" placeholder="$" style="max-width:90px" required><button class="btn sm">New invoice</button></form></div>` : ''}
     </div>`;
     const again = () => route();
+    bindLogin(g, box);
     const lf = $('[data-lvf]', box);
     if (lf) lf.onsubmit = async e => { e.preventDefault(); const { error } = await sb.rpc('set_member_level', { p_profile: pid, p_level: $('[data-lv]', lf).value }); if (error) return toast(error.message); toast('Level set'); };
     const am = $('[data-addm]', box);
@@ -590,6 +603,7 @@ export function install(X) {
   async function tabStaff(g, tok, shell, qs, owner) {
     const from = /^\d{4}-\d{2}-\d{2}$/.test(qs.get('from') || '') ? qs.get('from') : today().slice(0, 8) + '01';
     const to = /^\d{4}-\d{2}-\d{2}$/.test(qs.get('to') || '') ? qs.get('to') : today();
+    const lgs = owner ? await loginStatus(g) : new Map();
     const [staff, avail, swaps, mine, coached] = await Promise.all([
       sb.from('gym_staff').select('*').eq('gym_id', g.id).then(must),
       sb.from('coach_availability').select('*').eq('gym_id', g.id).order('weekday').order('start_time').then(must),
@@ -610,7 +624,7 @@ export function install(X) {
         ${avail.filter(a => a.profile_id === S.me.id).map(a => `<div class="row swRow"><span>${DOW[a.weekday]} ${hm(a.start_time)} to ${hm(a.end_time)}</span><button class="btn ghost sm" data-rma="${a.id}">Remove</button></div>`).join('') || '<p class="hint">Add the times you are free to coach.</p>'}
         <form class="row" id="avF"><select id="av-d" style="max-width:110px">${opt(DOW.map((d, i) => [i, d]), 1)}</select><input id="av-s" type="time" value="05:00" style="max-width:130px"><input id="av-e" type="time" value="09:00" style="max-width:130px"><button class="btn sm">Add</button></form></div>
       <div><h3>Coaches</h3><div class="board"><div class="tablewrap"><table><thead><tr><th>Coach</th><th>Available</th>${owner ? '<th>Pay</th>' : ''}</tr></thead><tbody>
-        ${staff.map(s => `<tr><td><b>${esc(nm(s.profile_id))}</b>${s.role === 'owner' ? ' <span class="pill acc">Owner</span>' : ''}</td><td class="sub">${avail.filter(a => a.profile_id === s.profile_id).map(a => `${DOW[a.weekday]} ${hm(a.start_time)}–${hm(a.end_time)}`).join(', ') || 'not set'}</td>
+        ${staff.map(s => `<tr><td><b>${esc(nm(s.profile_id))}</b>${s.role === 'owner' ? ' <span class="pill acc">Owner</span>' : ''}${owner && lgs.get(s.profile_id) && !lgs.get(s.profile_id).has_login ? loginRow(lgs.get(s.profile_id), s.profile_id, owner) : ''}</td><td class="sub">${avail.filter(a => a.profile_id === s.profile_id).map(a => `${DOW[a.weekday]} ${hm(a.start_time)}–${hm(a.end_time)}`).join(', ') || 'not set'}</td>
         ${owner ? `<td><form class="row" data-pay="${s.profile_id}"><input data-rate inputmode="decimal" value="${s.pay_rate != null ? num(s.pay_rate) : ''}" placeholder="$" style="max-width:80px"><select data-type style="max-width:120px">${opt([['class', 'per class'], ['hour', 'per hour']], s.pay_type)}</select><button class="btn ghost sm">Save</button></form></td>` : ''}</tr>`).join('')}
         </tbody></table></div></div><p class="hint">Owners add coaches on the <a href="/gym/${g.id}">gym page</a>.</p>
         ${owner ? `<h3 style="margin-top:20px">Hours and <span>pay</span></h3><form class="row" id="hpF"><input type="date" id="hp-f" value="${from}" style="max-width:170px"><span>to</span><input type="date" id="hp-t" value="${to}" style="max-width:170px"><button class="btn ghost sm">Show</button><button type="button" class="btn ghost sm" id="hpCsv">Download CSV</button></form>

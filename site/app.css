@@ -1989,3 +1989,6 @@ a.g{text-decoration:none;color:inherit}
 .apWrap[open] summary{margin-bottom:12px}
 .apDone{margin-top:12px;padding:12px 14px;border:1px solid var(--up);border-radius:8px;background:color-mix(in srgb,var(--up) 10%,var(--panel))}
 .apDone .row{margin-top:8px}.apDone input{flex:1;min-width:220px}
+.lgF{margin:6px 0 10px;flex-wrap:wrap}
+.lgF .hint{flex-basis:100%}
+td .lgF{margin:6px 0 0}
