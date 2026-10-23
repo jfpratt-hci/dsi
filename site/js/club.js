@@ -236,6 +236,7 @@ export function install(X) {
     const shell = inner => `${officeBar(g, tab)}<section class="sec">${inner}</section>`;
     const view = { today: tabToday, schedule: tabSchedule, members: tabMembers, billing: tabBilling, docs: tabDocs, staff: tabStaff }[tab];
     await view(g, tok, shell, qs, owner);
+    if (tok === S.tok) bindAddPerson(g);
   };
 
   /* ----- Check in ----- */
@@ -361,6 +362,34 @@ export function install(X) {
   }
 
   /* ----- Members ----- */
+  // Owners and Dandy admins add a member or a staff member. With a login already, they are linked now;
+  // otherwise their profile waits and is theirs the first time they sign in with that email.
+  const addPersonForm = (g, role) => `<details class="formCard apWrap"${location.hash === '#add' ? ' open' : ''}><summary>Add a ${role === 'member' ? 'member' : 'staff member'}</summary>
+    <form class="apF" data-ap><div class="fields">
+      <div class="field w2"><label>Name</label><input data-k="name" maxlength="60" required placeholder="First and last name" autocomplete="off"></div>
+      <div class="field w2"><label>Email</label><input data-k="email" type="email" required placeholder="They sign in with this" autocomplete="off"></div>
+      <div class="field"><label>Phone <small>optional</small></label><input data-k="phone" type="tel" placeholder="513 555 0100" autocomplete="off"></div>
+      <div class="field"><label>Add as</label><select data-k="role">${[['member', 'Member'], ['coach', 'Coach'], ['owner', 'Owner']].map(([v, n]) => `<option value="${v}"${v === role ? ' selected' : ''}>${n}</option>`).join('')}</select></div></div>
+      <div class="row"><button class="btn sm">Add</button><span class="hint" data-msg>They get in by signing in at dandystrength.com with this email. No password needed.</span></div></form>
+    <div class="apDone" data-done hidden></div></details>`;
+  const bindAddPerson = g => $$('[data-ap]').forEach(f => f.onsubmit = async e => {
+    e.preventDefault();
+    const v = k => $(`[data-k="${k}"]`, f).value.trim(), msg = $('[data-msg]', f), b = f.querySelector('button');
+    b.disabled = true; msg.textContent = 'Adding…';
+    try {
+      const r = await rpc('gym_add_person', { p_gym: g.id, p_name: v('name'), p_email: v('email'), p_phone: v('phone') || null, p_role: v('role') });
+      const role = v('role'), who = role === 'member' ? 'a member' : 'a ' + role;
+      const note = `Hi ${v('name').split(' ')[0]}, you're set up at ${g.name} on Dandy. Sign in at dandystrength.com/login with ${v('email')} to book classes and see the workout.`;
+      const done = $('[data-done]', f.parentElement);
+      done.hidden = false;
+      done.innerHTML = `<b>${esc(r.name)} is ${who} of ${esc(g.name)}.</b> ${r.how === 'existing' ? 'They already had a login, so it is linked now.' : 'Their profile is waiting for them the first time they sign in with that email.'}
+        <div class="row"><input readonly value="${esc(note)}" aria-label="Message to send them"><button type="button" class="btn ghost sm" data-copy>Copy message</button><a class="btn ghost sm" href="/u/${r.profile_id}">Open profile</a></div>`;
+      $('[data-copy]', done).onclick = async () => { try { await navigator.clipboard.writeText(note); toast('Copied. Text or email it to them.'); } catch { $('input', done).select(); } };
+      f.reset(); $('[data-k="role"]', f).value = role; msg.textContent = 'Added. Add another or refresh to see them in the list.';
+    } catch (err) { msg.textContent = err.message; }
+    b.disabled = false;
+  });
+
   async function tabMembers(g, tok, shell, qs, owner) {
     const since = addDays(today(), -30);
     const [members, ms, docs, sigs, att, plans, inv] = await Promise.all([
@@ -379,7 +408,7 @@ export function install(X) {
     const owed = id => inv.filter(i => i.profile_id === id).reduce((t, i) => t + i.amount_cents, 0);
     const q = (qs.get('q') || '').toLowerCase();
     const list = members.filter(m => !q || m.display_name.toLowerCase().includes(q));
-    if (!paint(tok, shell(`<div class="row adSearch"><label class="vh" for="mq">Search members</label><input id="mq" placeholder="Search members" value="${esc(qs.get('q') || '')}" style="max-width:300px"><span class="hint">${list.length} of ${members.length} members. Members join by picking ${esc(g.name)} on the Gym league page.${owner ? ' Remove takes someone off the gym and ends a desk paid membership; their account and history stay.' : ''}</span></div>
+    if (!paint(tok, shell(`${owner ? addPersonForm(g, 'member') : ''}<div class="row adSearch"><label class="vh" for="mq">Search members</label><input id="mq" placeholder="Search members" value="${esc(qs.get('q') || '')}" style="max-width:300px"><span class="hint">${list.length} of ${members.length} members. Members join by picking ${esc(g.name)} on the Gym league page.${owner ? ' Remove takes someone off the gym and ends a desk paid membership; their account and history stay.' : ''}</span></div>
       <div class="board"><div class="tablewrap"><table class="adT"><thead><tr><th>Member</th><th>Membership</th><th>Waiver</th><th>Contract</th><th class="r">Visits 30 days</th><th>Last visit</th>${owner ? '<th class="r">Owes</th>' : ''}<th></th></tr></thead><tbody>
       ${list.map(m => { const c = cur(m.id), v = visits(m.id); return `<tr><td><b><a href="/u/${m.id}">${esc(m.display_name)}</a></b></td><td>${c ? `${esc(c.plan_name)} ${statusPill(c.status)}` : statusPill('')}</td>
         <td>${signedDoc(m.id, 'waiver') ? '<span class="pill up">Signed</span>' : '<span class="pill down">Missing</span>'}</td><td>${!docId('contract') ? '<span class="sub">none</span>' : signedDoc(m.id, 'contract') ? '<span class="pill up">Signed</span>' : '<span class="pill flat">Not yet</span>'}</td>
@@ -574,7 +603,7 @@ export function install(X) {
     const fmtHrs = h => (Math.round(h * 100) / 100).toString();
     const sw = swaps.map(r => `<div class="row swRow"><span><b>${esc(r.session ? r.session.name : 'Class')}</b> ${esc(r.session ? new Date(r.session.starts_at).toLocaleString('en-US', { timeZone: g.tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '')} · from ${esc(nm(r.from_coach))}${r.to_coach ? ' to ' + esc(nm(r.to_coach)) : ' to anyone'}${r.note ? ` <span class="sub">"${esc(r.note)}"</span>` : ''}</span>
       ${r.from_coach !== S.me.id && (!r.to_coach || r.to_coach === S.me.id) ? `<button class="btn sm" data-take="${r.id}">Take it</button>` : ''}${r.from_coach === S.me.id || owner ? `<button class="btn ghost sm" data-csw="${r.id}">Cancel</button>` : ''}</div>`).join('');
-    if (!paint(tok, shell(`<div class="stGrid">
+    if (!paint(tok, shell(`${owner ? addPersonForm(g, 'coach') : ''}<div class="stGrid">
       <div><h3>Swaps</h3>${sw || '<p class="hint">No open swaps.</p>'}
         <h3 style="margin-top:20px">Your next <span>classes</span></h3>${mine.map(s => `<form class="row swRow" data-sw="${s.id}"><span><b>${esc(s.name)}</b> ${esc(new Date(s.starts_at).toLocaleString('en-US', { timeZone: g.tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</span><select data-to style="max-width:160px">${opt([['', 'Any coach'], ...staff.filter(x => x.profile_id !== S.me.id).map(x => [x.profile_id, nm(x.profile_id)])], '')}</select><input data-note maxlength="200" placeholder="Note" style="max-width:150px"><button class="btn ghost sm">Ask for a swap</button></form>`).join('') || '<p class="hint">You are not on any upcoming classes.</p>'}
         <h3 style="margin-top:20px">When you can <span>coach</span></h3>
