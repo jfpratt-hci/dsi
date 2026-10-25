@@ -7,7 +7,7 @@ create or replace function public.lift_from_name(p text) returns text
 language sql immutable as $$
   with n as (select ' ' || regexp_replace(lower(coalesce(p, '')), '[^a-z0-9&]+', ' ', 'g') || ' ' as s)
   select case
-    when s ~ ' (hang|hangs|tempo|pause|paused|deficit|box|dumbbell|dumbbells|db|kb|kettlebell|kettlebells|banded|band|block|blocks|pin|swing|swings|thruster|thrusters|wall|ball|balls|sandbag|landmine|single arm|single leg|split squat|bulgarian|goblet|zercher|romanian|rdl|stiff|good morning|pull|pulls|row|rows|air|jump|step|lunge|lunges|cluster|clusters|complex|drill|drills|technique|skill|muscle) ' then null
+    when s ~ ' (hang|hangs|tempo|pause|paused|deficit|box|dumbbell|dumbbells|db|kb|kettlebell|kettlebells|banded|band|block|blocks|pin|swing|swings|thruster|thrusters|wall|ball|balls|sandbag|landmine|single arm|single leg|split squat|bulgarian|goblet|zercher|romanian|rdl|stiff|good morning|pull|pulls|row|rows|air|jump|step|lunge|lunges|cluster|clusters|complex|drill|drills|technique|skill|muscle|stance|staggered|snatch dl|snatch deadlift|clean dl|clean deadlift|z press|floor) ' then null
     when s ~ ' (clean (and|&) jerk|c ?& ?j|cnj) ' then 'clean_and_jerk'
     when s ~ ' squat snatch ' then 'squat_snatch'
     when s ~ ' power snatch ' then 'power_snatch'
