@@ -212,7 +212,7 @@ export function install(X) {
     const secs = () => num((cfg || {}).lobby_secs) || 12;
     const style = document.createElement('style'); style.id = 'lbStyle'; style.textContent = LOBBY_CSS; document.head.appendChild(style);
     $('#main').innerHTML = `<div class="lbWrap"><div class="lbStage" id="lbStage">
-      <header class="lbTop"><div class="lbLogo"><img src="/assets/mark.svg" alt=""><div><b>${esc(g.name)}</b><br><span>${esc(g.city || 'Dandy TV')}</span></div></div><div class="lbClock"><span id="lbDate"></span><b id="lbTime"></b></div></header>
+      <header class="lbTop"><div class="lbLogo"><img src="/assets/mark.svg" alt=""><div><b>${esc(g.name)} TV</b><br><span>${esc(g.city || 'Dandy TV')}</span></div></div><div class="lbClock"><span id="lbDate"></span><b id="lbTime"></b></div></header>
       <main class="lbSlides" id="lbSlides" aria-live="polite"></main>
       <footer class="lbTick"><div class="lbProg" id="lbProg"></div><div class="lbNext"><span class="dot"></span><div><b id="lbNextT"></b><br><span id="lbNextS"></span></div></div><div class="lbDots" id="lbDots"></div><div class="lbFoot">${esc([g.address, g.phone].filter(Boolean).join(' · ') || 'dandystrength.com')}</div></footer>
     </div></div>${preview ? '' : `<div class="lbCtl" id="lbCtl"><button type="button" id="lbPrev">Prev</button><button type="button" id="lbPlay">Pause</button><button type="button" id="lbNextB">Next</button><button type="button" id="lbFull">Full screen</button>${isStaff(g.id) ? `<a href="/dandytv/${g.id}">Set up</a>` : ''}</div>`}`;

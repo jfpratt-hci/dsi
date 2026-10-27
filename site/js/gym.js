@@ -564,7 +564,9 @@ export function install(X) {
       const { g, w, logs, rowOf, lb, prs, q, battles, by, yday, from30 } = st;
       const members = inClass(), cls = classNow();
       const out = [], cs = (st.tv && st.tv.class_screens) || {}, on = k => cs[k] !== false;
-      const head = (k, t) => `<header class="tvHead"><div class="tvGym"><img src="/assets/mark.svg" alt="Dandy Strength" class="tvLogo"><div><b>${esc(g.name)}</b><span>${esc(k)}</span></div></div><div class="tvTitle">${t}</div><div class="tvNow sm" data-cnow></div></header><div class="tvCBar" data-cbar></div>`;
+      // The board is the gym's own TV: "CrossFit Symmetry TV".
+      document.title = g.name + ' TV';
+      const head = (k, t) => `<header class="tvHead"><div class="tvGym"><img src="/assets/mark.svg" alt="Dandy Strength" class="tvLogo"><div><b>${esc(g.name)} TV</b><span>${esc(k)}</span></div></div><div class="tvTitle">${t}</div><div class="tvNow sm" data-cnow></div></header><div class="tvCBar" data-cbar></div>`;
       // 1. Workout of the day
       // No header here: the workout's name leads the screen; the logo, date and time sit in the footer.
       if (on('wod')) out.push(`<div class="tvBody tvWodS">
