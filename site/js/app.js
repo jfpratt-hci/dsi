@@ -1421,7 +1421,7 @@ VIEWS.import = async (_, tok) => {
 const CONTACT = 'dandy@dandystrength.com';
 const doc = (kicker, title, updated, body) => `<section class="sec narrow"><div><div class="kicker">${kicker}</div><h2>${title}</h2><p class="secSub">Last updated ${updated}</p></div></section>
   <section class="sec"><div class="doc">${body}</div></section>`;
-VIEWS.privacy = async (_, tok) => paint(tok, doc('Your data', 'Privacy <span>policy</span>', 'September 29, 2026', `
+VIEWS.privacy = async (_, tok) => paint(tok, doc('Your data', 'Privacy <span>policy</span>', 'October 28, 2026', `
   <p>Dandy Strength runs dandystrength.com, the Dandy Strength Index ("DSI") and the Dandy Strength apps for iPhone and Android. This policy explains what we collect and why. Questions: <a href="mailto:${CONTACT}">${CONTACT}</a>.</p>
   <h3>What we collect</h3>
   <ul><li><b>Account:</b> your email address, used only to sign you in.</li>
@@ -1432,6 +1432,8 @@ VIEWS.privacy = async (_, tok) => paint(tok, doc('Your data', 'Privacy <span>pol
   <p>Your board name, age, bodyweight, division, lifts, PRs, goals and lift videos appear on the public leaderboard and your lifter card. Your email is never shown. Chat is visible only to signed in members of that room.</p>
   <h3>What we do not do</h3>
   <p>We do not sell your data, show ads, or use third party tracking or advertising tools.</p>
+  <h3>Text messages</h3>
+  <p>When you give your mobile number to a gym on Dandy Strength and agree to texts, that gym can text you about classes, trials, your membership, billing and, if you also agree to it, news and offers. Message frequency varies. Message and data rates may apply. Reply STOP to opt out at any time and HELP for help. No mobile information is shared with third parties or affiliates for marketing or promotional purposes. Text messaging opt in data and consent are never shared with any third party, except the providers that deliver the messages for us.</p>
   <h3>Who processes it</h3>
   <p>Supabase stores the database, logins and videos. Resend sends sign in emails. Cloudflare hosts the website. Apple and Google deliver the apps. Each only handles data needed to provide that service.</p>
   <h3>Your choices</h3>
@@ -1440,7 +1442,7 @@ VIEWS.privacy = async (_, tok) => paint(tok, doc('Your data', 'Privacy <span>pol
   <p>DSI is for people 13 and older. We do not knowingly collect data from children under 13.</p>
   <h3>Changes</h3>
   <p>If this policy changes we will update the date above and post a note in the app.</p>`));
-VIEWS.terms = async (_, tok) => paint(tok, doc('The rules', 'Terms of <span>use</span>', 'September 29, 2026', `
+VIEWS.terms = async (_, tok) => paint(tok, doc('The rules', 'Terms of <span>use</span>', 'October 28, 2026', `
   <p>By using dandystrength.com or the DSI apps you agree to these terms.</p>
   <h3>Community rules</h3>
   <ul><li><b>Log real lifts.</b> Only log weight you actually moved. Fake numbers get struck from the record.</li>
@@ -1451,6 +1453,8 @@ VIEWS.terms = async (_, tok) => paint(tok, doc('The rules', 'Terms of <span>use<
   <p>There is zero tolerance for objectionable content or abusive users.</p>
   <h3>Your content</h3>
   <p>You own what you post. You give DSI permission to display it on the boards, your lifter card and in chat so the service works. You can delete it at any time.</p>
+  <h3>Text messages</h3>
+  <p>Gyms on Dandy Strength send texts only to people who agree to them, about classes, trials, memberships, billing and, with separate consent, news and offers. Message frequency varies. Message and data rates may apply. Reply STOP to stop texts from that gym and HELP for help, or email ${CONTACT}. Carriers are not liable for delayed or undelivered messages.</p>
   <h3>Not training or medical advice</h3>
   <p>Scores, targets, plans and coach notes are for fun and motivation. They are not medical, health or training advice. Lift safely and within your limits.</p>
   <h3>Accounts</h3>
