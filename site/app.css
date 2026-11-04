@@ -2091,3 +2091,25 @@ td .lgF{margin:6px 0 0}
 .tvWodS .tvPartBtn.on .tvMins b,.tvWodS .tvPartBtn.on .tvMins span{color:#141414}
 .tvWodS .tvLog{right:7.6cqw;line-height:1.25}
 .tvWodS .tvSecsBig>div{padding-bottom:6.4cqw}
+/* Dandy TV check in: every member as a big tile; tap your name when you walk in (Nov 2026) */
+.tvCheck{grid-template-rows:auto minmax(0,1fr);padding:1.8cqw 2.2cqw}
+.tvCheck header{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:2cqw}
+.tvCheck header b{font-size:3.6cqw}
+.tvCheck header span{font-size:1.5cqw}
+.tvCount{display:grid;justify-items:center;line-height:1}
+.tvCount b{font:700 4.4cqw/1 var(--mono)!important;color:var(--accent)}
+.tvCount span{font:700 1cqw var(--mono)!important;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.tvWhoX{width:4cqw;height:4cqw;border-radius:50%;border:.15cqw solid var(--line);background:var(--panel);color:var(--ink);font:400 2.6cqw/1 var(--sans);cursor:pointer}
+.tvCheck .tvWhoGrid{grid-template-columns:repeat(7,minmax(0,1fr));gap:.7cqw;overflow:auto;scrollbar-width:none}
+.tvCheck .tvWhoGrid button{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:.7cqw;padding:.7cqw .8cqw;border-radius:.6cqw;min-height:5cqw}
+.tvCheck .tvWhoGrid button:disabled{cursor:default;opacity:.75}
+.tvWhoAv.av{--av:3.4cqw!important;width:3.4cqw;height:3.4cqw;font-size:1.2cqw}
+.tvWhoN{display:grid;min-width:0;line-height:1.1}
+.tvWhoN b{font:800 1.6cqw var(--disp);text-transform:uppercase;letter-spacing:.02em;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tvWhoN span{font:500 1.05cqw var(--sans);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tvCheck .tvWhoGrid button i{display:none;position:absolute;top:.4cqw;right:.5cqw;width:1.8cqw;height:1.8cqw;border-radius:50%;background:var(--accent);color:#141414;font:900 1.1cqw/1.8cqw var(--sans);font-style:normal;text-align:center}
+.tvCheck .tvWhoGrid button[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 16%,var(--panel))}
+.tvCheck .tvWhoGrid button[aria-pressed="true"] i{display:block}
+.tvCheck .tvWhoGrid button.armed{border-color:var(--down,#e5484d);background:rgba(229,72,77,.15)}
+.tvCheck .tvWhoGrid button.armed::after{content:"Tap again to remove";position:absolute;left:0;right:0;bottom:-.1cqw;font:700 .8cqw var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--down,#e5484d);text-align:center}
+.tvCheckBtn{border:.15cqw solid var(--accent);background:var(--accent);color:#141414;border-radius:2cqw;padding:.4cqw 1.2cqw;font:800 1.1cqw var(--disp);text-transform:uppercase;letter-spacing:.06em;cursor:pointer;margin-left:.6cqw;width:auto!important;height:auto!important}
