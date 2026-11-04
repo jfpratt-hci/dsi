@@ -2089,3 +2089,5 @@ td .lgF{margin:6px 0 0}
 .tvMins span{font:700 .95cqw var(--mono);letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-top:.15cqw}
 .tvWodS .tvPartBtn.on .tvMins{background:var(--accent);border-color:var(--accent)}
 .tvWodS .tvPartBtn.on .tvMins b,.tvWodS .tvPartBtn.on .tvMins span{color:#141414}
+.tvWodS .tvLog{right:7.6cqw;line-height:1.25}
+.tvWodS .tvSecsBig>div{padding-bottom:6.4cqw}
