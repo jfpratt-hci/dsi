@@ -2073,7 +2073,7 @@ td .lgF{margin:6px 0 0}
 .tvS.noFoot{grid-template-rows:minmax(0,1fr);padding-bottom:1.6cqw}
 .tvS.noFoot>.tvWodS{grid-row:1/-1}
 .tvWodS .tvNow .lbl,.tvWodS .tvNow small{display:none}
-.tvWodS .tvNow b{font-size:7.3cqw}
+.tvWodS .tvNow b{font-size:9.7cqw;line-height:.85}
 .tvWodS .tvTL{height:2.8cqw}
 .tvWodS .tvSeg{font-size:1.3cqw}
 .tvWodS .tvSeg i{font-size:1.6cqw}
