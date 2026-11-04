@@ -570,7 +570,7 @@ export function install(X) {
       // 1. Workout of the day
       // No header here: the workout's name leads the screen; the logo, date and time sit in the footer.
       if (on('wod')) out.push(`<div class="tvBody tvWodS">
-        ${w ? `<div class="tvTop"><div class="tvTitleRow"><h1>${esc(w.title)}</h1><div class="tvNow" data-cnow></div></div><div data-cbar data-rule><div class="tvRule"></div></div></div><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div class="tvPartBtn" role="button" tabindex="0" data-part="${p.L}" aria-label="Show part ${p.L} full screen"><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${levelsHtml(p, 'tvLv')}${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
+        ${w ? `<div class="tvTop"><div class="tvTitleRow"><h1>${esc(w.title)}</h1><div class="tvNow" data-cnow></div></div><div data-cbar data-rule><div class="tvRule"></div></div></div><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div class="tvPartBtn" role="button" tabindex="0" data-part="${p.L}" aria-label="Show part ${p.L} full screen"><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${levelsHtml(p, 'tvLv')}${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}${(() => { const c = clockOf(p); return c && c.mode !== 'none' && c.min > 0 ? `<span class="tvMins"><b>${c.min}</b><span>min</span></span>` : ''; })()}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
         : `<h1>Rest or not posted</h1><p class="tvEmpty">Coaches post the day at dandystrength.com/gym/${esc(g.id)}</p>`}</div>`);
       // 2. Today's targets (one screen per 12 members)
       const lifts = (w && w.lifts) || [];
@@ -708,7 +708,7 @@ export function install(X) {
     // itself at the class's start time from the schedule; with no class on the schedule it shows the plan only. The bar fills as
     // the class runs and the big clock shows the part on now, the changeover, or the time left.
     // The workout name stays on one line: its size shrinks until it fits beside the clock.
-    const fitTitle = () => { const h = document.querySelector('.tvWodS .tvTitleRow h1'); if (!h) return; let lo = 2.2, hi = 5.6; h.style.fontSize = hi + 'cqw'; if (h.scrollWidth <= h.clientWidth + 1) return; for (let i = 0; i < 12; i++) { const m = (lo + hi) / 2; h.style.fontSize = m + 'cqw'; if (h.scrollWidth > h.clientWidth + 1) hi = m; else lo = m; } h.style.fontSize = lo + 'cqw'; };
+    const fitTitle = () => { const h = document.querySelector('.tvWodS .tvTitleRow h1'); if (!h) return; let lo = 2.2, hi = 5; h.style.fontSize = hi + 'cqw'; if (h.scrollWidth <= h.clientWidth + 1) return; for (let i = 0; i < 12; i++) { const m = (lo + hi) / 2; h.style.fontSize = m + 'cqw'; if (h.scrollWidth > h.clientWidth + 1) hi = m; else lo = m; } h.style.fontSize = lo + 'cqw'; };
     const classPlan = () => {
       const ps = st && st.w ? shownParts(st.w).map(p => ({ p, c: clockOf(p) })).filter(x => x.c.mode !== 'none' && x.c.min > 0) : [];
       const segs = []; let t = 0;
@@ -878,11 +878,16 @@ export function install(X) {
     };
     // The workout screen: one text size for every part, as big as fits. iPads mirrored to a TV are 4:3, so a fixed size runs off.
     const fitCards = () => {
+      // Each card's workout text starts big (read from across the gym) and steps down only as far as that card needs.
       const ps = $$('.tvWodS .tvSecsBig p'); if (!ps.length) return;
-      const over = () => ps.some(p => p.scrollHeight > p.clientHeight + 1 || p.scrollWidth > p.clientWidth + 1);
-      let lo = 0.7, hi = 5;
-      for (let i = 0; i < 12; i++) { const m = (lo + hi) / 2; ps.forEach(p => { p.style.fontSize = m + 'cqw'; }); if (over()) hi = m; else lo = m; }
-      ps.forEach(p => { p.style.fontSize = lo + 'cqw'; });
+      const top = $('.tvWodS .tvSecsBig.four') ? 2.2 : 2.5;
+      ps.forEach(p => {
+        const over = () => p.scrollHeight > p.clientHeight + 1 || p.scrollWidth > p.clientWidth + 1;
+        p.style.fontSize = top + 'cqw'; if (!over()) return;
+        let lo = 0.7, hi = top;
+        for (let i = 0; i < 10; i++) { const m = (lo + hi) / 2; p.style.fontSize = m + 'cqw'; if (over()) hi = m; else lo = m; }
+        p.style.fontSize = lo + 'cqw';
+      });
     };
     window.addEventListener('resize', () => { if (tok === S.tok) { fitTitle(); fitCards(); } });
     const bindParts = () => { $$('[data-whobtn]').forEach(b => b.onclick = showWho); bindCards(); };
@@ -900,7 +905,7 @@ export function install(X) {
     const draw = () => {
       if (tok !== S.tok || !st) return;
       const list = screens();
-      main.innerHTML = `<div class="tvDeck" id="tvDeck" tabindex="0">${list.map((h, i) => `<section class="tvS" data-i="${i}">${h}<footer class="tvFoot"><img src="/assets/mark.svg" alt="Dandy Strength" class="tvFootLogo"><span class="tvFootTime"><span class="tvDate">${esc(new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }))}</span><b class="tvClock">${clock()}</b></span></footer></section>`).join('')}</div>
+      main.innerHTML = `<div class="tvDeck" id="tvDeck" tabindex="0">${list.map((h, i) => /tvWodS/.test(h) ? `<section class="tvS noFoot" data-i="${i}">${h}</section>` : `<section class="tvS" data-i="${i}">${h}<footer class="tvFoot"><img src="/assets/mark.svg" alt="Dandy Strength" class="tvFootLogo"><span class="tvFootTime"><span class="tvDate">${esc(new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }))}</span><b class="tvClock">${clock()}</b></span></footer></section>`).join('')}</div>
         <div class="tvStageBox tvDotsBox"><nav class="tvDots" aria-label="Screens">${list.map((_, i) => `<button type="button" data-go="${i}" aria-label="Screen ${i + 1}"${i === cur ? ' aria-current="true"' : ''}></button>`).join('')}${pauseBtn()}</nav></div>`;
       deck = $('#tvDeck');
       cur = Math.min(cur, list.length - 1);

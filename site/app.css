@@ -2068,3 +2068,24 @@ td .lgF{margin:6px 0 0}
 .mxT th, .mxT td { padding-top: 6px; padding-bottom: 6px; }
 .mxT .mxIn { padding: 6px 10px; font-size: 15px; }
 .mxT .mxIn[data-best]:placeholder-shown { border-style: dashed; border-color: rgba(245, 197, 66, .45); }
+/* Dandy TV workout screen, read from 20 to 30 feet on a 75" TV (Nov 2026):
+   no footer, a bigger class timer with no label or time left line, bigger part headers and text, minutes per part bottom right. */
+.tvS.noFoot{grid-template-rows:minmax(0,1fr);padding-bottom:1.6cqw}
+.tvS.noFoot>.tvWodS{grid-row:1/-1}
+.tvWodS .tvNow .lbl,.tvWodS .tvNow small{display:none}
+.tvWodS .tvNow b{font-size:7.3cqw}
+.tvWodS .tvTL{height:2.8cqw}
+.tvWodS .tvSeg{font-size:1.3cqw}
+.tvWodS .tvSeg i{font-size:1.6cqw}
+.tvWodS .tvEnds{font-size:1.2cqw}
+.tvWodS .tvSecsBig>div{position:relative;padding:1.3cqw 1.5cqw 5.6cqw}
+.tvWodS .tvSecsBig b{font-size:2.6cqw;gap:1cqw}
+.tvWodS .tvSecsBig b i{width:3.4cqw;height:3.4cqw;font-size:2.2cqw;flex:none}
+.tvWodS .tvSecsBig.four b{font-size:2.2cqw}
+.tvWodS .tvSecsBig p{line-height:1.28;margin-top:.9cqw}
+.tvWodS .tvLog{position:absolute;left:1.5cqw;bottom:1.6cqw;margin:0;padding:0;font-size:1.3cqw}
+.tvMins{position:absolute;bottom:1.1cqw;right:1.2cqw;display:grid;justify-items:center;background:var(--panel2);border:.12cqw solid var(--line);border-radius:.5cqw;padding:.35cqw .8cqw;line-height:1}
+.tvMins b{display:block!important;font:700 2.6cqw/1 var(--mono)!important;color:var(--ink);text-transform:none!important;letter-spacing:0!important}
+.tvMins span{font:700 .95cqw var(--mono);letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-top:.15cqw}
+.tvWodS .tvPartBtn.on .tvMins{background:var(--accent);border-color:var(--accent)}
+.tvWodS .tvPartBtn.on .tvMins b,.tvWodS .tvPartBtn.on .tvMins span{color:#141414}
