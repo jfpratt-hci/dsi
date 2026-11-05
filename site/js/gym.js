@@ -556,7 +556,7 @@ export function install(X) {
         const c = classNow(), here = new Set(c ? c.ids : []), ok = canLog() && c && !String(c.session.id).startsWith('c-');
         const roleOf = new Map((st.staff || []).map(x => [x.profile_id, x.role]));
         const ms = [...st.members].sort((a, b) => fullName(a).localeCompare(fullName(b)));
-        const nameHtml = m => { const n = fullName(m).split(' '), r = roleOf.get(m.id); return `<b>${esc(n[0])}</b><span>${esc(n.slice(1).join(' '))}${r ? ` <em class="tvWhoRole">${r === 'owner' ? 'Owner' : 'Coach'}</em>` : ''}</span>`; };
+        const nameHtml = m => { const n = fullName(m).split(' '), r = roleOf.get(m.id), bn = m.display_name && m.display_name.toLowerCase() !== fullName(m).toLowerCase() ? m.display_name : ''; return `<b>${esc(n[0])}</b><span>${esc(n.slice(1).join(' '))}${bn ? ` <em class="tvWhoBoard">· ${esc(bn)}</em>` : ''}${r ? ` <em class="tvWhoRole">${r === 'owner' ? 'Owner' : 'Coach'}</em>` : ''}</span>`; };
         box.innerHTML = `<div class="tvWho tvCheck" role="dialog" aria-modal="true" aria-label="Check in"><header><div><b>${c ? 'Check in' : 'No class on right now'}</b>
           <span>${!c ? 'Check in opens 15 minutes before each class.' : !ok ? (canLog() ? 'This class is not on the schedule yet. Add it on the Schedule page.' : 'Sign in on this TV as a coach or the owner to check people in.') : `${esc(c.label)} · tap your name when you walk in`}</span></div>
           ${c ? `<div class="tvCount"><b>${here.size}</b><span>here</span></div>` : ''}<button type="button" class="tvWhoX" id="tvWhoDone" aria-label="Close">×</button></header>
@@ -589,7 +589,7 @@ export function install(X) {
       // 1. Workout of the day
       // No header here: the workout's name leads the screen; the logo, date and time sit in the footer.
       if (on('wod')) out.push(`<div class="tvBody tvWodS">
-        ${w ? `<div class="tvTop"><div class="tvTitleRow"><h1>${esc(w.title)}</h1><div class="tvNow" data-cnow></div></div><div data-cbar data-rule><div class="tvRule"></div></div></div><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div class="tvPartBtn" role="button" tabindex="0" data-part="${p.L}" aria-label="Show part ${p.L} full screen"><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${levelsHtml(p, 'tvLv')}${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}${(() => { const c = clockOf(p); return c && c.mode !== 'none' && c.min > 0 ? `<span class="tvMins"><b>${c.min}</b><span>min</span></span>` : ''; })()}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
+        ${w ? `<div class="tvTop"><div class="tvTitleRow"><h1>${esc(w.title)}</h1><div class="tvNow" data-cnow></div><button type="button" class="tvTopCheck" data-whobtn><span>Check in</span>${cls ? `<b>${members.length}</b>` : ''}</button></div><div data-cbar data-rule><div class="tvRule"></div></div></div><div class="tvSecsBig${shownParts(w).length > 3 ? ' four' : ''}">${shownParts(w).map(p => `<div class="tvPartBtn" role="button" tabindex="0" data-part="${p.L}" aria-label="Show part ${p.L} full screen"><b><i>${p.L}</i>${esc(p.name)}</b><p>${esc(p.text)}</p>${levelsHtml(p, 'tvLv')}${logWords(p) ? `<span class="tvLog">Log your ${logWords(p)}</span>` : ''}${(() => { const c = clockOf(p); return c && c.mode !== 'none' && c.min > 0 ? `<span class="tvMins"><b>${c.min}</b><span>min</span></span>` : ''; })()}</div>`).join('')}</div>${w.score_label ? `<div class="tvScoreBy">Scored by ${esc(w.score_label)}</div>` : ''}`
         : `<h1>Rest or not posted</h1><p class="tvEmpty">Coaches post the day at dandystrength.com/gym/${esc(g.id)}</p>`}</div>`);
       // 2. Today's targets (one screen per 12 members)
       const lifts = (w && w.lifts) || [];
@@ -925,7 +925,7 @@ export function install(X) {
       if (tok !== S.tok || !st) return;
       const list = screens();
       main.innerHTML = `<div class="tvDeck" id="tvDeck" tabindex="0">${list.map((h, i) => /tvWodS/.test(h) ? `<section class="tvS noFoot" data-i="${i}">${h}</section>` : `<section class="tvS" data-i="${i}">${h}<footer class="tvFoot"><img src="/assets/mark.svg" alt="Dandy Strength" class="tvFootLogo"><span class="tvFootTime"><span class="tvDate">${esc(new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }))}</span><b class="tvClock">${clock()}</b></span></footer></section>`).join('')}</div>
-        <div class="tvStageBox tvDotsBox"><nav class="tvDots" aria-label="Screens">${list.map((_, i) => `<button type="button" data-go="${i}" aria-label="Screen ${i + 1}"${i === cur ? ' aria-current="true"' : ''}></button>`).join('')}${pauseBtn()}<button type="button" class="tvCheckBtn" data-whobtn>Check in</button></nav></div>`;
+        <div class="tvStageBox tvDotsBox"><nav class="tvDots" aria-label="Screens">${list.map((_, i) => `<button type="button" data-go="${i}" aria-label="Screen ${i + 1}"${i === cur ? ' aria-current="true"' : ''}></button>`).join('')}${pauseBtn()}</nav></div>`;
       deck = $('#tvDeck');
       cur = Math.min(cur, list.length - 1);
       deck.scrollTop = cur * deck.clientHeight;

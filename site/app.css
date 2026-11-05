@@ -2114,3 +2114,10 @@ td .lgF{margin:6px 0 0}
 .tvCheck .tvWhoGrid button.armed::after{content:"Tap again to remove";position:absolute;left:0;right:0;bottom:-.1cqw;font:700 .8cqw var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--down,#e5484d);text-align:center}
 .tvCheckBtn{border:.15cqw solid var(--accent);background:var(--accent);color:#141414;border-radius:2cqw;padding:.4cqw 1.2cqw;font:800 1.1cqw var(--disp);text-transform:uppercase;letter-spacing:.06em;cursor:pointer;margin-left:.6cqw;width:auto!important;height:auto!important}
 .tvWhoRole{font:800 .75cqw var(--mono);font-style:normal;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-left:.3cqw}
+/* Workout screen: smaller class clock, Check in button top right (Nov 4 2026) */
+.tvWodS .tvNow b{font-size:4.6cqw;line-height:.9}
+.tvTopCheck{flex:none;display:inline-flex;align-items:center;gap:.8cqw;align-self:center;border:0;border-radius:3cqw;background:var(--accent);color:#141414;padding:.9cqw 1.8cqw;font:900 1.9cqw/1 var(--disp);text-transform:uppercase;letter-spacing:.05em;cursor:pointer;box-shadow:0 .4cqw 1.6cqw color-mix(in srgb,var(--accent) 35%,transparent)}
+.tvTopCheck::before{content:"";width:1.6cqw;height:1.6cqw;border-radius:50%;background:#141414 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f5c518' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/70% no-repeat}
+.tvTopCheck b{font:800 1.5cqw/1 var(--mono);background:#141414;color:var(--accent);border-radius:2cqw;padding:.3cqw .7cqw}
+.tvTopCheck:active{transform:scale(.97)}
+.tvWhoBoard{font-style:normal;color:var(--accent);font-weight:700}
