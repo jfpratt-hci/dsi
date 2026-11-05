@@ -2113,3 +2113,4 @@ td .lgF{margin:6px 0 0}
 .tvCheck .tvWhoGrid button.armed{border-color:var(--down,#e5484d);background:rgba(229,72,77,.15)}
 .tvCheck .tvWhoGrid button.armed::after{content:"Tap again to remove";position:absolute;left:0;right:0;bottom:-.1cqw;font:700 .8cqw var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--down,#e5484d);text-align:center}
 .tvCheckBtn{border:.15cqw solid var(--accent);background:var(--accent);color:#141414;border-radius:2cqw;padding:.4cqw 1.2cqw;font:800 1.1cqw var(--disp);text-transform:uppercase;letter-spacing:.06em;cursor:pointer;margin-left:.6cqw;width:auto!important;height:auto!important}
+.tvWhoRole{font:800 .75cqw var(--mono);font-style:normal;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-left:.3cqw}

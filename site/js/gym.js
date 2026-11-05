@@ -546,16 +546,17 @@ export function install(X) {
     const staffIds = () => new Set((st.staff || []).map(x => x.profile_id));
     const fullName = m => (st.realName && st.realName.get(m.id)) || m.display_name;
     /* ---------- check in on the TV ---------- */
-    // Every member of the gym (coaches left out) as a big tile. Tap your name when you walk in: it marks you here for
+    // Every member of the gym, coaches and owners included (tagged), as a big tile. Tap your name when you walk in: it marks you here for
     // the class on now, the same attendance the Classes page and the coach pay report use. Booked counts as here.
     // Tap a name that is already here twice to take it back off. Needs a coach or the owner signed in on the TV.
     const showWho = () => {
       let box = document.getElementById('tvWhoBox');
       if (!box) { box = document.createElement('div'); box.id = 'tvWhoBox'; box.className = 'tvStageBox'; document.body.appendChild(box); }
       const paintWho = () => {
-        const c = classNow(), here = new Set(c ? c.ids : []), stf = staffIds(), ok = canLog() && c && !String(c.session.id).startsWith('c-');
-        const ms = st.members.filter(m => !stf.has(m.id) || here.has(m.id)).sort((a, b) => fullName(a).localeCompare(fullName(b)));
-        const nameHtml = m => { const n = fullName(m).split(' '); return `<b>${esc(n[0])}</b><span>${esc(n.slice(1).join(' '))}</span>`; };
+        const c = classNow(), here = new Set(c ? c.ids : []), ok = canLog() && c && !String(c.session.id).startsWith('c-');
+        const roleOf = new Map((st.staff || []).map(x => [x.profile_id, x.role]));
+        const ms = [...st.members].sort((a, b) => fullName(a).localeCompare(fullName(b)));
+        const nameHtml = m => { const n = fullName(m).split(' '), r = roleOf.get(m.id); return `<b>${esc(n[0])}</b><span>${esc(n.slice(1).join(' '))}${r ? ` <em class="tvWhoRole">${r === 'owner' ? 'Owner' : 'Coach'}</em>` : ''}</span>`; };
         box.innerHTML = `<div class="tvWho tvCheck" role="dialog" aria-modal="true" aria-label="Check in"><header><div><b>${c ? 'Check in' : 'No class on right now'}</b>
           <span>${!c ? 'Check in opens 15 minutes before each class.' : !ok ? (canLog() ? 'This class is not on the schedule yet. Add it on the Schedule page.' : 'Sign in on this TV as a coach or the owner to check people in.') : `${esc(c.label)} · tap your name when you walk in`}</span></div>
           ${c ? `<div class="tvCount"><b>${here.size}</b><span>here</span></div>` : ''}<button type="button" class="tvWhoX" id="tvWhoDone" aria-label="Close">×</button></header>
